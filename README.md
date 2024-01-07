@@ -30,10 +30,9 @@ Matter = "matter-ecs/matter@0.7.0"
 
 Before building, you'll need to install all dependencies using [Wally].
 
-You can then sync or build the project with [Rojo]. Matter Hooks contains
-several project files with different builds of the project. The
-`default.project.json` is the package build. The `example.project.json` is the
-example game build.
+You can then sync or build the project with [Rojo]. Matter contains several
+project files with different builds of the project. The `default.project.json`
+is the package build. The `example.project.json` is the example game build.
 
 [rojo]: https://rojo.space/
 [wally]: https://wally.run/
