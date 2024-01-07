@@ -164,6 +164,45 @@ return function()
 			connection.default:Disconnect()
 		end)
 
+		it("should not schedule systems more than once", function()
+			local loop = Loop.new()
+
+			local order = {}
+			local systemA = {
+				system = function()
+					table.insert(order, "a")
+				end,
+				t = 1,
+			}
+
+			local systemB = {
+				system = function()
+					table.insert(order, "b")
+				end,
+				t = 2,
+			}
+
+			loop:scheduleSystems({
+				systemA,
+				systemA,
+			})
+
+			loop:scheduleSystem(systemB)
+			loop:scheduleSystem(systemB)
+
+			local connection = loop:begin({ default = bindable.Event })
+
+			expect(#order).to.equal(0)
+
+			bindable:Fire()
+
+			expect(#order).to.equal(2)
+			expect(order[1]).to.equal("a")
+			expect(order[2]).to.equal("b")
+
+			connection.default:Disconnect()
+		end)
+
 		it("should schedule systems in order if dependencies are defined", function()
 			local loop = Loop.new()
 
