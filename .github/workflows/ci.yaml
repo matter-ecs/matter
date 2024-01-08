@@ -44,6 +44,9 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.3.0
 
+      - name: Install Dependencies
+        run: wally install
+
       - name: Build
         run: rojo build --output build.rbxm default.project.json
 
@@ -63,6 +66,9 @@ jobs:
 
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.3.0
+
+      - name: Install Dependencies
+        run: wally install --project-path example
 
       - name: Build
         run: rojo build --output build.rbxm example.project.json
