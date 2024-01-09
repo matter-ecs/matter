@@ -26,6 +26,12 @@ Matter can be installed with [Wally] by including it as a dependency in your
 Matter = "matter-ecs/matter@0.7.0"
 ```
 
+## Migration
+
+If you're currently using the scope `evaera/matter`, prior versions are the same
+package. You can migrate by changing your `wally.toml` file to use the scope
+`matter-ecs/matter`.
+
 ## Building
 
 Before building, you'll need to install all dependencies using [Wally].
