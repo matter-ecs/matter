@@ -4,6 +4,6 @@ require(ReplicatedStorage.TestEZ).TestBootstrap:run({
 	ReplicatedStorage.Matter,
 	nil,
 	{
-		noXpcallByDefault = true
-	}
+		noXpcallByDefault = true,
+	},
 })
