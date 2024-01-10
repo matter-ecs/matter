@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  format:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v3
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0.3.0
+
+      - name: Check Formatting
+        run: stylua --check .
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v3
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0.3.0
+
+      - name: Check Linting
+        run: selene lib tests example/src
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v3
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0.3.0
+
+      - name: Install Dependencies
+        run: wally install
+
+      - name: Build
+        run: rojo build --output build.rbxm default.project.json
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: build.rbxm
+
+  build-example:
+    name: Build Example Game
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v3
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0.3.0
+
+      - name: Install Dependencies
+        run: wally install --project-path example
+
+      - name: Build
+        run: rojo build --output build.rbxm example.project.json
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-example
+          path: build.rbxm
