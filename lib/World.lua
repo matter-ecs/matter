@@ -194,8 +194,8 @@ function World:_newQueryArchetype(queryArchetype)
 
 	for _, storage in self._storages do
 		for entityArchetype in storage do
-			local archetypes = queryArchetype:gmatch("[^x]+")
-			local baseArchetype = archetypes()
+			local archetypes = string.split(queryArchetype, "x")
+			local baseArchetype = table.remove(archetypes, 1)
 
 			if not areArchetypesCompatible(baseArchetype, entityArchetype) then
 				continue
@@ -203,7 +203,7 @@ function World:_newQueryArchetype(queryArchetype)
 
 			local skip = false
 
-			for exclude in archetypes do
+			for _, exclude in archetypes do
 				if areArchetypesCompatible(exclude, entityArchetype) then
 					skip = true
 					break
