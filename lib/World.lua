@@ -194,12 +194,11 @@ function World:_newQueryArchetype(queryArchetype)
 
 	for _, storage in self._storages do
 		for entityArchetype in storage do
-			local archetype = string.split(queryArchetype, "||")
-			local negatedArchetype = archetype[1]
-			local filter = { unpack(archetype, 2, #archetype) }
+			local archetypes = queryArchetype:gmatch("[^x]+")
+			local baseArchetype = archetypes()
 
 			local skip = false
-			for _, exclude in filter do
+			for _, exclude in archetypes do
 				if areArchetypesCompatible(exclude, entityArchetype) then
 					skip = true
 					break
@@ -210,7 +209,7 @@ function World:_newQueryArchetype(queryArchetype)
 				continue
 			end
 
-			if areArchetypesCompatible(negatedArchetype, entityArchetype) then
+			if areArchetypesCompatible(baseArchetype, entityArchetype) then
 				self._queryCache[queryArchetype][entityArchetype] = true
 			end
 		end

@@ -204,9 +204,9 @@ end
 
 function QueryResult:without(...)
 	local world = self.world
-	local filter = table.concat(string.split(archetypeOf(...), "_"), "||")
+	local filter = string.gsub(archetypeOf(...), "_", "x")
 
-	local negativeArchetype = `{self._queryArchetype}||{filter}`
+	local negativeArchetype = `{self._queryArchetype}x{filter}`
 
 	if world._queryCache[negativeArchetype] == nil then
 		world:_newQueryArchetype(negativeArchetype)
@@ -242,13 +242,15 @@ end
 function View:__iter()
 	local current = self.head
 	return function()
-		if current then
-			local entity = current.entity
-			local fetch = self.fetches[entity]
-			current = current.next
-
-			return entity, unpack(fetch, 1, fetch.n)
+		if not current then
+			return
 		end
+
+		local entity = current.entity
+		local fetch = self.fetches[entity]
+		current = current.next
+
+		return entity, unpack(fetch, 1, fetch.n)
 	end
 end
 
