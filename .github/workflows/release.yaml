@@ -5,8 +5,8 @@ on:
     tags: ["v*"]
 
 jobs:
-  build-matter:
-    name: Build Matter
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Project
@@ -15,14 +15,17 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.3.0
 
-      - name: Build Matter
-        run: rojo build --output matter.rbxm default.project.json
+      - name: Install Dependencies
+        run: wally install
+
+      - name: Build
+        run: rojo build --output build.rbxm default.project.json
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: matter
-          path: matter.rbxm
+          name: build
+          path: build.rbxm
 
   build-example:
     name: Build Example Game
@@ -34,18 +37,21 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.3.0
 
+      - name: Install Dependencies
+        run: wally install --project-path example
+
       - name: Build Example Game
-        run: rojo build --output example.rbxl example.project.json
+        run: rojo build --output build.rbxl example.project.json
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: example
-          path: example.rbxl
+          name: build-example
+          path: build.rbxl
 
   release:
     name: Release
-    needs: [build-matter, build-example]
+    needs: [build, build-example]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Project
@@ -54,13 +60,13 @@ jobs:
       - name: Download Matter Build
         uses: actions/download-artifact@v3
         with:
-          name: matter
+          name: build
           path: matter.rbxm
 
       - name: Download Example Game Build
         uses: actions/download-artifact@v3
         with:
-          name: example
+          name: build-example
           path: AttackOfTheKillerRoombas.rbxl
 
       - name: Create Release
@@ -84,5 +90,5 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.3.0
 
-      - name: Publish Matter
-        run: wally publish --token ${{ secrets.WALLY_TOKEN }}
+      - name: Publish
+        run: wally publish --token ${{ secrets.WALLY_AUTH_TOKEN }}
