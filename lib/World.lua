@@ -198,7 +198,7 @@ function World:_newQueryArchetype(queryArchetype)
 			local baseArchetype = archetypes()
 
 			local skip = false
-			for _, exclude in archetypes do
+			for exclude in archetypes do
 				if areArchetypesCompatible(exclude, entityArchetype) then
 					skip = true
 					break
