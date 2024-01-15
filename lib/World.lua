@@ -197,7 +197,12 @@ function World:_newQueryArchetype(queryArchetype)
 			local archetypes = queryArchetype:gmatch("[^x]+")
 			local baseArchetype = archetypes()
 
+			if not areArchetypesCompatible(baseArchetype, entityArchetype) then
+				continue
+			end
+
 			local skip = false
+
 			for exclude in archetypes do
 				if areArchetypesCompatible(exclude, entityArchetype) then
 					skip = true
@@ -209,9 +214,7 @@ function World:_newQueryArchetype(queryArchetype)
 				continue
 			end
 
-			if areArchetypesCompatible(baseArchetype, entityArchetype) then
-				self._queryCache[queryArchetype][entityArchetype] = true
-			end
+			self._queryCache[queryArchetype][entityArchetype] = true
 		end
 	end
 end
