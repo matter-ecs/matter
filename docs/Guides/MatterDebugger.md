@@ -28,16 +28,18 @@ end
 
 This is accomplished using [Plasma](https://eryn.io/plasma/), an immediate-mode widget library. The widgets are only created while the debugger is active. Leaving the widget calls in your systems all the time is fine, because calling a widget function when the debugger is not open is a no-op.
 
-The [Matter example game](https://github.com/evaera/matter/blob/main/example/shared/start.lua) comes with the debugger set up already. If you want to see an example of the debugger already set up in a game, check out that page.
+The [Matter example game](https://github.com/matter-ecs/matter/blob/main/example/shared/start.lua) comes with the debugger set up already. If you want to see an example of the debugger already set up in a game, check out that page.
 
 ## Adding the Matter debugger to your game
 
 ### Installing Plasma
 You need to install [Plasma](https://eryn.io/plasma/) as a dependency to your project. We recommend you do this with [Wally](https://wally.run), the Roblox open source package manager.
 
+To find the latest version of Plasma, check out [this page](https://wally.run/package/matter-ecs/plasma) or run `wally search matter-ecs`.
+
 ```toml title="wally.toml"
 [dependencies]
-plasma = "evaera/plasma@0.4.2"
+plasma = "matter-ecs/plasma@x.x.x" # Replace x.x.x with the latest version
 ```
 
 ### Create the debugger
