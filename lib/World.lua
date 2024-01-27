@@ -596,6 +596,13 @@ function World:query(...)
 				entityData[metatables[2]],
 				entityData[metatables[3]],
 				entityData[metatables[4]]
+		elseif queryLength == 5 then
+			return entityId,
+				entityData[metatables[1]],
+				entityData[metatables[2]],
+				entityData[metatables[3]],
+				entityData[metatables[4]],
+				entityData[metatables[5]]
 		end
 
 		for i, metatable in ipairs(metatables) do
