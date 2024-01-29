@@ -164,6 +164,137 @@ return function()
 			connection.default:Disconnect()
 		end)
 
+		it("should not schedule systems more than once", function()
+			local loop = Loop.new()
+
+			local order = {}
+			local systemA = {
+				system = function()
+					table.insert(order, "a")
+				end,
+				t = 1,
+			}
+
+			local systemB = {
+				system = function()
+					table.insert(order, "b")
+				end,
+				t = 2,
+			}
+
+			loop:scheduleSystems({
+				systemA,
+				systemA,
+			})
+
+			loop:scheduleSystem(systemB)
+			loop:scheduleSystem(systemB)
+
+			local connection = loop:begin({ default = bindable.Event })
+
+			expect(#order).to.equal(0)
+
+			bindable:Fire()
+
+			expect(#order).to.equal(2)
+			expect(order[1]).to.equal("a")
+			expect(order[2]).to.equal("b")
+
+			connection.default:Disconnect()
+		end)
+
+		it("should schedule systems in order if dependencies are defined", function()
+			local loop = Loop.new()
+
+			local order = {}
+			local systemA = {
+				system = function()
+					table.insert(order, "a")
+				end,
+			}
+
+			local function namedSystemB()
+				table.insert(order, "b")
+			end
+
+			local systemB = {
+				system = namedSystemB,
+				after = { systemA },
+			}
+
+			--By naming the system functions this ensures that the initial table.sort call in the
+			--system scheduler returns the following order systemC -> systemB -> systemA
+			--and we want to schedule it in this order to ensure that the scheduler is able to complete
+			--without erroring
+			local function namedSystemA()
+				table.insert(order, "c")
+			end
+
+			local systemC = {
+				system = namedSystemA,
+				after = { systemA, systemB },
+			}
+
+			loop:scheduleSystems({
+				systemC,
+				systemB,
+				systemA,
+			})
+
+			local connection = loop:begin({ default = bindable.Event })
+
+			expect(#order).to.equal(0)
+
+			bindable:Fire()
+
+			expect(#order).to.equal(3)
+			expect(order[1]).to.equal("a")
+			expect(order[2]).to.equal("b")
+			expect(order[3]).to.equal("c")
+
+			connection.default:Disconnect()
+		end)
+
+		it("should schedule systems based on order passed into scheduleSystems", function()
+			local loop = Loop.new()
+
+			local order = {}
+			local systemA = {
+				system = function()
+					table.insert(order, "a")
+				end,
+			}
+			local systemB = {
+				system = function()
+					table.insert(order, "b")
+				end,
+			}
+			local systemC = {
+				system = function()
+					table.insert(order, "c")
+				end,
+			}
+
+			loop:scheduleSystems({
+				systemB,
+				systemC,
+				systemA,
+			})
+
+			local connection = loop:begin({ default = bindable.Event })
+
+			expect(#order).to.equal(0)
+
+			bindable:Fire()
+
+			expect(#order).to.equal(3)
+			expect(order[1]).to.equal("b")
+			expect(order[2]).to.equal("c")
+			expect(order[3]).to.equal("a")
+
+			connection.default:Disconnect()
+		end)
+
 		it("should throw error for systems with unscheduled depedencies", function()
 			local loop = Loop.new()
 
