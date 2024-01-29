@@ -599,12 +599,12 @@ end
 	This is used for many repeated random access to an entity. If you only need to iterate, just use a query.
 
 	```lua
-	for id, player, health, poison in world:query(Player, Health, Poison):view() do
-		-- Do something
+	local inflicting = world:query(Damage, Hitting, Player):view()
+	for _, source in world:query(DamagedBy) do
+		local damage = inflicting:get(source.from)
 	end
 
-	local dyingPeople = world:query(Player, Health, Poison):view()
-	local remainingHealth = dyingPeople:get(entity)
+	for _ in world:query(Damage):view() do end -- You can still iterate views if you want!
 	```
 	
 	@param ... Component - The component types to query. Only entities with *all* of these components will be returned.
