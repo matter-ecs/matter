@@ -607,7 +607,6 @@ end
 	for _ in world:query(Damage):view() do end -- You can still iterate views if you want!
 	```
 	
-	@param ... Component - The component types to query. Only entities with *all* of these components will be returned.
 	@return View See [View](/api/View) docs.
 ]=]
 
