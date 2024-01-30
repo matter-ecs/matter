@@ -4,5 +4,5 @@ Migrating from `evaera/matter` to `matter-ecs/matter` is easy! The only thing yo
 
   ```toml title="wally.toml"
   [dependencies]
-  matter = "matter-ecs/matter@x.x.x" # Replace x.x.x with the version you want to use
+  matter = "matter-ecs/matter@0.7.0"
   ```
