@@ -6,7 +6,7 @@ sidebar_position: 2
 
 ## [Wally](https://wally.run) Package Manager
 
-There are a few ways to install wally. You can find all the ways [here](https://wally.run/install). The recommended way is to use [Aftman](https://github.com/lpghatguy/aftman) and will be what's covered here.
+There are a few ways to install wally. You can find all the ways [here](https://wally.run/install). We recommend using [Aftman](https://github.com/lpghatguy/aftman) and is what we'll cover here.
 
 1. Initialize Aftman if you haven't already. You can do this by opening a terminal in the project and running `aftman init`.
 
