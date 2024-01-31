@@ -120,6 +120,9 @@ local function ui(debugger, loop)
 			plasma.heading("SYSTEMS")
 			plasma.space(10)
 
+			local durations = {}
+			local longestDuration = 0
+
 			for _, eventName in debugger._eventOrder do
 				local systems = loop._orderedSystemsByEvent[eventName]
 
@@ -131,27 +134,33 @@ local function ui(debugger, loop)
 					font = Enum.Font.Gotham,
 				})
 				plasma.space(5)
+
 				local items = {}
 
 				for _, system in systems do
 					local samples = loop.profiling[system]
-					local averageFrameTime = ""
-					local icon
-
 					if samples then
 						local duration = rollingAverage.getAverage(samples)
 
-						if duration > 0.004 then -- 4ms
-							icon = "\xe2\x9a\xa0\xef\xb8\x8f"
-						end
+						durations[system] = duration
+						longestDuration = math.max(longestDuration, duration)
+					end
+				end
 
-						if loop._systemErrors[system] then
-							icon = "\xf0\x9f\x92\xa5"
-						end
+				for index, system in systems do
+					local averageFrameTime = ""
+					local icon
 
-						local humanDuration, unit = formatDuration(duration)
+					local duration = durations[system] or 0
+					local humanDuration, unit = formatDuration(duration)
+					averageFrameTime = string.format("%.0f%s", humanDuration, unit)
 
-						averageFrameTime = string.format("%.0f%s", humanDuration, unit)
+					if duration > 0.004 then -- 4ms
+						icon = "\xe2\x9a\xa0\xef\xb8\x8f"
+					end
+
+					if loop._systemErrors[system] then
+						icon = "\xf0\x9f\x92\xa5"
 					end
 
 					table.insert(items, {
@@ -160,6 +169,8 @@ local function ui(debugger, loop)
 						selected = debugger.debugSystem == system,
 						system = system,
 						icon = icon,
+						barWidth = duration / longestDuration,
+						index = index,
 					})
 				end
 
