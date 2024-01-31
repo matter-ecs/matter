@@ -50,7 +50,7 @@ return function(Plasma)
 					Text = text,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextColor3 = color,
-					TextSize = 16,
+					TextSize = 14,
 				}),
 
 				Activated = function()
@@ -87,7 +87,7 @@ return function(Plasma)
 		refs.button.Icon.Text = options.icon or ""
 		refs.button.Icon.Visible = not not options.icon
 
-		refs.mainText.Font = options.font or Enum.Font.SourceSans
+		refs.mainText.Font = options.font or Enum.Font.Gotham
 
 		return {
 			clicked = function()
