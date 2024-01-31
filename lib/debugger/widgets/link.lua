@@ -16,8 +16,8 @@ return function(Plasma)
 			local button = create("TextButton", {
 				[ref] = "button",
 				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.XY,
 				Text = "",
-				Size = UDim2.new(0, 0, 0, 40),
 
 				create("UIPadding", {
 					PaddingBottom = UDim.new(0, 0),
@@ -37,7 +37,7 @@ return function(Plasma)
 					Size = UDim2.new(0, 30, 1, 0),
 					Text = options.icon,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					TextSize = 20,
+					TextSize = 16,
 					TextColor3 = style.textColor,
 					Font = Enum.Font.GothamBold,
 				}),
