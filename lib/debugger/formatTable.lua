@@ -30,7 +30,7 @@ local function formatTable(object, mode, _padLength, _depth)
 
 	local count = 0
 	local size = #values
-	for i, entry in values do
+	for _, entry in values do
 		local key = entry.key
 		local value = entry.value
 
