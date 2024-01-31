@@ -1,7 +1,7 @@
 return function(Plasma)
 	local create = Plasma.create
 
-	local Item = Plasma.widget(function(text, selected, icon, sideText, _, barWidth, index)
+	local Item = Plasma.widget(function(text, selected, icon, sideText, barWidth, index)
 		local clicked, setClicked = Plasma.useState(false)
 		local style = Plasma.useStyle()
 
@@ -159,7 +159,7 @@ return function(Plasma)
 
 		for _, item in items do
 			if
-				Item(item.text, item.selected, item.icon, item.sideText, options.width, item.barWidth, item.index):clicked()
+				Item(item.text, item.selected, item.icon, item.sideText, item.barWidth, item.index):clicked()
 			then
 				selected = item
 			end
