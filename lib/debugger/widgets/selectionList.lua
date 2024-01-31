@@ -109,7 +109,7 @@ return function(Plasma)
 		Plasma.useEffect(function()
 			refs.button.container.TextLabel.Text = text
 			refs.button.container.Icon.Text = icon or ""
-			refs.button.container.Icon.Visible = not not icon
+			refs.button.container.Icon.Visible = icon ~= nil
 		end, text, icon)
 
 		refs.button.container.sideText.Visible = sideText ~= nil
