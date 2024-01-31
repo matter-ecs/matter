@@ -25,6 +25,7 @@ return function(plasma)
 				local selected = plasma
 					.table(items, {
 						selectable = true,
+						font = Enum.Font.Code,
 					})
 					:selected()
 

@@ -66,8 +66,7 @@ local function ui(debugger, loop)
 				end
 			end
 
-			plasma.space(30)
-
+			plasma.space(15)
 			plasma.heading("STATE")
 			plasma.space(10)
 
@@ -117,7 +116,7 @@ local function ui(debugger, loop)
 				end
 			end
 
-			plasma.space(30)
+			plasma.space(15)
 			plasma.heading("SYSTEMS")
 			plasma.space(10)
 
@@ -131,7 +130,7 @@ local function ui(debugger, loop)
 				plasma.heading(eventName, {
 					font = Enum.Font.Gotham,
 				})
-				plasma.space(10)
+				plasma.space(5)
 				local items = {}
 
 				for _, system in systems do
@@ -174,7 +173,7 @@ local function ui(debugger, loop)
 					end
 				end
 
-				plasma.space(20)
+				plasma.space(10)
 			end
 		end)
 
@@ -213,8 +212,6 @@ local function ui(debugger, loop)
 						closable = true,
 					}, function()
 						plasma.useKey(name)
-						plasma.heading(name)
-						plasma.space(0)
 
 						plasma.row(function()
 							if plasma.button(string.format("View queries (%d)", #debugger._queries)):clicked() then

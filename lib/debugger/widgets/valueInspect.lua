@@ -68,7 +68,9 @@ return function(plasma)
 					return plasma.label("(empty table)")
 				end
 
-				plasma.table(items)
+				plasma.table(items, {
+					font = Enum.Font.Code,
+				})
 				return nil
 			end)
 			:closed()
