@@ -61,13 +61,17 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build
-          path: matter.rbxm
 
       - name: Download Example Game Build
         uses: actions/download-artifact@v3
         with:
           name: build-example
-          path: AttackOfTheKillerRoombas.rbxl
+
+      - name: Rename Build
+        run: mv build/build.rbxm matter.rbxm
+
+      - name: Rename Example Game Build
+        run: mv build-example/build.rbxl AttackOfTheKillerRoombas.rbxl
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
