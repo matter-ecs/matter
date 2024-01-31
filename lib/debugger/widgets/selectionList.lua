@@ -113,7 +113,7 @@ return function(Plasma)
 		end, text, icon)
 
 		refs.button.container.sideText.Visible = sideText ~= nil
-		refs.button.container.sideText.Text = sideText or ""
+		refs.button.container.sideText.Text = if sideText ~= nil then sideText else ""
 		refs.button.container.sideText.TextColor3 = if selected then style.textColor else style.mutedTextColor
 		refs.button.container.TextLabel.TextTruncate = sideText and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
 
