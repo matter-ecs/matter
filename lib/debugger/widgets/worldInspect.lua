@@ -38,8 +38,10 @@ return function(plasma)
 					end
 				end
 
-				plasma.row(function()
-					plasma.heading("Size")
+				plasma.row({
+					verticalAlignment = Enum.VerticalAlignment.Center,
+				}, function()
+					plasma.heading("SIZE:")
 					plasma.label(
 						`{world:size()} {if cache.emptyEntities > 0 then `({cache.emptyEntities} empty)` else ""}`
 					)
@@ -86,6 +88,7 @@ return function(plasma)
 							width = 200,
 							headings = true,
 							selectable = true,
+							font = Enum.Font.Code,
 						})
 						:selected()
 

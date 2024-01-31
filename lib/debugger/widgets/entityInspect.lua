@@ -4,6 +4,8 @@ local FormatMode = formatTableModule.FormatMode
 
 return function(plasma)
 	return plasma.widget(function(debugger)
+		local style = plasma.useStyle()
+
 		local closed = plasma
 			.window({
 				title = string.format("Entity %d", debugger.debugEntity),
@@ -18,7 +20,9 @@ return function(plasma)
 					local model = debugger.findInstanceFromEntity(debugger.debugEntity)
 
 					if model then
-						plasma.highlight(model)
+						plasma.highlight(model, {
+							fillColor = style.primaryColor,
+						})
 					end
 				end
 

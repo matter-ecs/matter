@@ -37,7 +37,7 @@ return function(Plasma)
 					Size = UDim2.new(0, 30, 1, 0),
 					Text = options.icon,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					TextSize = 23,
+					TextSize = 20,
 					TextColor3 = style.textColor,
 					Font = Enum.Font.GothamBold,
 				}),
@@ -50,7 +50,7 @@ return function(Plasma)
 					Text = text,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextColor3 = color,
-					TextSize = 19,
+					TextSize = 16,
 				}),
 
 				Activated = function()
