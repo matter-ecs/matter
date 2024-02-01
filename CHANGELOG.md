@@ -10,6 +10,28 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.7.1] - 2024-01-31
+
+### Changed
+
+- Improved overall usability of the world inspect widget in the debugger.
+  - The widget now displays a more table-like view of the world's entities and
+    their components.
+- Improved query unpacking performance when querying 5 components or fewer.
+  - This covers the majority of use cases.
+  - Querying more than 5 components remains unchanged.
+- The debugger UI is more compact and includes minor layout improvements.
+- The debugger panel now better displays system order and performance.
+
+### Fixed
+
+- Slider now properly supports passing only a number rather than a table.
+- TestEZ is now a dev dependency rather than a regular dependency.
+- Fixed regressions with system scheduling.
+  - Scheduling systems with dependencies on other systems no longer incorrectly
+    detects cycles.
+  - Scheduling no longer occasionally produces non-deterministic ordering.
+
 ## [0.7.0] - 2023-12-19
 
 ### Added
@@ -174,7 +196,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 - Initial release
 
-[unreleased]: https://github.com/matter-ecs/matter/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/matter-ecs/matter/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/matter-ecs/matter/releases/tag/v0.7.1
 [0.7.0]: https://github.com/matter-ecs/matter/releases/tag/v0.7.0
 [0.6.2]: https://github.com/matter-ecs/matter/releases/tag/v0.6.2
 [0.6.1]: https://github.com/matter-ecs/matter/releases/tag/v0.6.1

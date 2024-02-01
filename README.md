@@ -23,7 +23,7 @@ Matter can be installed with [Wally] by including it as a dependency in your
 `wally.toml` file.
 
 ```toml
-Matter = "matter-ecs/matter@0.7.0"
+Matter = "matter-ecs/matter@0.7.1"
 ```
 
 ## Migration
