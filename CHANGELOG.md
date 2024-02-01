@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 ### Changed
 
 - Improved overall usability of the world inspect widget in the debugger.
+  - The widget now displays a more table-like view of the world's entities and
+    their components.
 - Improved query unpacking performance when querying 5 components or fewer.
   - This covers the majority of use cases.
   - Querying more than 5 components remains unchanged.
