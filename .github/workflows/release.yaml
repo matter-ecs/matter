@@ -61,11 +61,13 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build
+          path: build
 
       - name: Download Example Game Build
         uses: actions/download-artifact@v3
         with:
           name: build-example
+          path: build-example
 
       - name: Rename Build
         run: mv build/build.rbxm matter.rbxm
