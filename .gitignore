@@ -39,8 +39,11 @@ luac.out
 *.x86_64
 *.hex
 
+# Wally files
 DevPackages
 Packages
+wally.lock
+
 roblox.toml
 build
 *.rbxl
