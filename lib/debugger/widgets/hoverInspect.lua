@@ -14,9 +14,8 @@ return function(plasma)
 			if next(componentData) == nil then
 				str ..= "{ }"
 			else
-				str ..= formatTable(componentData, FormatMode.Long, 0, 2)
+				str ..= (formatTable(componentData, FormatMode.Long, 0, 2) .. "\n")
 			end
-			str ..= "\n"
 		end
 
 		custom.tooltip(str)

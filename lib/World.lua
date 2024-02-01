@@ -584,6 +584,27 @@ function World:query(...)
 			return
 		end
 
+		if queryLength == 1 then
+			return entityId, entityData[metatables[1]]
+		elseif queryLength == 2 then
+			return entityId, entityData[metatables[1]], entityData[metatables[2]]
+		elseif queryLength == 3 then
+			return entityId, entityData[metatables[1]], entityData[metatables[2]], entityData[metatables[3]]
+		elseif queryLength == 4 then
+			return entityId,
+				entityData[metatables[1]],
+				entityData[metatables[2]],
+				entityData[metatables[3]],
+				entityData[metatables[4]]
+		elseif queryLength == 5 then
+			return entityId,
+				entityData[metatables[1]],
+				entityData[metatables[2]],
+				entityData[metatables[3]],
+				entityData[metatables[4]],
+				entityData[metatables[5]]
+		end
+
 		for i, metatable in ipairs(metatables) do
 			queryOutput[i] = entityData[metatable]
 		end

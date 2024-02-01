@@ -10,7 +10,7 @@ return function(plasma)
 				[ref] = "label",
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Top,
-				TextSize = 20,
+				TextSize = 15,
 				BorderSizePixel = 0,
 				Font = Enum.Font.Code,
 				TextStrokeTransparency = 0.5,
@@ -20,10 +20,10 @@ return function(plasma)
 				AutomaticSize = Enum.AutomaticSize.XY,
 
 				create("UIPadding", {
-					PaddingBottom = UDim.new(0, 8),
-					PaddingLeft = UDim.new(0, 8),
-					PaddingRight = UDim.new(0, 8),
-					PaddingTop = UDim.new(0, 8),
+					PaddingBottom = UDim.new(0, 4),
+					PaddingLeft = UDim.new(0, 4),
+					PaddingRight = UDim.new(0, 4),
+					PaddingTop = UDim.new(0, 4),
 				}),
 
 				create("UICorner"),
