@@ -110,6 +110,40 @@ return function()
 			expect(nextId).to.equal(6)
 		end)
 
+		it("should allow spawning entities in opposite region, default world", function()
+			local world = World.new()
+
+			local A = component()
+			local id = world:spawnAt(-5, A())
+
+			expect(function()
+				world:spawnAt(-5, A())
+			end).to.throw()
+
+			expect(id).to.equal(-5)
+
+			local nextId = world:spawn(A())
+			expect(nextId).to.equal(1)
+		end)
+
+		it("should allow spawning entities in opposite region, reversed world", function()
+			local world = World.new(true)
+
+			local A = component()
+			local id = world:spawnAt(5, A())
+
+			expect(function()
+				world:spawnAt(5, A())
+			end).to.throw()
+
+			expect(id).to.equal(5)
+
+			local nextId = world:spawn(A())
+			expect(nextId).to.equal(-1)
+			nextId = world:spawn(A())
+			expect(nextId).to.equal(-2)
+		end)
+
 		it("should allow inserting and removing components from existing entities", function()
 			local world = World.new()
 

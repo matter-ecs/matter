@@ -21,8 +21,9 @@ World.__index = World
 
 --[=[
 	Creates a new World.
+	@param isReversed boolean? -- If True, the entity ID will start decreasing from -1.
 ]=]
-function World.new()
+function World.new(isReversed: boolean?)
 	local firstStorage = {}
 
 	return setmetatable({
@@ -45,9 +46,12 @@ function World.new()
 		-- when to update the queryCache.
 		_entityArchetypeCache = {},
 
+		-- If True, the entity ID will start decreasing from -1.
+		_isReversed = isReversed,
+		
 		-- The next ID that will be assigned with World:spawn
-		_nextId = 1,
-
+		_nextId = isReversed and -1 or 1,
+		
 		-- The total number of active entities in the world
 		_size = 0,
 
@@ -152,8 +156,14 @@ function World:spawnAt(id, ...)
 
 	self._size += 1
 
-	if id >= self._nextId then
-		self._nextId = id + 1
+	if self._isReversed then
+		if id <= self._nextId then
+			self._nextId = id - 1
+		end
+	else
+		if id >= self._nextId then
+			self._nextId = id + 1
+		end
 	end
 
 	local components = {}
