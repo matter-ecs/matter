@@ -25,7 +25,7 @@ wally = "UpliftGames/wally@x.x.x"
 
 ```toml title="wally.toml"
 [dependencies]
-matter = "matter-ecs/matter@x.x.x" # Replace x.x.x with the latest version
+matter = "matter-ecs/matter@0.7.0"
 ```
 
 6. Run `wally install`.
