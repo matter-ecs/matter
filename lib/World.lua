@@ -390,6 +390,21 @@ function World:get(id, ...)
 	return unpack(components, 1, length)
 end
 
+local function noop() end
+
+local noopQuery = setmetatable({
+	next = noop,
+	snapshot = noop,
+	without = function(self)
+		return self
+	end,
+	view = noop,
+}, {
+	__iter = function()
+		return noop
+	end,
+})
+
 --[=[
 	Performs a query against the entities in this World. Returns a [QueryResult](/api/QueryResult), which iterates over
 	the results of the query.
@@ -409,21 +424,6 @@ end
 	@param ... Component -- The component types to query. Only entities with *all* of these components will be returned.
 	@return QueryResult -- See [QueryResult](/api/QueryResult) docs.
 ]=]
-
-local function noop() end
-
-local noopQuery = setmetatable({
-	next = noop,
-	snapshot = noop,
-	without = function(self)
-		return self
-	end,
-	view = noop,
-}, {
-	__iter = function()
-		return noop
-	end,
-})
 
 function World:query(...)
 	debug.profilebegin("World:query")
@@ -486,7 +486,7 @@ function World:query(...)
 		self:_markStorageDirty()
 	end
 
-	return QueryResult.new(self, expand, archetype, compatibleArchetypes)
+	return QueryResult.new(self, expand, compatibleArchetypes)
 end
 
 local function cleanupQueryChanged(hookState)
