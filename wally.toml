@@ -1,9 +1,29 @@
 [package]
-name = "evaera/matter"
-version = "0.7.0"
+name = "matter-ecs/matter"
+description = "A modern ECS library for Roblox"
+version = "0.7.1"
+license = "MIT"
+authors = [
+    "Eryn L. K.",
+    "Lucas Gangstad <lucas@lasttalon.dev>",
+    "Ukendio <ukendio@gmail.com>",
+]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
-exclude = ["example", "docs", "Packages", ".moonwave", "build", "pages", "tests", "AttackOfTheKillerRoombas.rbxl", "AttackOfTheKillerRoombas.rbxl.lock", "matter.rbxl", "matter.rbxm", "roblox.toml"]
+exclude = [
+    "example",
+    "docs",
+    "Packages",
+    ".moonwave",
+    "build",
+    "pages",
+    "tests",
+    "AttackOfTheKillerRoombas.rbxl",
+    "AttackOfTheKillerRoombas.rbxl.lock",
+    "matter.rbxl",
+    "matter.rbxm",
+    "roblox.toml",
+]
 
 [dev-dependencies]
 TestEZ = "roblox/testez@0.4.1"
