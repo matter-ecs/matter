@@ -29,6 +29,7 @@ local function formatTable(object, mode, _padLength, _depth)
 	end)
 
 	local count = 0
+	local size = #values
 	for _, entry in values do
 		local key = entry.key
 		local value = entry.value
@@ -40,7 +41,8 @@ local function formatTable(object, mode, _padLength, _depth)
 		end
 
 		if mode == FormatMode.Long then
-			part ..= "\n" .. string.rep("  ", _depth - 1)
+			local spaces = string.rep("  ", _depth - 1)
+			part ..= if count == 0 then spaces else "\n" .. spaces
 		end
 
 		count += 1
@@ -94,7 +96,8 @@ local function formatTable(object, mode, _padLength, _depth)
 	end
 
 	if mode == FormatMode.Long then
-		str ..= "\n" .. string.rep("  ", _depth - 2)
+		local spaces = string.rep("  ", _depth - 1)
+		str ..= if count == size then spaces else "\n" .. spaces
 	end
 
 	if mode == FormatMode.Short or _depth > 1 then

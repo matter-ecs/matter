@@ -67,7 +67,7 @@ Debugger.__index = Debugger
 	@within Debugger
 
 	Create this property in Debugger to specify a function that will be called to determine if a player should be
-	allowed to connect to the server-side debugger.
+	allowed to connect to the server-side debugger. In Studio, this property is ignored.
 
 	If not specified, the default behavior is to allow anyone in Studio and disallow everyone in a live game.
 

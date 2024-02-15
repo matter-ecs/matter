@@ -14,10 +14,10 @@ return function(Plasma)
 			UICorner.Parent = Frame
 
 			local UIPadding = Instance.new("UIPadding")
-			UIPadding.PaddingBottom = UDim.new(0, 20)
-			UIPadding.PaddingLeft = UDim.new(0, 20)
-			UIPadding.PaddingRight = UDim.new(0, 20)
-			UIPadding.PaddingTop = UDim.new(0, 20)
+			UIPadding.PaddingBottom = UDim.new(0, 10)
+			UIPadding.PaddingLeft = UDim.new(0, 10)
+			UIPadding.PaddingRight = UDim.new(0, 10)
+			UIPadding.PaddingTop = UDim.new(0, 10)
 			UIPadding.Parent = Frame
 
 			local UIStroke = Instance.new("UIStroke")
@@ -25,7 +25,6 @@ return function(Plasma)
 
 			local UIListLayout = Instance.new("UIListLayout")
 			UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-			UIListLayout.Padding = UDim.new(0, 10)
 			UIListLayout.Parent = Frame
 
 			local numChildren = #Frame:GetChildren()
