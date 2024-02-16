@@ -4,7 +4,7 @@ return function(Plasma)
 	return Plasma.widget(function(fn, options)
 		options = options or {}
 
-		local padding = options.padding or 10
+		local padding = options.padding or 5
 
 		local refs = Plasma.useInstance(function(ref)
 			return create("Frame", {
