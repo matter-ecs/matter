@@ -464,24 +464,25 @@ function World:query(...)
 		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	local storageIndex = 1
-	local lastEntityId
 	local currentCompatibleArchetype = next(compatibleArchetypes)
-	local seenEntities = {}
+	local lastEntityId
+	local storageIndex = 1
 
 	if self._pristineStorage == self._storages[1] then
 		self:_markStorageDirty()
 	end
 
+	local seenEntities = {}
+
 	local function nextItem()
 		local entityId, entityData
-		local storages = self._storages
 
+		local storages = self._storages
 		repeat
 			local nextStorage = storages[storageIndex]
-
+			local currently = nextStorage[currentCompatibleArchetype]
 			if nextStorage[currentCompatibleArchetype] then
-				entityId, entityData = next(nextStorage[currentCompatibleArchetype], lastEntityId)
+				entityId, entityData = next(currently, lastEntityId)
 			end
 
 			while entityId == nil do
@@ -490,7 +491,7 @@ function World:query(...)
 				if currentCompatibleArchetype == nil then
 					storageIndex += 1
 
-					local nextStorage = self._storages[storageIndex]
+					nextStorage = storages[storageIndex]
 
 					if nextStorage == nil or next(nextStorage) == nil then
 						return
