@@ -15,85 +15,42 @@
 local QueryResult = {}
 QueryResult.__index = QueryResult
 
-function QueryResult.new(world, expand, compatibleArchetypes)
+function QueryResult.new(expand, nextItem)
 	return setmetatable({
-		world = world,
-		seenEntities = {},
-		currentCompatibleArchetype = next(compatibleArchetypes),
-		compatibleArchetypes = compatibleArchetypes,
-		storageIndex = 1,
 		_filter = {},
+		_next = nextItem,
 		_expand = expand,
 	}, QueryResult)
 end
 
-local function nextItem(query)
-	local world = query.world
-	local currentCompatibleArchetype = query.currentCompatibleArchetype
-	local seenEntities = query.seenEntities
-	local compatibleArchetypes = query.compatibleArchetypes
+function QueryResult:__iter()
+	return function()
+		while true do 
+			local entityId, entityData = self._next()
 
-	local entityId, entityData
+			if not entityId then
+				break
+			end
 
-	local storages = world._storages
-	repeat
-		local nextStorage = storages[query.storageIndex]
-		local currently = nextStorage[currentCompatibleArchetype]
-		if currently then
-			entityId, entityData = next(currently, query.lastEntityId)
-		end
-
-		while entityId == nil do
-			currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
-
-			if currentCompatibleArchetype == nil then
-				query.storageIndex += 1
-
-				nextStorage = storages[query.storageIndex]
-
-				if nextStorage == nil or next(nextStorage) == nil then
-					return
+			local skip = false
+			for _, metatable in ipairs(self._filter) do
+				if entityData[metatable] then
+					skip = true
+					break
 				end
+			end
 
-				currentCompatibleArchetype = nil
-
-				if world._pristineStorage == nextStorage then
-					world:_markStorageDirty()
-				end
-
-				continue
-			elseif nextStorage[currentCompatibleArchetype] == nil then
+			if skip then
 				continue
 			end
 
-			entityId, entityData = next(nextStorage[currentCompatibleArchetype])
+			return self._expand(entityId, entityData)
 		end
-
-		query.lastEntityId = entityId
-
-	until seenEntities[entityId] == nil
-
-	query.currentCompatibleArchetype = currentCompatibleArchetype
-
-	seenEntities[entityId] = true
-
-	for _, metatable in query._filter do
-		if entityData[metatable] then
-			return nextItem(query)
-		end
-	end
-
-	return entityId, entityData
-end
-
-function QueryResult:__iter()
-	return function()
-		return self._expand(nextItem(self))
 	end
 end
 
 function QueryResult:__call()
-	return self._expand(nextItem(self))
+	return self._expand(self._next())
 end
 
 --[=[
@@ -123,7 +80,7 @@ end
 	@return ...ComponentInstance -- The requested component values
 ]=]
 function QueryResult:next()
-	return self._expand(nextItem(self))
+	return self._expand(self._next())
 end
 
 local snapshot = {
@@ -172,7 +129,7 @@ function QueryResult:snapshot()
 	local list = setmetatable({}, snapshot)
 
 	local function iter()
-		return nextItem(self)
+		return self._next()
 	end
 
 	for entityId, entityData in iter do
