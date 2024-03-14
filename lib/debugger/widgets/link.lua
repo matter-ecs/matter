@@ -16,8 +16,8 @@ return function(Plasma)
 			local button = create("TextButton", {
 				[ref] = "button",
 				BackgroundTransparency = 1,
+				AutomaticSize = Enum.AutomaticSize.XY,
 				Text = "",
-				Size = UDim2.new(0, 0, 0, 40),
 
 				create("UIPadding", {
 					PaddingBottom = UDim.new(0, 0),
@@ -37,7 +37,7 @@ return function(Plasma)
 					Size = UDim2.new(0, 30, 1, 0),
 					Text = options.icon,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					TextSize = 23,
+					TextSize = 16,
 					TextColor3 = style.textColor,
 					Font = Enum.Font.GothamBold,
 				}),
@@ -50,7 +50,7 @@ return function(Plasma)
 					Text = text,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextColor3 = color,
-					TextSize = 19,
+					TextSize = 14,
 				}),
 
 				Activated = function()
@@ -87,7 +87,7 @@ return function(Plasma)
 		refs.button.Icon.Text = options.icon or ""
 		refs.button.Icon.Visible = not not options.icon
 
-		refs.mainText.Font = options.font or Enum.Font.SourceSans
+		refs.mainText.Font = options.font or Enum.Font.Gotham
 
 		return {
 			clicked = function()
