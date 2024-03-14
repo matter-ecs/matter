@@ -25,7 +25,7 @@ end
 
 function QueryResult:__iter()
 	return function()
-		while true do 
+		while true do
 			local entityId, entityData = self._next()
 
 			if not entityId then
