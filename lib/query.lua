@@ -46,6 +46,7 @@ function QueryResult:__iter()
 
 			return self._expand(entityId, entityData)
 		end
+		return
 	end
 end
 

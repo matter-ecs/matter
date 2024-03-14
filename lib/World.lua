@@ -464,61 +464,59 @@ function World:query(...)
 		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	
 	local storageIndex = 1
 	local lastEntityId
 	local currentCompatibleArchetype = next(compatibleArchetypes)
 	local seenEntities = {}
 
+	if self._pristineStorage == self._storages[1] then
+		self:_markStorageDirty()
+	end
+
 	local function nextItem()
-	
 		local entityId, entityData
-	
 		local storages = self._storages
+
 		repeat
 			local nextStorage = storages[storageIndex]
-			local currently = nextStorage[currentCompatibleArchetype]
-			if currently then
-				entityId, entityData = next(currently, lastEntityId)
+
+			if nextStorage[currentCompatibleArchetype] then
+				entityId, entityData = next(nextStorage[currentCompatibleArchetype], lastEntityId)
 			end
-	
+
 			while entityId == nil do
 				currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
-	
+
 				if currentCompatibleArchetype == nil then
 					storageIndex += 1
-	
-					nextStorage = storages[storageIndex]
-	
+
+					local nextStorage = self._storages[storageIndex]
+
 					if nextStorage == nil or next(nextStorage) == nil then
 						return
 					end
-	
+
 					currentCompatibleArchetype = nil
-	
+
 					if self._pristineStorage == nextStorage then
 						self:_markStorageDirty()
 					end
-	
+
 					continue
 				elseif nextStorage[currentCompatibleArchetype] == nil then
 					continue
 				end
-	
+
 				entityId, entityData = next(nextStorage[currentCompatibleArchetype])
 			end
-	
+
 			lastEntityId = entityId
-	
+
 		until seenEntities[entityId] == nil
-	
+
 		seenEntities[entityId] = true
 
 		return entityId, entityData
-	end
-
-	if self._pristineStorage == self._storages[1] then
-		self:_markStorageDirty()
 	end
 
 	return QueryResult.new(expand, nextItem)
