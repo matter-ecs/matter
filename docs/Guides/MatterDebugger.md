@@ -26,18 +26,20 @@ local function spinSpinners(world, _, ui)
 end
 ```
 
-This is accomplished using [Plasma](https://eryn.io/plasma/), an immediate-mode widget library. The widgets are only created while the debugger is active. Leaving the widget calls in your systems all the time is fine, because calling a widget function when the debugger is not open is a no-op.
+This is accomplished using [Plasma](https://matter-ecs.github.io/plasma/), an immediate-mode widget library. The widgets are only created while the debugger is active. Leaving the widget calls in your systems all the time is fine, because calling a widget function when the debugger is not open is a no-op.
 
-The [Matter example game](https://github.com/evaera/matter/blob/main/example/shared/start.lua) comes with the debugger set up already. If you want to see an example of the debugger already set up in a game, check out that page.
+The [Matter example game](https://github.com/matter-ecs/matter/blob/main/example/shared/start.lua) comes with the debugger set up already. If you want to see an example of the debugger already set up in a game, check out that page.
 
 ## Adding the Matter debugger to your game
 
 ### Installing Plasma
-You need to install [Plasma](https://eryn.io/plasma/) as a dependency to your project. We recommend you do this with [Wally](https://wally.run), the Roblox open source package manager.
+You need to install [Plasma](https://matter-ecs.github.io/plasma/) as a dependency to your project. We recommend you do this with [Wally](https://wally.run), the Roblox open source package manager.
+
+To find the latest version of Plasma, check out [this page](https://wally.run/package/matter-ecs/plasma) or run `wally search matter-ecs`.
 
 ```toml title="wally.toml"
 [dependencies]
-plasma = "evaera/plasma@0.4.2"
+plasma = "matter-ecs/plasma@0.4.2"
 ```
 
 ### Create the debugger
@@ -145,7 +147,7 @@ The following Plasma widgets are available:
 - table
 - window
 
-For details on these widgets, check out the [Plasma docs](https://eryn.io/plasma/api/Plasma)
+For details on these widgets, check out the [Plasma docs](https://matter-ecs.github.io/plasma/api/Plasma)
 
 ## Demo videos
 

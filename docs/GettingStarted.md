@@ -7,7 +7,7 @@ sidebar_position: 4
 :::tip
 We **highly recommend** checking out the source code of our example game to see what this all looks like when set up in a real game. Clone the repo, build the project, open it up in your favorite editor and get some first hand experience. There's no better way to learn!
 
-See the [`/example` directory in the matter repo](https://github.com/evaera/matter/tree/main/example/).
+See the [`/example` directory in the matter repo](https://github.com/matter-ecs/matter/tree/main/example/).
 :::
 
 ## Scaffolding a new project
@@ -91,4 +91,4 @@ value, so we don't have to mutate the existing component.
 ## Next steps
 You should dive in to the [API reference](/api/Matter)! The Matter API is simple and documented in detail.
 
-And if you haven't already, check out the [`/example` directory in the matter repo](https://github.com/evaera/matter/tree/main/example/).
+And if you haven't already, check out the [`/example` directory in the matter repo](https://github.com/matter-ecs/matter/tree/main/example/).

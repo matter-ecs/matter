@@ -26,7 +26,7 @@ Reconciliation, in this context, means taking state from one form and turning it
 
 When writing code in an ECS like Matter, it's ideal for all of our gameplay code to operate on the ECS world alone. In the Matter example game, for example, there are ships that fly to certain points in space. For example, instead of updating the ships in the Data Model directly, we store the current goal position in the Ship component. The Ship component knows nothing about the Data Model. It has no reference to the physical ship Instance in the Data Model, it only contains the state about the ship.
 
-We can create another component (in the [Matter example game](https://github.com/evaera/matter/tree/main/example), we call it `Model`) that holds a reference to the ship Instance.
+We can create another component (in the [Matter example game](https://github.com/matter-ecs/matter/tree/main/example), we call it `Model`) that holds a reference to the ship Instance.
 
 We can loop over all Ships that don't also have a Model, and create one for it.
 
@@ -116,7 +116,7 @@ We can make a system that handles both of these cases for us.
 for id, transformRecord in world:queryChanged(Transform) do
 
 	local model = world:get(id, Model)
-	
+
 	-- Take care to ignore the changed event if it was us that triggered it
 	if model and transformRecord.new and not transformRecord.new.doNotReconcile then
 		model.instance:SetPrimaryPartCFrame(transformRecord.new.cframe)
@@ -127,7 +127,7 @@ end
 for id, modelRecord in world:queryChanged(Model) do
 
 	local transform = world:get(id, Transform)
-	
+
 	if transform and modelRecord.new then
 		modelRecord.new.model:SetPrimaryPartCFrame(transform.cframe)
 	end
