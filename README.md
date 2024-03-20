@@ -10,6 +10,9 @@
   <a href="https://matter-ecs.github.io/matter/">
 		<img src="https://github.com/matter-ecs/matter/actions/workflows/docs.yaml/badge.svg" alt="Docs status">
 	</a>
+  <a href="https://discord.gg/6cvzthZC4X">
+    <img src="https://dcbadge.vercel.app/api/server/6cvzthZC4X?style=flat" alt="OSS Discord">
+  </a>
 </div>
 <br>
 
