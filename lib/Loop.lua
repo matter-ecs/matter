@@ -18,14 +18,6 @@ local function systemName(system: System)
 	return debug.info(fn, "s") .. "->" .. debug.info(fn, "n")
 end
 
-local function systemPriority(system: System)
-	if type(system) == "table" then
-		return system.priority or 0
-	end
-
-	return 0
-end
-
 --[=[
 	@class Loop
 
@@ -222,9 +214,44 @@ function Loop:replaceSystem(old: System, new: System)
 end
 
 local function orderSystemsByDependencies(unscheduledSystems: { System })
-	local sortedUnscheduledSystems = table.clone(unscheduledSystems)
+	local systemPriorityMap = {}
+	local visiting = "v"
 
-	table.sort(sortedUnscheduledSystems, function(a, b)
+	local function systemPriority(system: System)
+		local priority = systemPriorityMap[system]
+
+		if not priority then
+			priority = 0
+
+			systemPriorityMap[system] = visiting
+
+			if type(system) == "table" then
+				if system.after then
+					for _, dependency in system.after do
+						if systemPriorityMap[dependency] ~= visiting then
+							priority = math.max(priority, systemPriority(dependency) + 1)
+						else
+							error(
+								`Unable to get system priority due to cyclic dependency between: \n{systemName(system)} \nAND \n{systemName(
+									dependency
+								)}`
+							)
+						end
+					end
+				elseif system.priority then
+					priority = system.priority
+				end
+			end
+
+			systemPriorityMap[system] = priority
+		end
+
+		return priority
+	end
+
+	local scheduledSystems = table.clone(unscheduledSystems)
+
+	table.sort(scheduledSystems, function(a, b)
 		local priorityA = systemPriority(a)
 		local priorityB = systemPriority(b)
 
@@ -241,39 +268,6 @@ local function orderSystemsByDependencies(unscheduledSystems: { System })
 
 		return priorityA < priorityB
 	end)
-
-	local scheduledSystemsSet = {}
-	local scheduledSystems = {}
-
-	local visited, explored = 1, 2
-
-	local function scheduleSystem(system)
-		scheduledSystemsSet[system] = visited
-
-		if type(system) == "table" and system.after then
-			for _, dependency in system.after do
-				if scheduledSystemsSet[dependency] == nil then
-					scheduleSystem(dependency)
-				elseif scheduledSystemsSet[dependency] == visited then
-					error(
-						`Unable to schedule systems due to cyclic dependency between: \n{systemName(system)} \nAND \n{systemName(
-							dependency
-						)}`
-					)
-				end
-			end
-		end
-
-		scheduledSystemsSet[system] = explored
-
-		table.insert(scheduledSystems, system)
-	end
-
-	for _, system in sortedUnscheduledSystems do
-		if scheduledSystemsSet[system] == nil then
-			scheduleSystem(system)
-		end
-	end
 
 	return scheduledSystems
 end
@@ -304,9 +298,7 @@ function Loop:_sortSystems()
 						error(
 							`Unable to schedule "{systemName(system)}" because the system "{systemName(dependency)}" is not scheduled.\n\nEither schedule "{systemName(
 								dependency
-							)}" before "{systemName(
-								system
-							)}" or consider scheduling these systems together with Loop:scheduleSystems`
+							)}" before "{systemName(system)}" or consider scheduling these systems together with Loop:scheduleSystems`
 						)
 					end
 				end
