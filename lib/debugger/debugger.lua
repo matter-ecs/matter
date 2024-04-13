@@ -158,6 +158,7 @@ function Debugger.new(plasma)
 		_eventBridge = EventBridge.new(function(...)
 			remoteEvent:FireClient(...)
 		end),
+		_playersUsingDebugger = {},
 		_customWidgets = {},
 	}, Debugger)
 
@@ -292,6 +293,7 @@ function Debugger:connectPlayer(player)
 	end
 
 	self._eventBridge:connectPlayer(player)
+	self._playersUsingDebugger[player] = true
 end
 
 function Debugger:disconnectPlayer(player)
@@ -300,6 +302,7 @@ function Debugger:disconnectPlayer(player)
 	end
 
 	self._eventBridge:disconnectPlayer(player)
+	self._playersUsingDebugger[player] = nil
 
 	if #self._eventBridge.players == 0 then
 		self:_disable()
