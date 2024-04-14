@@ -16,7 +16,6 @@ return function(Plasma)
 			local button = create("TextButton", {
 				[ref] = "button",
 				BackgroundTransparency = 1,
-				AutomaticSize = Enum.AutomaticSize.XY,
 				Text = "",
 
 				create("UIPadding", {
