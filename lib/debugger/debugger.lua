@@ -334,6 +334,7 @@ function Debugger:autoInitialize(loop)
 	parent.DisplayOrder = 2 ^ 31 - 1
 	parent.ResetOnSpawn = false
 	parent.IgnoreGuiInset = true
+	parent.AutoLocalize = false
 
 	if IS_CLIENT then
 		parent.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
