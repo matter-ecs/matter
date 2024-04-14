@@ -9,6 +9,7 @@ return function(Plasma)
 			Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 			Frame.Size = UDim2.new(0, 50, 0, 40)
 			Frame.Visible = false
+			Frame.AutoLocalize = false
 
 			local UICorner = Instance.new("UICorner")
 			UICorner.Parent = Frame
