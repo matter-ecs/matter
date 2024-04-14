@@ -231,11 +231,13 @@ local function orderSystemsByDependencies(unscheduledSystems: { System })
 						if systemPriorityMap[dependency] ~= visiting then
 							priority = math.max(priority, systemPriority(dependency) + 1)
 						else
-							error(
-								`Unable to get system priority due to cyclic dependency between: \n{systemName(system)} \nAND \n{systemName(
+							local errorStatement = {
+								`Cyclic dependency detected: System '{systemName(system)}' is set to execute after System '{systemName(
 									dependency
-								)}`
-							)
+								)}', and vice versa. This creates a loop that prevents the systems from being able to execute in a valid order.`,
+								"To resolve this issue, reconsider the dependencies between these systems. One possible solution is to update the 'after' field from one of the systems.",
+							}
+							error(table.concat(errorStatement, "\n"))
 						end
 					end
 				elseif system.priority then
