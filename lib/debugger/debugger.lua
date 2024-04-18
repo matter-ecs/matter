@@ -116,7 +116,7 @@ Debugger.__index = Debugger
 ]=]
 
 --[=[
-  @prop loopParameterNames {string}
+	@prop loopParameterNames {string}
 	@within Debugger
 
 	Create this property in Debugger to specify the names of the parameters to your Loop constructor. This is used to
@@ -126,7 +126,7 @@ Debugger.__index = Debugger
 
 	```lua
 	debugger.loopParameterNames = {"World", "State", "Widgets"}
-  ```
+	```
 ]=]
 
 --[=[
