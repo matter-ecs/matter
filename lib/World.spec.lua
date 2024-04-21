@@ -138,6 +138,24 @@ return function()
 			expect(world:size()).to.equal(1)
 		end)
 
+		it("should not find any entities", function()
+			local world = World.new()
+
+			local Hello = component()
+			local Bob = component()
+			local Shirley = component()
+
+			local _helloBob = world:spawn(Hello(), Bob())
+			local _helloShirley = world:spawn(Hello(), Shirley())
+
+			local withoutCount = 0
+			for _ in world:query(Hello):without(Bob, Shirley) do
+				withoutCount += 1
+			end
+
+			expect(withoutCount).to.equal(0)
+		end)
+
 		it("should be queryable", function()
 			local world = World.new()
 
@@ -505,9 +523,10 @@ return function()
 				})
 			)
 
-			local snapshot = world:query(Health, Player):snapshot()
+			local query = world:query(Health, Player)
+			local snapshot = query:snapshot()
 
-			for entityId, health, player in world:query(Health, Player):snapshot() do
+			for entityId, health, player in snapshot do
 				expect(type(entityId)).to.equal("number")
 				expect(type(player.name)).to.equal("string")
 				expect(type(health.value)).to.equal("number")
@@ -521,6 +540,8 @@ return function()
 			else
 				expect(snapshot[2][1]).to.equal(1)
 			end
+
+			expect(#world:query(Player):without(Poison):snapshot()).to.equal(1)
 		end)
 
 		it("should not invalidate iterators", function()
