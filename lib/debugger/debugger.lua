@@ -132,7 +132,7 @@ Debugger.__index = Debugger
 --[=[
 	Creates a new Debugger.
 
-	You need to depend on [Plasma](https://eryn.io/plasma/) in your project and pass a handle to it here.
+	You need to depend on [Plasma](https://matter-ecs.github.io/plasma/) in your project and pass a handle to it here.
 
 	@param plasma Plasma -- The instance of Plasma used in your game.
 	@return Debugger
@@ -481,7 +481,7 @@ end
 --[=[
 	Returns a handle to the debug widgets you can pass to your systems.
 
-	All [plasma widgets](https://eryn.io/plasma/api/Plasma#arrow) are available under this namespace.
+	All [plasma widgets](https://matter-ecs.github.io/plasma/api/Plasma#widgets) are available under this namespace.
 
 	```lua
 	-- ...

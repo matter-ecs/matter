@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Using CollectionService tags
 
-As a pure ECS first and foremost, Matter provides no special functionality for CollectionService tags out of the box. However, it's rather simple to implement this yourself. Here's an example taken from the official [Matter example game](https://github.com/evaera/matter/tree/main/example/server).
+As a pure ECS first and foremost, Matter provides no special functionality for CollectionService tags out of the box. However, it's rather simple to implement this yourself. Here's an example taken from the official [Matter example game](https://github.com/matter-ecs/matter/tree/main/example/src/server).
 
 ```lua
 local CollectionService = game:GetService("CollectionService")
