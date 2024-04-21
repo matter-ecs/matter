@@ -12,6 +12,7 @@ return function(Plasma)
 				BackgroundTransparency = 1,
 				Position = UDim2.new(0, 0, 0, 0),
 				Size = UDim2.new(1, 0, 1, 0),
+				AutoLocalize = false,
 
 				create("UIPadding", {
 					PaddingTop = UDim.new(0, options.marginTop or 0),
