@@ -77,10 +77,12 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
+        permissions:
+          contents: write
         with:
-          name: Matter ${{ github.ref }}
+          name: Matter ${{ github.ref_name }}
           body: |
-            Matter ${{ github.ref }} is now available!
+            Matter ${{ github.ref_name }} is now available!
           files: |
             matter.rbxm
             AttackOfTheKillerRoombas.rbxl

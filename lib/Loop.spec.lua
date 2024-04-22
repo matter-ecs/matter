@@ -164,6 +164,48 @@ return function()
 			connection.default:Disconnect()
 		end)
 
+		it("should call systems in order with dependent system after priority system", function()
+			local loop = Loop.new()
+
+			local order = {}
+			local systemB = {
+				system = function()
+					table.insert(order, "b")
+				end,
+			}
+			local systemC = {
+				system = function()
+					table.insert(order, "c")
+				end,
+				priority = 1000,
+			}
+			local systemA = {
+				system = function()
+					table.insert(order, "a")
+				end,
+				after = { systemC },
+			}
+
+			loop:scheduleSystems({
+				systemB,
+				systemC,
+				systemA,
+			})
+
+			local connection = loop:begin({ default = bindable.Event })
+
+			expect(#order).to.equal(0)
+
+			bindable:Fire()
+
+			expect(#order).to.equal(3)
+			expect(order[1]).to.equal("b")
+			expect(order[2]).to.equal("c")
+			expect(order[3]).to.equal("a")
+
+			connection.default:Disconnect()
+		end)
+
 		it("should not schedule systems more than once", function()
 			local loop = Loop.new()
 
