@@ -630,7 +630,7 @@ end
 
 	Provides random access to the results of a query.
 
-	Calling the View is equivalent iterating a query. 
+	Calling the View is equivalent to iterating a query. 
 
 	```lua
 	for id, player, health, poison in world:query(Player, Health, Poison):view() do
