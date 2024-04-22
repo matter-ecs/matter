@@ -662,10 +662,9 @@ function QueryResult:view()
 
 	local fetches = {}
 	local list = {} :: any
-	
+
 	local View = {}
 	View.__index = View
-
 
 	function View:__iter()
 		local current = list.head
