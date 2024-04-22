@@ -692,6 +692,19 @@ function QueryResult:view()
 		end
 
 		local fetch = fetches[entity]
+		local queryLength = fetch.n
+
+		if queryLength == 1 then
+			return fetch[1]
+		elseif queryLength == 2 then
+			return fetch[1], fetch[2]
+		elseif queryLength == 3 then
+			return fetch[1], fetch[2], fetch[3]
+		elseif queryLength == 4 then
+			return fetch[1], fetch[2], fetch[3], fetch[4]
+		elseif queryLength == 5 then
+			return fetch[1], fetch[2], fetch[3], fetch[4], fetch[5]
+		end
 
 		return unpack(fetch, 1, fetch.n)
 	end
