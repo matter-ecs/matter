@@ -630,7 +630,7 @@ end
 
 	Provides random access to the results of a query.
 
-	Calling the table is equivalent iterating a query. 
+	Calling the View is equivalent iterating a query. 
 
 	```lua
 	for id, player, health, poison in world:query(Player, Health, Poison):view() do
@@ -638,53 +638,6 @@ end
 	end
 	```
 ]=]
-
-local View = {}
-View.__index = View
-
-function View.new()
-	return setmetatable({
-		fetches = {},
-	}, View)
-end
-
-function View:__iter()
-	local current = self.head
-	return function()
-		if current then
-			local entity = current.entity
-			local fetch = self.fetches[entity]
-			current = current.next
-
-			return entity, unpack(fetch, 1, fetch.n)
-		end
-	end
-end
-
---[=[
-	Retrieve the query results to corresponding `entity`
-	@param entity number - the entity ID
-	@return ...ComponentInstance
-]=]
-function View:get(entity)
-	if not self:contains(entity) then
-		return
-	end
-
-	local fetch = self.fetches[entity]
-
-	return unpack(fetch, 1, fetch.n)
-end
-
---[=[
-	Equivalent to `world:contains()`	
-	@param entity number - the entity ID
-	@return boolean 
-]=]
-
-function View:contains(entity)
-	return self.fetches[entity] ~= nil
-end
 
 --[=[
 	Creates a View of the query and does all of the iterator tasks at once at an amortized cost.
@@ -704,21 +657,69 @@ end
 
 function QueryResult:view()
 	local function iter()
-		return self._next()
+		return nextItem(self)
 	end
 
-	local view = View.new()
+	local fetches = {}
+	local list = {} :: any
+	
+	local View = {}
+	View.__index = View
+
+
+	function View:__iter()
+		local current = list.head
+		return function()
+			if not current then
+				return
+			end
+			local entity = current.entity
+			local fetch = fetches[entity]
+			current = current.next
+
+			return entity, unpack(fetch, 1, fetch.n)
+		end
+	end
+
+	--[=[
+		@within View
+			Retrieve the query results to corresponding `entity`
+		@param entity number - the entity ID
+		@return ...ComponentInstance
+	]=]
+	function View:get(entity)
+		if not self:contains(entity) then
+			return
+		end
+
+		local fetch = fetches[entity]
+
+		return unpack(fetch, 1, fetch.n)
+	end
+
+	--[=[
+		@within View
+		Equivalent to `world:contains()`	
+		@param entity number - the entity ID
+		@return boolean 
+	]=]
+
+	function View:contains(entity)
+		return fetches[entity] ~= nil
+	end
 
 	for entityId, entityData in iter do
 		if entityId then
 			-- We start at 2 on Select since we don't need want to pack the entity id.
 			local fetch = table.pack(select(2, self._expand(entityId, entityData)))
 			local node = { entity = entityId, next = nil }
-			view.fetches[entityId] = fetch
-			if not view.head then
-				view.head = node
+
+			fetches[entityId] = fetch
+
+			if not list.head then
+				list.head = node
 			else
-				local current = view.head
+				local current = list.head
 				while current.next do
 					current = current.next
 				end
@@ -727,7 +728,7 @@ function QueryResult:view()
 		end
 	end
 
-	return view
+	return setmetatable({}, View)
 end
 
 --[=[
