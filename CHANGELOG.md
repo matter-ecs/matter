@@ -10,6 +10,23 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+
+## [0.8.0] - 2024-04-22
+
+### Changed
+- Added `Views` for random-accessing entities within queries. 
+  - Views are optimized for terse indexing, making them useful for traversing graphs of entities.
+- Added `Debugger.loopParameterNames` which allows for labelling things passed to Loop.
+- Disabled `AutoLocalize` on many Plasma Widgets.
+  - This removes unnecessary computations for `LocalizationService::attemptLocalization`.
+- Improved `QueryResult:without` to narrow archetype invariants.
+  - The filter now works on the archetype-level rather than filtering entities
+    ad-hoc which will immensely improve query performance.
+    
+### Fixed
+
+- Fixed the Scheduler not respecting priorties of systems.
+- Fixed padding of items in the Debugger's state view.
 ## [0.7.1] - 2024-01-31
 
 ### Changed
