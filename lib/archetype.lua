@@ -57,14 +57,18 @@ function archetypeOf(...)
 end
 
 function areArchetypesCompatible(queryArchetype, targetArchetype)
+	local archetypes = string.split(queryArchetype, "x")
+	local baseArchetype = table.remove(archetypes, 1)
+
 	local cachedCompatibility = compatibilityCache[queryArchetype .. "-" .. targetArchetype]
 	if cachedCompatibility ~= nil then
 		return cachedCompatibility
 	end
 	debug.profilebegin("areArchetypesCompatible")
 
-	local queryIds = string.split(queryArchetype, "_")
+	local queryIds = string.split(baseArchetype, "_")
 	local targetIds = toSet(string.split(targetArchetype, "_"))
+	local excludeIds = toSet(archetypes)
 
 	for _, queryId in ipairs(queryIds) do
 		if targetIds[queryId] == nil then
@@ -74,6 +78,14 @@ function areArchetypesCompatible(queryArchetype, targetArchetype)
 		end
 	end
 
+	for excludeId in excludeIds do 
+		if targetIds[excludeId] then 
+			compatibilityCache[queryArchetype .. "-" .. targetArchetype] = false
+			debug.profileend()
+			return false
+		end
+	end
+	
 	compatibilityCache[queryArchetype .. "-" .. targetArchetype] = true
 
 	debug.profileend()

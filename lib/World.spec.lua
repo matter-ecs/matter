@@ -41,6 +41,30 @@ end
 
 return function()
 	describe("World", function()
+		it("should find entities V2", function()
+            local world = World.new()
+
+            local Character = component("Character")
+            local LocalOwned = component("LocalOwned")
+
+            local _helloBob = world:spawn(Character(), LocalOwned())
+
+            local withoutCount = 0
+            for _ in world:query(Character):without(LocalOwned) do
+                withoutCount += 1
+            end
+
+            expect(withoutCount).to.equal(0)
+
+            world:remove(_helloBob, LocalOwned)
+
+            local withoutCount = 0
+            for _ in world:query(Character):without(LocalOwned) do
+                withoutCount += 1
+            end
+
+            expect(withoutCount).to.equal(1)
+        end)
 		it("should be iterable", function()
 			local world = World.new()
 			local A = component()

@@ -192,27 +192,9 @@ function World:_newQueryArchetype(queryArchetype)
 
 	for _, storage in self._storages do
 		for entityArchetype in storage do
-			local archetypes = string.split(queryArchetype, "x")
-			local baseArchetype = table.remove(archetypes, 1)
-
-			if not areArchetypesCompatible(baseArchetype, entityArchetype) then
-				continue
+			if areArchetypesCompatible(queryArchetype, entityArchetype) then
+				self._queryCache[queryArchetype][entityArchetype] = true
 			end
-
-			local skip = false
-
-			for _, exclude in archetypes do
-				if areArchetypesCompatible(exclude, entityArchetype) then
-					skip = true
-					break
-				end
-			end
-
-			if skip then
-				continue
-			end
-
-			self._queryCache[queryArchetype][entityArchetype] = true
 		end
 	end
 end
@@ -615,6 +597,7 @@ function QueryResult:without(...)
 	local negativeArchetype = `{self._queryArchetype}x{filter}`
 
 	if world._queryCache[negativeArchetype] == nil then
+		print("please")
 		world:_newQueryArchetype(negativeArchetype)
 	end
 
