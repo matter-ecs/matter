@@ -23,5 +23,15 @@ return function()
 			expect(archetype.areArchetypesCompatible(archetypeC, archetypeA)).to.equal(true)
 			expect(archetype.areArchetypesCompatible(archetypeB, archetypeC)).to.equal(false)
 		end)
+		it("should identify compatible archetypes with negations", function()
+			local a = component()
+			local b = component()
+			local c = component()
+
+			local archetypeAB = archetype.archetypeOf(a, b)
+			local negativeArchetypeBC = archetype.negateArchetypeOf(b, c)
+
+			expect(archetype.areArchetypesCompatible(negativeArchetypeBC, archetypeAB)).to.equal(true)
+		end)
 	end)
 end

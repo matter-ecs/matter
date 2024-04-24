@@ -5,6 +5,7 @@ local Component = require(script.Parent.component)
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
 local archetypeOf = archetypeModule.archetypeOf
+local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
@@ -592,12 +593,11 @@ end
 
 function QueryResult:without(...)
 	local world = self.world
-	local filter = string.gsub(archetypeOf(...), "_", "x")
+	local filter = negateArchetypeOf(...)
 
 	local negativeArchetype = `{self._queryArchetype}x{filter}`
 
 	if world._queryCache[negativeArchetype] == nil then
-		print("please")
 		world:_newQueryArchetype(negativeArchetype)
 	end
 

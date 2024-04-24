@@ -56,6 +56,10 @@ function archetypeOf(...)
 	return archetype
 end
 
+function negateArchetypeOf(...)
+	return string.gsub(archetypeOf(...), "_", "x")
+end
+
 function areArchetypesCompatible(queryArchetype, targetArchetype)
 	local archetypes = string.split(queryArchetype, "x")
 	local baseArchetype = table.remove(archetypes, 1)
@@ -78,14 +82,14 @@ function areArchetypesCompatible(queryArchetype, targetArchetype)
 		end
 	end
 
-	for excludeId in excludeIds do 
-		if targetIds[excludeId] then 
+	for excludeId in excludeIds do
+		if targetIds[excludeId] then
 			compatibilityCache[queryArchetype .. "-" .. targetArchetype] = false
 			debug.profileend()
 			return false
 		end
 	end
-	
+
 	compatibilityCache[queryArchetype .. "-" .. targetArchetype] = true
 
 	debug.profileend()
@@ -94,5 +98,6 @@ end
 
 return {
 	archetypeOf = archetypeOf,
+	negateArchetypeOf = negateArchetypeOf,
 	areArchetypesCompatible = areArchetypesCompatible,
 }
