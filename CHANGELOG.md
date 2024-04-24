@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+- `QueryResult:without` now correctly matches against entity archetype after cache has been invalidated from transitioning archetype.
 
 ## [0.8.0] - 2024-04-22
 
