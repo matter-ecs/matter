@@ -299,6 +299,40 @@ return function()
 			expect(runCount).to.equal(2)
 		end)
 
+		it("should find entity without and with component", function()
+			local world = World.new()
+
+			local Character = component("Character")
+			local LocalOwned = component("LocalOwned")
+
+			local _helloBob = world:spawn(Character(), LocalOwned())
+
+			local withoutCount = 0
+			for _ in world:query(Character):without(LocalOwned) do
+				withoutCount += 1
+			end
+
+			expect(withoutCount).to.equal(0)
+
+			world:remove(_helloBob, LocalOwned)
+
+			local withoutCount = 0
+			for _ in world:query(Character):without(LocalOwned) do
+				withoutCount += 1
+			end
+
+			expect(withoutCount).to.equal(1)
+
+			world:insert(_helloBob, LocalOwned())
+
+			local withoutCount = 0
+			for _ in world:query(Character):without(LocalOwned) do
+				withoutCount += 1
+			end
+
+			expect(withoutCount).to.equal(0)
+		end)
+
 		it("should track changes", function()
 			local world = World.new()
 

@@ -5,6 +5,7 @@ local Component = require(script.Parent.component)
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
 local archetypeOf = archetypeModule.archetypeOf
+local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
@@ -192,27 +193,9 @@ function World:_newQueryArchetype(queryArchetype)
 
 	for _, storage in self._storages do
 		for entityArchetype in storage do
-			local archetypes = string.split(queryArchetype, "x")
-			local baseArchetype = table.remove(archetypes, 1)
-
-			if not areArchetypesCompatible(baseArchetype, entityArchetype) then
-				continue
+			if areArchetypesCompatible(queryArchetype, entityArchetype) then
+				self._queryCache[queryArchetype][entityArchetype] = true
 			end
-
-			local skip = false
-
-			for _, exclude in archetypes do
-				if areArchetypesCompatible(exclude, entityArchetype) then
-					skip = true
-					break
-				end
-			end
-
-			if skip then
-				continue
-			end
-
-			self._queryCache[queryArchetype][entityArchetype] = true
 		end
 	end
 end
@@ -610,7 +593,7 @@ end
 
 function QueryResult:without(...)
 	local world = self.world
-	local filter = string.gsub(archetypeOf(...), "_", "x")
+	local filter = negateArchetypeOf(...)
 
 	local negativeArchetype = `{self._queryArchetype}x{filter}`
 
