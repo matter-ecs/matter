@@ -98,5 +98,8 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.3.0
 
+      - name: Wally Login
+        run: wally login --token ${{ secrets.WALLY_AUTH_TOKEN }}
+
       - name: Publish
-        run: wally publish --token ${{ secrets.WALLY_AUTH_TOKEN }}
+        run: wally publish
