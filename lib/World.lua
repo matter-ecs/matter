@@ -5,6 +5,7 @@ local Component = require(script.Parent.component)
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
 local archetypeOf = archetypeModule.archetypeOf
+local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
@@ -192,27 +193,9 @@ function World:_newQueryArchetype(queryArchetype)
 
 	for _, storage in self._storages do
 		for entityArchetype in storage do
-			local archetypes = string.split(queryArchetype, "x")
-			local baseArchetype = table.remove(archetypes, 1)
-
-			if not areArchetypesCompatible(baseArchetype, entityArchetype) then
-				continue
+			if areArchetypesCompatible(queryArchetype, entityArchetype) then
+				self._queryCache[queryArchetype][entityArchetype] = true
 			end
-
-			local skip = false
-
-			for _, exclude in archetypes do
-				if areArchetypesCompatible(exclude, entityArchetype) then
-					skip = true
-					break
-				end
-			end
-
-			if skip then
-				continue
-			end
-
-			self._queryCache[queryArchetype][entityArchetype] = true
 		end
 	end
 end
@@ -610,7 +593,7 @@ end
 
 function QueryResult:without(...)
 	local world = self.world
-	local filter = string.gsub(archetypeOf(...), "_", "x")
+	local filter = negateArchetypeOf(...)
 
 	local negativeArchetype = `{self._queryArchetype}x{filter}`
 
@@ -623,6 +606,124 @@ function QueryResult:without(...)
 	self.compatibleArchetypes = compatibleArchetypes
 	self.currentCompatibleArchetype = next(compatibleArchetypes)
 	return self
+end
+
+--[=[
+	@class View
+
+	Provides random access to the results of a query.
+
+	Calling the View is equivalent to iterating a query. 
+
+	```lua
+	for id, player, health, poison in world:query(Player, Health, Poison):view() do
+		-- Do something
+	end
+	```
+]=]
+
+--[=[
+	Creates a View of the query and does all of the iterator tasks at once at an amortized cost.
+	This is used for many repeated random access to an entity. If you only need to iterate, just use a query.
+
+	```lua
+	local inflicting = world:query(Damage, Hitting, Player):view()
+	for _, source in world:query(DamagedBy) do
+		local damage = inflicting:get(source.from)
+	end
+
+	for _ in world:query(Damage):view() do end -- You can still iterate views if you want!
+	```
+	
+	@return View See [View](/api/View) docs.
+]=]
+
+function QueryResult:view()
+	local function iter()
+		return nextItem(self)
+	end
+
+	local fetches = {}
+	local list = {} :: any
+
+	local View = {}
+	View.__index = View
+
+	function View:__iter()
+		local current = list.head
+		return function()
+			if not current then
+				return
+			end
+			local entity = current.entity
+			local fetch = fetches[entity]
+			current = current.next
+
+			return entity, unpack(fetch, 1, fetch.n)
+		end
+	end
+
+	--[=[
+		@within View
+			Retrieve the query results to corresponding `entity`
+		@param entity number - the entity ID
+		@return ...ComponentInstance
+	]=]
+	function View:get(entity)
+		if not self:contains(entity) then
+			return
+		end
+
+		local fetch = fetches[entity]
+		local queryLength = fetch.n
+
+		if queryLength == 1 then
+			return fetch[1]
+		elseif queryLength == 2 then
+			return fetch[1], fetch[2]
+		elseif queryLength == 3 then
+			return fetch[1], fetch[2], fetch[3]
+		elseif queryLength == 4 then
+			return fetch[1], fetch[2], fetch[3], fetch[4]
+		elseif queryLength == 5 then
+			return fetch[1], fetch[2], fetch[3], fetch[4], fetch[5]
+		end
+
+		return unpack(fetch, 1, fetch.n)
+	end
+
+	--[=[
+		@within View
+		Equivalent to `world:contains()`	
+		@param entity number - the entity ID
+		@return boolean 
+	]=]
+
+	function View:contains(entity)
+		return fetches[entity] ~= nil
+	end
+
+	for entityId, entityData in iter do
+		if entityId then
+			-- We start at 2 on Select since we don't need want to pack the entity id.
+			local fetch = table.pack(select(2, self._expand(entityId, entityData)))
+			local node = { entity = entityId, next = nil }
+
+			fetches[entityId] = fetch
+
+			if not list.head then
+				list.head = node
+			else
+				local current = list.head
+				while current.next do
+					current = current.next
+				end
+				current.next = node
+			end
+		end
+	end
+
+	return setmetatable({}, View)
 end
 
 --[=[
