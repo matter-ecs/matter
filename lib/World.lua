@@ -8,9 +8,13 @@ local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
+local ERROR_DUPLICATE_ENTITY =
+	"The world already contains an entity with ID %d. Use World:replace instead if this is intentional."
 
 type i53 = number
 type i24 = number
+
+type Component = { [any]: any }
 
 type Ty = { i53 }
 type ArchetypeId = number
@@ -232,7 +236,7 @@ local function archetypeTraverseAdd(world: World, componentId: i53, archetype: A
 end
 
 local function componentAdd(world: World, entityId: i53, component)
-	local componentId = #component
+	local componentId = #getmetatable(component)
 
 	local record = world:ensureRecord(entityId)
 	local sourceArchetype = record.archetype
@@ -388,13 +392,7 @@ end
 
 function World.spawnAt(world: World, entityId: i53, ...)
 	if world:contains(entityId) then
-		error(
-			string.format(
-				"The world already contains an entity with ID %d. Use World:replace instead if this is intentional.",
-				entityId
-			),
-			2
-		)
+		error(string.format(ERROR_DUPLICATE_ENTITY, entityId), 2)
 	end
 
 	if entityId >= world.nextId then
@@ -429,7 +427,7 @@ end
 	end
 end]]
 
-function World.query(world: World, ...: () -> () -> i53): () -> (number, ...any)
+function World.query(world: World, ...: Component): () -> (number, ...any)
 	local compatibleArchetypes = {}
 	local components = { ... }
 	local archetypes = world.archetypes
@@ -437,7 +435,7 @@ function World.query(world: World, ...: () -> () -> i53): () -> (number, ...any)
 	local a: any, b: any, c: any, d: any, e: any = ...
 
 	if queryLength == 1 then
-		a = a()()
+		a = a()
 		local archetypesMap = world.componentIndex[a]
 		components = { a }
 		local function single()
@@ -462,9 +460,11 @@ function World.query(world: World, ...: () -> () -> i53): () -> (number, ...any)
 		end
 		return single()
 	elseif queryLength == 2 then
-		a = a()()
-		b = b()()
+		a = #a
+		b = #b
 		components = { a, b }
+
+		--print(a, b, world.componentIndex)
 		local archetypesMap = world.componentIndex[a]
 		for id in archetypesMap do
 			local archetype = archetypes[id]
@@ -496,27 +496,27 @@ function World.query(world: World, ...: () -> () -> i53): () -> (number, ...any)
 		end
 		return double()
 	elseif queryLength == 3 then
-		a = a()()
-		b = b()()
-		c = c()()
+		a = a()
+		b = b()
+		c = c()
 		components = { a, b, c }
 	elseif queryLength == 4 then
-		a = a()()
-		b = b()()
-		c = c()()
-		d = d()()
+		a = a()
+		b = b()
+		c = c()
+		d = d()
 
 		components = { a, b, c, d }
 	elseif queryLength == 5 then
-		a = a()()
-		b = b()()
-		c = c()()
-		d = d()()
-		e = e()()
+		a = a()
+		b = b()
+		c = c()
+		d = d()
+		e = e()
 		components = { a, b, c, d, e }
 	else
 		for i, comp in components do
-			components[i] = comp()() :: any
+			components[i] = comp() :: any
 		end
 	end
 

@@ -156,7 +156,7 @@ return function()
 			expect(withoutCount).to.equal(0)
 		end)
 
-		it("should be queryable", function()
+		itFOCUS("should be queryable", function()
 			local world = World.new()
 
 			local Player = component()
@@ -191,6 +191,7 @@ return function()
 			local foundCount = 0
 
 			for entityId, player, health in world:query(Player, Health) do
+				print(entityId, player, health)
 				foundCount += 1
 				found[entityId] = {
 					[Player] = player,
