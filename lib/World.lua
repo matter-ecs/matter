@@ -1,6 +1,7 @@
 --!optimize 2
 --!native
 --!strict
+local component = require(script.Parent.component)
 local topoRuntime = require(script.Parent.topoRuntime)
 local Component = require(script.Parent.component)
 
@@ -293,8 +294,8 @@ local function archetypeTraverseRemove(world: World, componentId: i53, archetype
 	return edge.remove
 end
 
-function World.remove(world: World, entityId: i53, component: () -> () -> i53)
-	local componentId = component()()
+function World.remove(world: World, entityId: i53, component: Component)
+	local componentId = #component
 	local record = world:ensureRecord(entityId)
 	local sourceArchetype = record.archetype
 	local destinationArchetype = archetypeTraverseRemove(world, componentId, sourceArchetype)
@@ -306,7 +307,7 @@ end
 
 local function get(componentIndex: { [i24]: ArchetypeMap }, record: Record, componentId: i24)
 	local archetype = record.archetype
-	local archetypeRecord = componentIndex[componentId][archetype.id]
+	local archetypeRecord = componentIndex[componentId].sparse[archetype.id]
 
 	if not archetypeRecord then
 		return nil
@@ -315,32 +316,23 @@ local function get(componentIndex: { [i24]: ArchetypeMap }, record: Record, comp
 	return archetype.columns[archetypeRecord][record.row]
 end
 
-function World.get(
-	world: World,
-	entityId: i53,
-	a: () -> () -> i53,
-	b: () -> i53,
-	c: () -> i53,
-	d: () -> i53,
-	e: () -> i53
-)
-	local id = entityId
+function World.get(world: World, entityId: i53, a: Component, b: Component, c: Component, d: Component, e: Component)
 	local componentIndex = world.componentIndex
-	local record = world.entityIndex[id]
+	local record = world.entityIndex[entityId]
 	if not record then
 		return nil
 	end
 
-	local va = get(componentIndex, record, a()())
+	local va = get(componentIndex, record, #a)
 
 	if b == nil then
 		return va
 	elseif c == nil then
-		return va, get(componentIndex, record, b())
+		return va, get(componentIndex, record, #b)
 	elseif d == nil then
-		return va, get(componentIndex, record, b()), get(componentIndex, record, c())
+		return va, get(componentIndex, record, #b), get(componentIndex, record, #c)
 	elseif e == nil then
-		return va, get(componentIndex, record, b()), get(componentIndex, record, c()), get(componentIndex, record, d())
+		return va, get(componentIndex, record, #b), get(componentIndex, record, #c), get(componentIndex, record, #d)
 	else
 		error("args exceeded")
 	end

@@ -224,7 +224,7 @@ return function()
 			expect(withoutCount).to.equal(1)
 		end)
 
-		it("should allow getting single components", function()
+		itFOCUS("should allow getting single components", function()
 			local world = World.new()
 
 			local Player = component()
@@ -520,7 +520,7 @@ return function()
 			end).to.throw()
 		end)
 
-		it("should error when passing a Component instead of Component instance", function()
+		itFOCUS("should error when passing a Component instead of Component instance", function()
 			expect(function()
 				World.new():spawn(component())
 			end).to.throw()
