@@ -1,15 +1,11 @@
 --!optimize 2
 --!native
 --!strict
-local archetypeModule = require(script.Parent.archetype)
 local topoRuntime = require(script.Parent.topoRuntime)
 local Component = require(script.Parent.component)
 
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
-local archetypeOf = archetypeModule.archetypeOf
-local negateArchetypeOf = archetypeModule.negateArchetypeOf
-local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 
@@ -154,16 +150,20 @@ end
 
 local World = {}
 World.__index = World
+
+local function reset(world: World) end
+
 function World.new()
 	local self = setmetatable({
 		entityIndex = {},
 		componentIndex = {},
 		archetypes = {},
 		archetypeIndex = {},
-		ROOT_ARCHETYPE = nil :: Archetype?,
-		nextId = 2 ^ 8,
+		nextId = 0,
 		nextArchetypeId = 0,
+		_size = 0,
 	}, World)
+
 	self.ROOT_ARCHETYPE = archetypeOf(self, {}, nil)
 	return self
 end
@@ -231,16 +231,9 @@ local function archetypeTraverseAdd(world: World, componentId: i53, archetype: A
 	return edge.add
 end
 
-function World.ensureRecord(world: World, entityId: i53)
-	local entityIndex = world.entityIndex
-	local id = entityId
-	if not entityIndex[id] then
-		entityIndex[id] = {} :: Record
-	end
-	return entityIndex[id]
-end
+local function componentAdd(world: World, entityId: i53, component)
+	local componentId = #component
 
-function World.add(world: World, entityId: i53, componentId: i53, data: unknown)
 	local record = world:ensureRecord(entityId)
 	local sourceArchetype = record.archetype
 	local destinationArchetype = archetypeTraverseAdd(world, componentId, sourceArchetype)
@@ -255,7 +248,30 @@ function World.add(world: World, entityId: i53, componentId: i53, data: unknown)
 	end
 
 	local archetypeRecord = destinationArchetype.records[componentId]
-	destinationArchetype.columns[archetypeRecord][record.row] = data
+	destinationArchetype.columns[archetypeRecord][record.row] = component
+end
+
+function World.ensureRecord(world: World, entityId: i53)
+	local entityIndex = world.entityIndex
+	local id = entityId
+	if not entityIndex[id] then
+		entityIndex[id] = {} :: Record
+	end
+	return entityIndex[id]
+end
+
+function World.insert(world: World, entityId: i53, ...)
+	debug.profilebegin("insert")
+
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	for i = 1, select("#", ...) do
+		componentAdd(world, entityId, select(i, ...))
+	end
+
+	debug.profileend()
 end
 
 local function archetypeTraverseRemove(world: World, componentId: i53, archetype: Archetype?): Archetype
@@ -329,17 +345,6 @@ function World.entity(world: World)
 	return world.nextId
 end
 
-local nextId = 0
-local function component(): <T>(data: T) -> () -> (number, T)
-	nextId += 1
-	local id = nextId
-	return function(data)
-		return function()
-			return id, data
-		end
-	end
-end
-
 function World.archetypesWith(world: World, componentId: i53)
 	local archetypes = world.archetypes
 	local archetypeMap = world.componentIndex[componentId]
@@ -350,23 +355,79 @@ function World.archetypesWith(world: World, componentId: i53)
 	return compatibleArchetypes
 end
 
-function World.spawn(world: World, ...: () -> <T>() -> (number, T))
-	local entity = world:entity()
-	for i = 1, select("#", ...) do
-		local component = select(i, ...)
-		local componentId, data = component()
-		world:add(entity, componentId, data)
-	end
-	return entity
+function World:__iter()
+	return World._next, self
 end
 
-function World.insert(world: World, entity: i53, ...: () -> <T>(data: T) -> (number, T))
+function World.spawn(world: World, ...: () -> <T>() -> (number, T))
+	return world:spawnAt(world.nextId, ...)
+end
+
+function World.despawn(world: World, entityId: i53)
+	-- TODO: handle archetypes
+	world.entityIndex[entityId] = nil
+	world._size -= 1
+end
+
+function World.clear(world: World)
+	world.entityIndex = {}
+	world.componentIndex = {}
+	world.archetypes = {}
+	world.archetypeIndex = {}
+	world._size = 0
+	world.ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
+end
+
+function World.size(world: World)
+	return world._size
+end
+
+function World.contains(world: World, entityId: i53)
+	return world.entityIndex[entityId] ~= nil
+end
+
+function World.spawnAt(world: World, entityId: i53, ...)
+	if world:contains(entityId) then
+		error(
+			string.format(
+				"The world already contains an entity with ID %d. Use World:replace instead if this is intentional.",
+				entityId
+			),
+			2
+		)
+	end
+
+	if entityId >= world.nextId then
+		world.nextId = entityId + 1
+	end
+
+	world._size += 1
+	world:ensureRecord(entityId)
+
+	local components = {}
+	for i = 1, select("#", ...) do
+		local component = select(i, ...)
+		assertValidComponentInstance(component, i)
+
+		local metatable = getmetatable(component)
+		if components[metatable] then
+			error(("Duplicate component type at index %d"):format(i), 2)
+		end
+
+		components[metatable] = component
+		componentAdd(world, entityId, component)
+	end
+
+	return entityId
+end
+
+--[[function World.insert(world: World, entity: i53, ...: () -> <T>(data: T) -> (number, T))
 	for i = 1, select("#", ...) do
 		local component = select(i, ...)
 		local componentId, data = component()
 		world:add(entity, componentId, data)
 	end
-end
+end]]
 
 function World.query(world: World, ...: () -> () -> i53): () -> (number, ...any)
 	local compatibleArchetypes = {}

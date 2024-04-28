@@ -63,14 +63,14 @@ return function()
 					expect(data[A]).to.be.ok()
 					expect(data[B]).to.be.ok()
 				else
-					error("unknown entity", id)
+					error(`unknown entity {id}`)
 				end
 			end
 
 			expect(count).to.equal(3)
 		end)
 
-		it("should have correct size", function()
+		itFOCUS("should have correct size", function()
 			local world = World.new()
 			world:spawn()
 			world:spawn()
@@ -86,7 +86,7 @@ return function()
 			expect(world:size()).to.equal(0)
 		end)
 
-		it("should report contains correctly", function()
+		itFOCUS("should report contains correctly", function()
 			local world = World.new()
 			local id = world:spawn()
 
@@ -94,7 +94,7 @@ return function()
 			expect(world:contains(1234124124124124124124)).to.equal(false)
 		end)
 
-		it("should allow spawning entities at a specific ID", function()
+		itFOCUS("should allow spawning entities at a specific ID", function()
 			local world = World.new()
 
 			local A = component()
