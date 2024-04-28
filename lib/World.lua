@@ -251,8 +251,10 @@ local function componentAdd(world: World, entityId: i53, component)
 		end
 	end
 
+	--print(component)
 	local archetypeRecord = destinationArchetype.records[componentId]
 	destinationArchetype.columns[archetypeRecord][record.row] = component
+	--print(destinationArchetype.columns[archetypeRecord])
 end
 
 function World.ensureRecord(world: World, entityId: i53)
@@ -417,21 +419,20 @@ end
 	end
 end]]
 
-
 local function noop(): any
-	return function() 
-	end
+	return function() end
 end
-local function getSmallestMap(componentIndex, components) 
+
+local function getSmallestMap(componentIndex, components)
 	local s: any
 
-	for i, componentId in components do 
+	for i, componentId in components do
 		local map = componentIndex[componentId]
-		if s == nil or map.size < s.size then 
-			s = map	
+		if s == nil or map.size < s.size then
+			s = map
 		end
 	end
-	
+
 	return s.sparse
 end
 
@@ -444,65 +445,68 @@ function World.query(world: World, ...: Component): any
 
 	if queryLength == 1 then
 		a = #a
-		local archetypesMap = world.componentIndex[a]
 		components = { a }
-		local function single()
-			local id = next(archetypesMap)
-			local archetype = archetypes[id :: number]
-			local lastRow
+		-- local archetypesMap = world.componentIndex[a]
+		-- components = { a }
+		-- local function single()
+		-- 	local id = next(archetypesMap)
+		-- 	local archetype = archetypes[id :: number]
+		-- 	local lastRow
 
-			return function(): any
-				local row, entity = next(archetype.entities, lastRow)
-				while row == nil do
-					id = next(archetypesMap, id)
-					if id == nil then
-						return
-					end
-					archetype = archetypes[id]
-					row = next(archetype.entities, row)
-				end
-				lastRow = row
+		-- 	return function(): any
+		-- 		local row, entity = next(archetype.entities, lastRow)
+		-- 		while row == nil do
+		-- 			id = next(archetypesMap, id)
+		-- 			if id == nil then
+		-- 				return
+		-- 			end
+		-- 			archetype = archetypes[id]
+		-- 			row = next(archetype.entities, row)
+		-- 		end
+		-- 		lastRow = row
 
-				return entity, archetype.columns[archetype.records[a]]
-			end
-		end
-		return single()
+		-- 		return entity, archetype.columns[archetype.records[a]]
+		-- 	end
+		-- end
+		-- return single()
 	elseif queryLength == 2 then
+		--print("iter double")
 		a = #a
 		b = #b
 		components = { a, b }
 
-		--print(a, b, world.componentIndex)
-		local archetypesMap = world.componentIndex[a]
-		for id in archetypesMap do
-			local archetype = archetypes[id]
-			if archetype.records[b] then
-				table.insert(compatibleArchetypes, archetype)
-			end
-		end
+		-- --print(a, b, world.componentIndex)
+		-- --[[local archetypesMap = world.componentIndex[a]
+		-- for id in archetypesMap do
+		-- 	local archetype = archetypes[id]
+		-- 	if archetype.records[b] then
+		-- 		table.insert(compatibleArchetypes, archetype)
+		-- 	end
+		-- end
 
-		local function double(): () -> (number, any, any)
-			local lastArchetype, archetype = next(compatibleArchetypes)
-			local lastRow
+		-- local function double(): () -> (number, any, any)
+		-- 	local lastArchetype, archetype = next(compatibleArchetypes)
+		-- 	local lastRow
 
-			return function()
-				local row = next(archetype.entities, lastRow)
-				while row == nil do
-					lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
-					if lastArchetype == nil then
-						return
-					end
-					row = next(archetype.entities, row)
-				end
-				lastRow = row
+		-- 	return function()
+		-- 		local row = next(archetype.entities, lastRow)
+		-- 		while row == nil do
+		-- 			lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
+		-- 			if lastArchetype == nil then
+		-- 				return
+		-- 			end
 
-				local entity = archetype.entities[row :: number]
-				local columns = archetype.columns
-				local archetypeRecords = archetype.records
-				return entity, columns[archetypeRecords[a]], columns[archetypeRecords[b]]
-			end
-		end
-		return double()
+		-- 			row = next(archetype.entities, row)
+		-- 		end
+		-- 		lastRow = row
+
+		-- 		local entity = archetype.entities[row :: number]
+		-- 		local columns = archetype.columns
+		-- 		local archetypeRecords = archetype.records
+		-- 		return entity, columns[archetypeRecords[a]], columns[archetypeRecords[b]]
+		-- 	end
+		-- end
+		-- return double()
 	elseif queryLength == 3 then
 		a = #a
 		b = #b
@@ -521,6 +525,7 @@ function World.query(world: World, ...: Component): any
 		c = #c
 		d = #d
 		e = #e
+
 		components = { a, b, c, d, e }
 	else
 		for i, comp in components do
@@ -534,7 +539,7 @@ function World.query(world: World, ...: Component): any
 		local archetype = archetypes[id]
 		local archetypeRecords = archetype.records
 		local matched = true
-		for i, componentId in components do
+		for _, componentId in components do
 			if not archetypeRecords[componentId] then
 				matched = false
 				break
@@ -545,9 +550,8 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	
 	local lastArchetype, archetype = next(compatibleArchetypes)
-	if not lastArchetype then 
+	if not lastArchetype then
 		return noop()
 	end
 
@@ -556,28 +560,32 @@ function World.query(world: World, ...: Component): any
 	local preparedQuery = {}
 	preparedQuery.__index = preparedQuery
 
-	function preparedQuery:without(...) 
+	function preparedQuery:without(...)
 		local components = { ... }
-		for i, component in components do 
+		for i, component in components do
 			components[i] = #component
 		end
-		for i = #compatibleArchetypes, 1, - 1 do 
+
+		for i = #compatibleArchetypes, 1, -1 do
 			local archetype = compatibleArchetypes[i]
 			local shouldRemove = false
-			for _, componentId in components do 
-				if archetype.records[componentId] then 
+			for _, componentId in components do
+				if archetype.records[componentId] then
 					shouldRemove = true
 					break
 				end
 			end
-			if shouldRemove then 
+
+			if shouldRemove then
 				table.remove(compatibleArchetypes, i)
 			end
-		end	
+		end
+
+		return self
 	end
 
-	function preparedQuery:__iter() 
-		return function() 
+	function preparedQuery:__iter()
+		return function()
 			local row = next(archetype.entities, lastRow)
 			while row == nil do
 				lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
@@ -587,37 +595,40 @@ function World.query(world: World, ...: Component): any
 				row = next(archetype.entities, row)
 			end
 			lastRow = row
-	
+
 			local columns = archetype.columns
 			local entityId = archetype.entities[row :: number]
 			local archetypeRecords = archetype.records
-	
+
 			if queryLength == 1 then
-				return entityId, columns[archetypeRecords[a]]
+				return entityId, columns[archetypeRecords[a]][row]
 			elseif queryLength == 2 then
-				return entityId, columns[archetypeRecords[a]], columns[archetypeRecords[b]]
+				return entityId, columns[archetypeRecords[a]][row], columns[archetypeRecords[b]][row]
 			elseif queryLength == 3 then
-				return entityId, columns[archetypeRecords[a]], columns[archetypeRecords[b]], columns[archetypeRecords[c]]
+				return entityId,
+					columns[archetypeRecords[a]][row],
+					columns[archetypeRecords[b]][row],
+					columns[archetypeRecords[c]][row]
 			elseif queryLength == 4 then
 				return entityId,
-					columns[archetypeRecords[a]],
-					columns[archetypeRecords[b]],
-					columns[archetypeRecords[c]],
-					columns[archetypeRecords[d]]
+					columns[archetypeRecords[a]][row],
+					columns[archetypeRecords[b]][row],
+					columns[archetypeRecords[c]][row],
+					columns[archetypeRecords[d]][row]
 			elseif queryLength == 5 then
 				return entityId,
-					columns[archetypeRecords[a]],
-					columns[archetypeRecords[b]],
-					columns[archetypeRecords[c]],
-					columns[archetypeRecords[d]],
-					columns[archetypeRecords[e]]
+					columns[archetypeRecords[a]][row],
+					columns[archetypeRecords[b]][row],
+					columns[archetypeRecords[c]][row],
+					columns[archetypeRecords[d]][row],
+					columns[archetypeRecords[e]][row]
 			end
-	
+
 			local queryOutput = {}
 			for i, componentId in (components :: any) :: { number } do
-				queryOutput[i] = columns[archetypeRecords[componentId]]
+				queryOutput[i] = columns[archetypeRecords[componentId]][row]
 			end
-	
+
 			return entityId, unpack(queryOutput, 1, queryLength)
 		end
 	end

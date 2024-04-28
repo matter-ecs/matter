@@ -191,7 +191,6 @@ return function()
 			local foundCount = 0
 
 			for entityId, player, health in world:query(Player, Health) do
-				print(entityId, player, health)
 				foundCount += 1
 				found[entityId] = {
 					[Player] = player,
