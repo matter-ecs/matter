@@ -567,10 +567,14 @@ function World.query(world: World, ...: Component): any
 					break
 				end
 			end
-
 			if shouldRemove then
 				table.remove(compatibleArchetypes, i)
 			end
+		end
+
+		lastArchetype, archetype = next(compatibleArchetypes)
+		if not lastArchetype then
+			return noop()
 		end
 
 		return self

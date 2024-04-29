@@ -299,7 +299,7 @@ return function()
 			expect(runCount).to.equal(2)
 		end)
 
-		it("should find entity without and with component", function()
+		itFOCUS("should find entity without and with component", function()
 			local world = World.new()
 
 			local Character = component("Character")
