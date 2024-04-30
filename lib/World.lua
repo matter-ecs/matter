@@ -72,10 +72,12 @@ local function transitionArchetype(
 	end
 
 	destinationEntities[destinationRow] = sourceEntities[sourceRow]
-	local moveAway = #sourceEntities
-	sourceEntities[sourceRow] = sourceEntities[moveAway]
-	sourceEntities[moveAway] = nil
-	entityIndex[destinationEntities[destinationRow]].row = sourceRow
+	entityIndex[sourceEntities[sourceRow]].row = destinationRow
+
+	local movedAway = #sourceEntities
+	sourceEntities[sourceRow] = sourceEntities[movedAway]
+	entityIndex[sourceEntities[movedAway]].row = sourceRow
+	sourceEntities[movedAway] = nil
 end
 
 local function archetypeAppend(entity: i53, archetype: Archetype): i24
@@ -169,12 +171,9 @@ type World = typeof(World.new())
 
 local function ensureArchetype(world: World, types, prev)
 	if #types < 1 then
-		if not world.ROOT_ARCHETYPE then
-			local ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
-			world.ROOT_ARCHETYPE = ROOT_ARCHETYPE
-			return ROOT_ARCHETYPE
-		end
+		return world.ROOT_ARCHETYPE
 	end
+
 	local ty = hash(types)
 	local archetype = world.archetypeIndex[ty]
 	if archetype then
@@ -228,14 +227,20 @@ local function archetypeTraverseAdd(world: World, componentId: i53, archetype: A
 	return edge.add
 end
 
-local function componentAdd(world: World, entityId: i53, component)
-	local componentId = #getmetatable(component)
+local function componentAdd(world: World, entityId: i53, componentInstance)
+	local componentId = #getmetatable(componentInstance)
 
 	local record = world:ensureRecord(entityId)
 	local sourceArchetype = record.archetype
 	local destinationArchetype = archetypeTraverseAdd(world, componentId, sourceArchetype)
 
-	if sourceArchetype and not (sourceArchetype == destinationArchetype) then
+	if sourceArchetype == destinationArchetype then
+		local archetypeRecord = destinationArchetype.records[componentId]
+		destinationArchetype.columns[archetypeRecord][record.row] = componentInstance
+		return
+	end
+
+	if sourceArchetype then
 		moveEntity(world.entityIndex, entityId, record, destinationArchetype)
 	else
 		-- if it has any components, then it wont be the root archetype
@@ -245,7 +250,7 @@ local function componentAdd(world: World, entityId: i53, component)
 	end
 
 	local archetypeRecord = destinationArchetype.records[componentId]
-	destinationArchetype.columns[archetypeRecord][record.row] = component
+	destinationArchetype.columns[archetypeRecord][record.row] = componentInstance
 end
 
 function World.ensureRecord(world: World, entityId: i53)
@@ -451,19 +456,6 @@ local function noop(): any
 	return function() end
 end
 
-local function getSmallestMap(componentIndex, components)
-	local s: any
-
-	for _, componentId in components do
-		local map = componentIndex[componentId]
-		if s == nil or map.size < s.size then
-			s = map
-		end
-	end
-
-	return s.sparse
-end
-
 --[=[
 	@class QueryResult
 
@@ -601,6 +593,10 @@ function World.query(world: World, ...: Component): any
 	local queryLength = select("#", ...)
 	local a: any, b: any, c: any, d: any, e: any = ...
 
+	if queryLength == 0 then
+		error("passed 0 components to query", 2)
+	end
+
 	if queryLength == 1 then
 		a = #a
 		components = { a }
@@ -691,8 +687,20 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	local firstArchetypeMap = getSmallestMap(world.componentIndex, components)
-	for id in firstArchetypeMap do
+	local firstArchetypeMap
+	local componentIndex = world.componentIndex
+	for _, componentId in components do
+		local map = componentIndex[componentId]
+		if not map then
+			error(tostring(componentId) .. " has not been added to an entity")
+		end
+
+		if firstArchetypeMap == nil or map.size < firstArchetypeMap.size then
+			firstArchetypeMap = map
+		end
+	end
+
+	for id in firstArchetypeMap.sparse do
 		local archetype = archetypes[id]
 		local archetypeRecords = archetype.records
 		local matched = true
@@ -702,6 +710,7 @@ function World.query(world: World, ...: Component): any
 				break
 			end
 		end
+
 		if matched then
 			table.insert(compatibleArchetypes, archetype)
 		end
@@ -716,6 +725,7 @@ function World.query(world: World, ...: Component): any
 	end
 
 	local lastRow
+	local queryOutput = {}
 	local function iterate(queryResult)
 		local row = next(queryResult._archetype.entities, lastRow)
 		while row == nil do
@@ -756,7 +766,6 @@ function World.query(world: World, ...: Component): any
 				columns[archetypeRecords[e]][row]
 		end
 
-		local queryOutput = {}
 		for i, componentId in components do
 			queryOutput[i] = columns[archetypeRecords[componentId]][row]
 		end
