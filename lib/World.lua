@@ -16,6 +16,7 @@ type i53 = number
 type i24 = number
 
 type Component = { [any]: any }
+type ComponentInstance = Component
 
 type Ty = { i53 }
 type ArchetypeId = number
@@ -100,17 +101,10 @@ local function moveEntity(entityIndex, entityId: i53, record: Record, to: Archet
 end
 
 local function hash(arr): string | number
-	if true then
-		return table.concat(arr, "_")
-	end
-	local hashed = 5381
-	for i = 1, #arr do
-		hashed = ((bit32.lshift(hashed, 5)) + hashed) + arr[i]
-	end
-	return hashed
+	return table.concat(arr, "_")
 end
 
-local function createArchetypeRecords(componentIndex: ComponentIndex, to: Archetype, from: Archetype?)
+local function createArchetypeRecords(componentIndex: ComponentIndex, to: Archetype)
 	local destinationCount = #to.types
 	local destinationIds = to.types
 
@@ -155,8 +149,6 @@ end
 
 local World = {}
 World.__index = World
-
-local function reset(world: World) end
 
 function World.new()
 	local self = setmetatable({
@@ -252,10 +244,8 @@ local function componentAdd(world: World, entityId: i53, component)
 		end
 	end
 
-	--print(component)
 	local archetypeRecord = destinationArchetype.records[componentId]
 	destinationArchetype.columns[archetypeRecord][record.row] = component
-	--print(destinationArchetype.columns[archetypeRecord])
 end
 
 function World.ensureRecord(world: World, entityId: i53)
@@ -294,18 +284,7 @@ local function archetypeTraverseRemove(world: World, componentId: i53, archetype
 	return edge.remove
 end
 
-function World.remove(world: World, entityId: i53, component: Component)
-	local componentId = #component
-	local record = world:ensureRecord(entityId)
-	local sourceArchetype = record.archetype
-	local destinationArchetype = archetypeTraverseRemove(world, componentId, sourceArchetype)
-
-	if sourceArchetype and not (sourceArchetype == destinationArchetype) then
-		moveEntity(world.entityIndex, entityId, record, destinationArchetype)
-	end
-end
-
-local function get(componentIndex: { [i24]: ArchetypeMap }, record: Record, componentId: i24)
+local function get(componentIndex: ComponentIndex, record: Record, componentId: i24): ComponentInstance?
 	local archetype = record.archetype
 	local archetypeRecord = componentIndex[componentId].sparse[archetype.id]
 
@@ -316,7 +295,57 @@ local function get(componentIndex: { [i24]: ArchetypeMap }, record: Record, comp
 	return archetype.columns[archetypeRecord][record.row]
 end
 
-function World.get(world: World, entityId: i53, a: Component, b: Component, c: Component, d: Component, e: Component)
+local function componentRemove(world: World, entityId: i53, component: Component)
+	local componentId = #component
+	local record = world:ensureRecord(entityId)
+	local sourceArchetype = record.archetype
+	local destinationArchetype = archetypeTraverseRemove(world, componentId, sourceArchetype)
+
+	-- TODO:
+	-- There is a better way to get the component for returning
+	local componentInstance = get(world.componentIndex, record, componentId)
+
+	if sourceArchetype and not (sourceArchetype == destinationArchetype) then
+		moveEntity(world.entityIndex, entityId, record, destinationArchetype)
+	end
+
+	return componentInstance
+end
+
+--[=[
+	Removes a component (or set of components) from an existing entity.
+
+	```lua
+	local removedA, removedB = world:remove(entityId, ComponentA, ComponentB)
+	```
+
+	@param id number -- The entity ID
+	@param ... Component -- The components to remove
+	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
+]=]
+function World.remove(world: World, entityId: i53, ...)
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local length = select("#", ...)
+	local removed = {}
+	for i = 1, length do
+		table.insert(removed, componentRemove(world, entityId, select(i, ...)))
+	end
+
+	return unpack(removed, 1, length)
+end
+
+function World.get(
+	world: World,
+	entityId: i53,
+	a: Component,
+	b: Component,
+	c: Component,
+	d: Component,
+	e: Component
+): any
 	local componentIndex = world.componentIndex
 	local record = world.entityIndex[entityId]
 	if not record then
@@ -347,7 +376,13 @@ function World:__iter()
 	return error("NOT IMPLEMENTED YET")
 end
 
-function World.spawn(world: World, ...: () -> <T>() -> (number, T))
+--[=[
+	Spawns a new entity in the world with the given components.
+
+	@param ... ComponentInstance -- The component values to spawn the entity with.
+	@return number -- The new entity ID.
+]=]
+function World.spawn(world: World, ...: ComponentInstance)
 	return world:spawnAt(world.nextId, ...)
 end
 
@@ -374,7 +409,16 @@ function World.contains(world: World, entityId: i53)
 	return world.entityIndex[entityId] ~= nil
 end
 
-function World.spawnAt(world: World, entityId: i53, ...)
+--[=[
+	Spawns a new entity in the world with a specific entity ID and given components.
+
+	The next ID generated from [World:spawn] will be increased as needed to never collide with a manually specified ID.
+
+	@param id number -- The entity ID to spawn with
+	@param ... ComponentInstance -- The component values to spawn the entity with.
+	@return number -- The same entity ID that was passed in
+]=]
+function World.spawnAt(world: World, entityId: i53, ...: ComponentInstance)
 	if world:contains(entityId) then
 		error(string.format(ERROR_DUPLICATE_ENTITY, entityId), 2)
 	end
@@ -403,14 +447,6 @@ function World.spawnAt(world: World, entityId: i53, ...)
 	return entityId
 end
 
---[[function World.insert(world: World, entity: i53, ...: () -> <T>(data: T) -> (number, T))
-	for i = 1, select("#", ...) do
-		local component = select(i, ...)
-		local componentId, data = component()
-		world:add(entity, componentId, data)
-	end
-end]]
-
 local function noop(): any
 	return function() end
 end
@@ -418,7 +454,7 @@ end
 local function getSmallestMap(componentIndex, components)
 	local s: any
 
-	for i, componentId in components do
+	for _, componentId in components do
 		local map = componentIndex[componentId]
 		if s == nil or map.size < s.size then
 			s = map
@@ -428,9 +464,139 @@ local function getSmallestMap(componentIndex, components)
 	return s.sparse
 end
 
+--[=[
+	@class QueryResult
+
+	A result from the [`World:query`](/api/World#query) function.
+
+	Calling the table or the `next` method allows iteration over the results. Once all results have been returned, the
+	QueryResult is exhausted and is no longer useful.
+
+	```lua
+	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
+		-- Do something
+	end
+	```
+]=]
+
+local QueryResult = {}
+QueryResult.__index = QueryResult
+
+function QueryResult.new(world, iterate, compatibleArchetypes, lastArchetype, archetype)
+	return setmetatable({
+		_world = world,
+		_compatibleArchetypes = compatibleArchetypes,
+		_lastArchetype = lastArchetype,
+		_archetype = archetype,
+		_nextItem = iterate,
+	}, QueryResult)
+end
+
+function QueryResult:__iter()
+	return function()
+		return self._nextItem()
+	end
+end
+
+function QueryResult:__call()
+	return self._nextItem()
+end
+
+--[=[
+	Returns the next set of values from the query result. Once all results have been returned, the
+	QueryResult is exhausted and is no longer useful.
+
+	:::info
+	This function is equivalent to calling the QueryResult as a function. When used in a for loop, this is implicitly
+	done by the language itself.
+	:::
+
+	```lua
+	-- Using world:query in this position will make Lua invoke the table as a function. This is conventional.
+	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
+		-- Do something
+	end
+	```
+
+	If you wanted to iterate over the QueryResult without a for loop, it's recommended that you call `next` directly
+	instead of calling the QueryResult as a function.
+	```lua
+	local id, enemy, charge, model = world:query(Enemy, Charge, Model):next()
+	local id, enemy, charge, model = world:query(Enemy, Charge, Model)() -- Possible, but unconventional
+	```
+
+	@return id -- Entity ID
+	@return ...ComponentInstance -- The requested component values
+]=]
+function QueryResult:next()
+	return self._nextItem()
+end
+
+--[=[
+	Returns an iterator that will skip any entities that also have the given components.
+
+	@param ... Component -- The component types to filter against.
+	@return () -> (id, ...ComponentInstance) -- Iterator of entity ID followed by the requested component values
+
+	```lua
+	for id in world:query(Target):without(Model) do
+		-- Do something
+	end
+	```
+]=]
+function QueryResult:without(...)
+	local components = { ... }
+	for i, component in components do
+		components[i] = #component
+	end
+
+	local compatibleArchetypes = self._compatibleArchetypes
+	for i = #compatibleArchetypes, 1, -1 do
+		local archetype = compatibleArchetypes[i]
+		local shouldRemove = false
+		for _, componentId in components do
+			if archetype.records[componentId] then
+				shouldRemove = true
+				break
+			end
+		end
+
+		if shouldRemove then
+			table.remove(compatibleArchetypes, i)
+		end
+	end
+
+	self._lastArchetype, self._archetype = next(self._compatibleArchetypes)
+	if not self._lastArchetype then
+		return noop()
+	end
+
+	return self
+end
+
+--[=[
+	Performs a query against the entities in this World. Returns a [QueryResult](/api/QueryResult), which iterates over
+	the results of the query.
+
+	Order of iteration is not guaranteed.
+
+	```lua
+	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
+		-- Do something
+	end
+
+	for id in world:query(Target):without(Model) do
+		-- Again, with feeling
+	end
+	```
+
+	@param ... Component -- The component types to query. Only entities with *all* of these components will be returned.
+	@return QueryResult -- See [QueryResult](/api/QueryResult) docs.
+]=]
 function World.query(world: World, ...: Component): any
+	debug.profilebegin("world:query")
 	local compatibleArchetypes = {}
-	local components = { ... } :: { any }
+	local components = { ... }
 	local archetypes = world.archetypes
 	local queryLength = select("#", ...)
 	local a: any, b: any, c: any, d: any, e: any = ...
@@ -542,94 +708,63 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
+	-- Only want to include archetype selection
+	debug.profileend()
+
 	local lastArchetype, archetype = next(compatibleArchetypes)
 	if not lastArchetype then
 		return noop()
 	end
 
 	local lastRow
-
-	local preparedQuery = {}
-	preparedQuery.__index = preparedQuery
-
-	function preparedQuery:without(...)
-		local components = { ... }
-		for i, component in components do
-			components[i] = #component
-		end
-
-		for i = #compatibleArchetypes, 1, -1 do
-			local archetype = compatibleArchetypes[i]
-			local shouldRemove = false
-			for _, componentId in components do
-				if archetype.records[componentId] then
-					shouldRemove = true
-					break
-				end
+	local function iterate()
+		local row = next(archetype.entities, lastRow)
+		while row == nil do
+			lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
+			if lastArchetype == nil then
+				return
 			end
-			if shouldRemove then
-				table.remove(compatibleArchetypes, i)
-			end
+			row = next(archetype.entities, row)
+		end
+		lastRow = row
+
+		local columns = archetype.columns
+		local entityId = archetype.entities[row :: number]
+		local archetypeRecords = archetype.records
+
+		if queryLength == 1 then
+			return entityId, columns[archetypeRecords[a]][row]
+		elseif queryLength == 2 then
+			return entityId, columns[archetypeRecords[a]][row], columns[archetypeRecords[b]][row]
+		elseif queryLength == 3 then
+			return entityId,
+				columns[archetypeRecords[a]][row],
+				columns[archetypeRecords[b]][row],
+				columns[archetypeRecords[c]][row]
+		elseif queryLength == 4 then
+			return entityId,
+				columns[archetypeRecords[a]][row],
+				columns[archetypeRecords[b]][row],
+				columns[archetypeRecords[c]][row],
+				columns[archetypeRecords[d]][row]
+		elseif queryLength == 5 then
+			return entityId,
+				columns[archetypeRecords[a]][row],
+				columns[archetypeRecords[b]][row],
+				columns[archetypeRecords[c]][row],
+				columns[archetypeRecords[d]][row],
+				columns[archetypeRecords[e]][row]
 		end
 
-		lastArchetype, archetype = next(compatibleArchetypes)
-		if not lastArchetype then
-			return noop()
+		local queryOutput = {}
+		for i, componentId in components do
+			queryOutput[i] = columns[archetypeRecords[componentId]][row]
 		end
 
-		return self
+		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	function preparedQuery:__iter()
-		return function()
-			local row = next(archetype.entities, lastRow)
-			while row == nil do
-				lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
-				if lastArchetype == nil then
-					return
-				end
-				row = next(archetype.entities, row)
-			end
-			lastRow = row
-
-			local columns = archetype.columns
-			local entityId = archetype.entities[row :: number]
-			local archetypeRecords = archetype.records
-
-			if queryLength == 1 then
-				return entityId, columns[archetypeRecords[a]][row]
-			elseif queryLength == 2 then
-				return entityId, columns[archetypeRecords[a]][row], columns[archetypeRecords[b]][row]
-			elseif queryLength == 3 then
-				return entityId,
-					columns[archetypeRecords[a]][row],
-					columns[archetypeRecords[b]][row],
-					columns[archetypeRecords[c]][row]
-			elseif queryLength == 4 then
-				return entityId,
-					columns[archetypeRecords[a]][row],
-					columns[archetypeRecords[b]][row],
-					columns[archetypeRecords[c]][row],
-					columns[archetypeRecords[d]][row]
-			elseif queryLength == 5 then
-				return entityId,
-					columns[archetypeRecords[a]][row],
-					columns[archetypeRecords[b]][row],
-					columns[archetypeRecords[c]][row],
-					columns[archetypeRecords[d]][row],
-					columns[archetypeRecords[e]][row]
-			end
-
-			local queryOutput = {}
-			for i, componentId in (components :: any) :: { number } do
-				queryOutput[i] = columns[archetypeRecords[componentId]][row]
-			end
-
-			return entityId, unpack(queryOutput, 1, queryLength)
-		end
-	end
-
-	return setmetatable({}, preparedQuery)
+	return QueryResult.new(world, iterate, compatibleArchetypes, lastArchetype, archetype)
 end
 
 return World
