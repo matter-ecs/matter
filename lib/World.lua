@@ -457,116 +457,6 @@ local function noop(): any
 end
 
 --[=[
-	@class QueryResult
-
-	A result from the [`World:query`](/api/World#query) function.
-
-	Calling the table or the `next` method allows iteration over the results. Once all results have been returned, the
-	QueryResult is exhausted and is no longer useful.
-
-	```lua
-	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
-		-- Do something
-	end
-	```
-]=]
-
-local QueryResult = {}
-QueryResult.__index = QueryResult
-
-function QueryResult.new(world, iterate, compatibleArchetypes, lastArchetype, archetype)
-	return setmetatable({
-		_world = world,
-		_compatibleArchetypes = compatibleArchetypes,
-		_nextItem = iterate,
-		_lastArchetype = lastArchetype,
-		_archetype = archetype,
-	}, QueryResult)
-end
-
-function QueryResult:__iter()
-	return function()
-		return self:_nextItem()
-	end
-end
-
-function QueryResult:__call()
-	return self:_nextItem()
-end
-
---[=[
-	Returns the next set of values from the query result. Once all results have been returned, the
-	QueryResult is exhausted and is no longer useful.
-
-	:::info
-	This function is equivalent to calling the QueryResult as a function. When used in a for loop, this is implicitly
-	done by the language itself.
-	:::
-
-	```lua
-	-- Using world:query in this position will make Lua invoke the table as a function. This is conventional.
-	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
-		-- Do something
-	end
-	```
-
-	If you wanted to iterate over the QueryResult without a for loop, it's recommended that you call `next` directly
-	instead of calling the QueryResult as a function.
-	```lua
-	local id, enemy, charge, model = world:query(Enemy, Charge, Model):next()
-	local id, enemy, charge, model = world:query(Enemy, Charge, Model)() -- Possible, but unconventional
-	```
-
-	@return id -- Entity ID
-	@return ...ComponentInstance -- The requested component values
-]=]
-function QueryResult:next()
-	return self._nextItem()
-end
-
---[=[
-	Returns an iterator that will skip any entities that also have the given components.
-
-	@param ... Component -- The component types to filter against.
-	@return () -> (id, ...ComponentInstance) -- Iterator of entity ID followed by the requested component values
-
-	```lua
-	for id in world:query(Target):without(Model) do
-		-- Do something
-	end
-	```
-]=]
-function QueryResult:without(...)
-	local components = { ... }
-	for i, component in components do
-		components[i] = #component
-	end
-
-	local compatibleArchetypes = self._compatibleArchetypes
-	for i = #compatibleArchetypes, 1, -1 do
-		local archetype = compatibleArchetypes[i]
-		local shouldRemove = false
-		for _, componentId in components do
-			if archetype.records[componentId] then
-				shouldRemove = true
-				break
-			end
-		end
-
-		if shouldRemove then
-			table.remove(compatibleArchetypes, i)
-		end
-	end
-
-	self._lastArchetype, self._archetype = next(compatibleArchetypes)
-	if not self._lastArchetype then
-		return noop()
-	end
-
-	return self
-end
-
---[=[
 	Performs a query against the entities in this World. Returns a [QueryResult](/api/QueryResult), which iterates over
 	the results of the query.
 
@@ -716,7 +606,7 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	-- Only want to include archetype selection
+	-- Only want to include archetype selection?
 	debug.profileend()
 
 	local lastArchetype, archetype = next(compatibleArchetypes)
@@ -726,21 +616,21 @@ function World.query(world: World, ...: Component): any
 
 	local lastRow
 	local queryOutput = {}
-	local function iterate(queryResult)
-		local row = next(queryResult._archetype.entities, lastRow)
+	local function iterate()
+		local row = next(archetype.entities, lastRow)
 		while row == nil do
-			queryResult._lastArchetype, queryResult._archetype = next(compatibleArchetypes, queryResult._lastArchetype)
-			if queryResult._lastArchetype == nil then
+			lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
+			if lastArchetype == nil then
 				return
 			end
-			row = next(queryResult._archetype.entities, row)
+			row = next(archetype.entities, row)
 		end
 
 		lastRow = row
 
-		local columns = queryResult._archetype.columns
-		local entityId = queryResult._archetype.entities[row :: number]
-		local archetypeRecords = queryResult._archetype.records
+		local columns = archetype.columns
+		local entityId = archetype.entities[row :: number]
+		local archetypeRecords = archetype.records
 
 		if queryLength == 1 then
 			return entityId, columns[archetypeRecords[a]][row]
@@ -773,7 +663,106 @@ function World.query(world: World, ...: Component): any
 		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	return QueryResult.new(world, iterate, compatibleArchetypes, lastArchetype, archetype)
+	--[=[
+	@class QueryResult
+
+	A result from the [`World:query`](/api/World#query) function.
+
+	Calling the table or the `next` method allows iteration over the results. Once all results have been returned, the
+	QueryResult is exhausted and is no longer useful.
+
+	```lua
+	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
+		-- Do something
+	end
+	```
+	]=]
+	local QueryResult = {}
+	QueryResult.__index = QueryResult
+
+	function QueryResult:__call()
+		return iterate()
+	end
+
+	function QueryResult:__iter()
+		return function()
+			return iterate()
+		end
+	end
+
+	--[=[
+	Returns the next set of values from the query result. Once all results have been returned, the
+	QueryResult is exhausted and is no longer useful.
+
+	:::info
+	This function is equivalent to calling the QueryResult as a function. When used in a for loop, this is implicitly
+	done by the language itself.
+	:::
+
+	```lua
+	-- Using world:query in this position will make Lua invoke the table as a function. This is conventional.
+	for id, enemy, charge, model in world:query(Enemy, Charge, Model) do
+		-- Do something
+	end
+	```
+
+	If you wanted to iterate over the QueryResult without a for loop, it's recommended that you call `next` directly
+	instead of calling the QueryResult as a function.
+	```lua
+	local id, enemy, charge, model = world:query(Enemy, Charge, Model):next()
+	local id, enemy, charge, model = world:query(Enemy, Charge, Model)() -- Possible, but unconventional
+	```
+
+	@return id -- Entity ID
+	@return ...ComponentInstance -- The requested component values
+	]=]
+	function QueryResult:next()
+		return iterate()
+	end
+
+	--[=[
+	Returns an iterator that will skip any entities that also have the given components.
+
+	@param ... Component -- The component types to filter against.
+	@return () -> (id, ...ComponentInstance) -- Iterator of entity ID followed by the requested component values
+
+	```lua
+	for id in world:query(Target):without(Model) do
+		-- Do something
+	end
+	```
+	]=]
+	function QueryResult:without(...)
+		local components = { ... }
+		for i, component in components do
+			components[i] = #component
+		end
+
+		local compatibleArchetypes = compatibleArchetypes
+		for i = #compatibleArchetypes, 1, -1 do
+			local archetype = compatibleArchetypes[i]
+			local shouldRemove = false
+			for _, componentId in components do
+				if archetype.records[componentId] then
+					shouldRemove = true
+					break
+				end
+			end
+
+			if shouldRemove then
+				table.remove(compatibleArchetypes, i)
+			end
+		end
+
+		lastArchetype, archetype = next(compatibleArchetypes)
+		if not lastArchetype then
+			return noop()
+		end
+
+		return self
+	end
+
+	return setmetatable({}, QueryResult)
 end
 
 return World
