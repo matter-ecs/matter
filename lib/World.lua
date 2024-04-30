@@ -486,20 +486,20 @@ function QueryResult.new(world, iterate, compatibleArchetypes, lastArchetype, ar
 	return setmetatable({
 		_world = world,
 		_compatibleArchetypes = compatibleArchetypes,
+		_nextItem = iterate,
 		_lastArchetype = lastArchetype,
 		_archetype = archetype,
-		_nextItem = iterate,
 	}, QueryResult)
 end
 
 function QueryResult:__iter()
 	return function()
-		return self._nextItem()
+		return self:_nextItem()
 	end
 end
 
 function QueryResult:__call()
-	return self._nextItem()
+	return self:_nextItem()
 end
 
 --[=[
@@ -566,7 +566,7 @@ function QueryResult:without(...)
 		end
 	end
 
-	self._lastArchetype, self._archetype = next(self._compatibleArchetypes)
+	self._lastArchetype, self._archetype = next(compatibleArchetypes)
 	if not self._lastArchetype then
 		return noop()
 	end
@@ -692,7 +692,6 @@ function World.query(world: World, ...: Component): any
 	end
 
 	local firstArchetypeMap = getSmallestMap(world.componentIndex, components)
-
 	for id in firstArchetypeMap do
 		local archetype = archetypes[id]
 		local archetypeRecords = archetype.records
@@ -717,20 +716,21 @@ function World.query(world: World, ...: Component): any
 	end
 
 	local lastRow
-	local function iterate()
-		local row = next(archetype.entities, lastRow)
+	local function iterate(queryResult)
+		local row = next(queryResult._archetype.entities, lastRow)
 		while row == nil do
-			lastArchetype, archetype = next(compatibleArchetypes, lastArchetype)
-			if lastArchetype == nil then
+			queryResult._lastArchetype, queryResult._archetype = next(compatibleArchetypes, queryResult._lastArchetype)
+			if queryResult._lastArchetype == nil then
 				return
 			end
-			row = next(archetype.entities, row)
+			row = next(queryResult._archetype.entities, row)
 		end
+
 		lastRow = row
 
-		local columns = archetype.columns
-		local entityId = archetype.entities[row :: number]
-		local archetypeRecords = archetype.records
+		local columns = queryResult._archetype.columns
+		local entityId = queryResult._archetype.entities[row :: number]
+		local archetypeRecords = queryResult._archetype.records
 
 		if queryLength == 1 then
 			return entityId, columns[archetypeRecords[a]][row]
