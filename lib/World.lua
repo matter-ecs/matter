@@ -11,6 +11,7 @@ local assertValidComponent = Component.assertValidComponent
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 local ERROR_DUPLICATE_ENTITY =
 	"The world already contains an entity with ID %d. Use World:replace instead if this is intentional."
+local ERROR_NO_COMPONENTS = "Missing components"
 
 type i53 = number
 type i24 = number
@@ -484,7 +485,9 @@ function World.query(world: World, ...: Component): any
 	local a: any, b: any, c: any, d: any, e: any = ...
 
 	if queryLength == 0 then
-		error("passed 0 components to query", 2)
+		-- TODO:
+		-- return noop query
+		warn("TODO noop query")
 	end
 
 	if queryLength == 1 then
@@ -572,16 +575,19 @@ function World.query(world: World, ...: Component): any
 
 		components = { a, b, c, d, e }
 	else
-		for i, comp in components do
-			components[i] = #comp
+		for i, component in components do
+			components[i] = (#component) :: any
 		end
 	end
 
 	local firstArchetypeMap
 	local componentIndex = world.componentIndex
-	for _, componentId in components do
+	for _, componentId in (components :: any) :: { number } do
 		local map = componentIndex[componentId]
 		if not map then
+			-- TODO:
+			-- see what upstream does in this case
+			-- currently replicating jecs
 			error(tostring(componentId) .. " has not been added to an entity")
 		end
 
@@ -718,6 +724,43 @@ function World.query(world: World, ...: Component): any
 	]=]
 	function QueryResult:next()
 		return iterate()
+	end
+
+	local Snapshot = {
+		__iter = function(self): any
+			local i = 0
+			return function()
+				i += 1
+
+				local data = self[i]
+
+				if data then
+					return unpack(data, 1, data.n)
+				end
+
+				return
+			end
+		end,
+	}
+
+	function QueryResult:snapshot()
+		local list = setmetatable({}, Snapshot) :: any
+
+		local function iter()
+			--local entry = table.pack(iterate())
+			--return if #entry == 0 then nil else entry
+			print(iterate())
+			return "x"
+		end
+
+		for data in iter :: any do
+			if data[1] then
+				table.insert(list, data)
+			end
+		end
+
+		print("entityId", list[1])
+		return list
 	end
 
 	--[=[

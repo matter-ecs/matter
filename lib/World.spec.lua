@@ -196,6 +196,8 @@ return function()
 					[Player] = player,
 					[Health] = health,
 				}
+
+				print("eId", entityId)
 			end
 
 			expect(foundCount).to.equal(2)
@@ -526,7 +528,7 @@ return function()
 			end).to.throw()
 		end)
 
-		it("should allow snapshotting a query", function()
+		itFOCUS("should allow snapshotting a query", function()
 			local world = World.new()
 
 			local Player = component()
@@ -557,6 +559,7 @@ return function()
 				})
 			)
 
+			--print("entityId", two)
 			local query = world:query(Health, Player)
 			local snapshot = query:snapshot()
 
@@ -569,6 +572,7 @@ return function()
 			world:remove(two, Health)
 			world:despawn(one)
 
+			print(snapshot)
 			if snapshot[2][1] == 3 then
 				expect(snapshot[1][1]).to.equal(1)
 			else
