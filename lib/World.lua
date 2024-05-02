@@ -392,11 +392,6 @@ function World.insert(world: World, entityId: i53, ...)
 		local newComponent = select(i, ...)
 		assertValidComponentInstance(newComponent, i)
 
-		print("Insert", newComponent, getmetatable(newComponent))
-		if getmetatable(newComponent) == nil then
-			print(debug.traceback())
-		end
-
 		local metatable = getmetatable(newComponent)
 		local oldComponent = world:get(entityId, metatable)
 		componentAdd(world, entityId, newComponent)
@@ -405,6 +400,20 @@ function World.insert(world: World, entityId: i53, ...)
 	end
 
 	debug.profileend()
+end
+
+function World.replace(world: World, entityId: i53, ...: ComponentInstance)
+	error("Replace is unimplemented")
+
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	--moveEntity(entityId, record, world.ROOT_ARCHETYPE)
+	for i = 1, select("#", ...) do
+		local newComponent = select(i, ...)
+		assertValidComponentInstance(newComponent, i)
+	end
 end
 
 function World.entity(world: World)

@@ -40,7 +40,7 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describe("World", function()
+	describeFOCUS("World", function()
 		it("should be iterable", function()
 			local world = World.new()
 			local A = component()
@@ -70,7 +70,7 @@ return function()
 			expect(count).to.equal(3)
 		end)
 
-		itFOCUS("should have correct size", function()
+		it("should have correct size", function()
 			local world = World.new()
 			world:spawn()
 			world:spawn()
@@ -86,7 +86,7 @@ return function()
 			expect(world:size()).to.equal(0)
 		end)
 
-		itFOCUS("should report contains correctly", function()
+		it("should report contains correctly", function()
 			local world = World.new()
 			local id = world:spawn()
 
@@ -94,7 +94,7 @@ return function()
 			expect(world:contains(1234124124124124124124)).to.equal(false)
 		end)
 
-		itFOCUS("should allow spawning entities at a specific ID", function()
+		it("should allow spawning entities at a specific ID", function()
 			local world = World.new()
 
 			local A = component()
@@ -110,7 +110,7 @@ return function()
 			expect(nextId).to.equal(6)
 		end)
 
-		itFOCUS("should allow inserting and removing components from existing entities", function()
+		it("should allow inserting and removing components from existing entities", function()
 			local world = World.new()
 
 			local Player = component("player")
@@ -121,14 +121,8 @@ return function()
 
 			expect(world:query(Player):next()).to.be.ok()
 			expect(world:query(Health):next()).to.never.be.ok()
-			for entityId, poison in world:query(Poison) do
-				print(entityId, poison)
-			end
 
 			world:insert(id, Health({ healthct = "ye" }))
-			for entityId, poison in world:query(Poison) do
-				print(entityId, poison)
-			end
 
 			expect(world:query(Player):next()).to.be.ok()
 			expect(world:query(Health):next()).to.be.ok()
@@ -144,7 +138,7 @@ return function()
 			expect(world:size()).to.equal(1)
 		end)
 
-		itFOCUS("should not find any entities", function()
+		it("should not find any entities", function()
 			local world = World.new()
 
 			local Hello = component()
@@ -162,7 +156,7 @@ return function()
 			expect(withoutCount).to.equal(0)
 		end)
 
-		itFOCUS("should be queryable", function()
+		it("should be queryable", function()
 			local world = World.new()
 
 			local Player = component()
@@ -230,7 +224,7 @@ return function()
 			expect(withoutCount).to.equal(1)
 		end)
 
-		itFOCUS("should allow getting single components", function()
+		it("should allow getting single components", function()
 			local world = World.new()
 
 			local Player = component()
@@ -248,7 +242,7 @@ return function()
 			expect(two.b).to.equal(2)
 		end)
 
-		itFOCUS("should get the right component out of order", function()
+		it("should get the right component out of order", function()
 			local world = World.new()
 
 			local Health = component()
@@ -319,7 +313,7 @@ return function()
 			expect(runCount).to.equal(2)
 		end)
 
-		itFOCUS("should find entity without and with component", function()
+		it("should find entity without and with component", function()
 			local world = World.new()
 
 			local Character = component("Character")
@@ -514,7 +508,9 @@ return function()
 			defaultBindable:Fire()
 			defaultBindable:Fire()
 
-			world:replace(secondEntityId, B())
+			--world:replace(secondEntityId, B())
+			world:remove(secondEntityId, A, C)
+			world:insert(secondEntityId, B())
 
 			infrequentBindable:Fire()
 
@@ -525,13 +521,13 @@ return function()
 			infrequentBindable:Fire()
 		end)
 
-		itFOCUS("should error when passing nil to query", function()
+		it("should error when passing nil to query", function()
 			expect(function()
 				World.new():query(nil)
 			end).to.throw()
 		end)
 
-		itFOCUS("should error when passing an invalid table", function()
+		it("should error when passing an invalid table", function()
 			local world = World.new()
 			local id = world:spawn()
 
@@ -540,13 +536,13 @@ return function()
 			end).to.throw()
 		end)
 
-		itFOCUS("should error when passing a Component instead of Component instance", function()
+		it("should error when passing a Component instead of Component instance", function()
 			expect(function()
 				World.new():spawn(component())
 			end).to.throw()
 		end)
 
-		itFOCUS("should allow snapshotting a query", function()
+		it("should allow snapshotting a query", function()
 			local world = World.new()
 
 			local Player = component()
@@ -575,7 +571,7 @@ return function()
 			expect(#world:query(Player, Health, Poison):snapshot()).to.equal(0)
 		end)
 
-		itFOCUS("should contain entity in view", function()
+		it("should contain entity in view", function()
 			local ComponentA = component("ComponentA")
 			local ComponentB = component("ComponentB")
 
@@ -593,7 +589,7 @@ return function()
 			expect(viewB:contains(entityA)).to.equal(false)
 		end)
 
-		itFOCUS("should get entity data from view", function()
+		it("should get entity data from view", function()
 			local numComponents = 20
 			local components = {}
 
@@ -628,7 +624,7 @@ return function()
 			expect(getmetatable(viewBEntityAData[1])).to.equal(components[1])
 		end)
 
-		itFOCUS("should return view results in query order", function()
+		it("should return view results in query order", function()
 			local Parent = component("Parent")
 			local Transform = component("Transform")
 			local Root = component("Root")
@@ -717,7 +713,7 @@ return function()
 			expect(count).to.equal(10)
 		end)
 
-		itFOCUS("should have empty queries with similar methods", function()
+		it("should have empty queries with similar methods", function()
 			-- TODO:
 			-- This doesn't handle things like view properly
 
