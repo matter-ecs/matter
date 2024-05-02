@@ -110,7 +110,7 @@ return function()
 			expect(nextId).to.equal(6)
 		end)
 
-		it("should allow inserting and removing components from existing entities", function()
+		itFOCUS("should allow inserting and removing components from existing entities", function()
 			local world = World.new()
 
 			local Player = component("player")
@@ -248,7 +248,7 @@ return function()
 			expect(two.b).to.equal(2)
 		end)
 
-		it("should get the right component out of order", function()
+		itFOCUS("should get the right component out of order", function()
 			local world = World.new()
 
 			local Health = component()

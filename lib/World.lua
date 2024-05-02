@@ -54,31 +54,44 @@ type Archetypes = { [ArchetypeId]: Archetype }
 
 local function transitionArchetype(
 	entityIndex: EntityIndex,
-	destinationArchetype: Archetype,
+	to: Archetype,
 	destinationRow: i24,
-	sourceArchetype: Archetype,
+	from: Archetype,
 	sourceRow: i24
 )
-	local columns = sourceArchetype.columns
-	local sourceEntities = sourceArchetype.entities
-	local destinationEntities = destinationArchetype.entities
-	local destinationColumns = destinationArchetype.columns
+	-- local columns = sourceArchetype.columns
+	-- local sourceEntities = sourceArchetype.entities
+	-- local destinationEntities = destinationArchetype.entities
+	-- local destinationColumns = destinationArchetype.columns
+
+	local columns = from.columns
+	local sourceEntities = from.entities
+	local destinationEntities = to.entities
+	local destinationColumns = to.columns
+	local tr = to.records
+	local types = from.types
 
 	for componentId, column in columns do
-		local targetColumn = destinationColumns[componentId]
+		local targetColumn = destinationColumns[tr[types[componentId]]]
 		if targetColumn then
 			targetColumn[destinationRow] = column[sourceRow]
 		end
-		column[sourceRow] = column[#column]
-		column[#column] = nil
+
+		if sourceRow ~= #column then
+			column[sourceRow] = column[#column]
+			column[#column] = nil
+		end
 	end
 
 	destinationEntities[destinationRow] = sourceEntities[sourceRow]
 	entityIndex[sourceEntities[sourceRow]].row = destinationRow
 
 	local movedAway = #sourceEntities
-	sourceEntities[sourceRow] = sourceEntities[movedAway]
-	entityIndex[sourceEntities[movedAway]].row = sourceRow
+	if sourceRow ~= movedAway then
+		sourceEntities[sourceRow] = sourceEntities[movedAway]
+		entityIndex[sourceEntities[movedAway]].row = sourceRow
+	end
+
 	sourceEntities[movedAway] = nil
 end
 
@@ -147,7 +160,10 @@ local function archetypeOf(world: World, types: { i24 }, prev: Archetype?): Arch
 
 	world.archetypeIndex[ty] = archetype
 	world.archetypes[id] = archetype
-	createArchetypeRecords(world.componentIndex, archetype, prev)
+
+	if #types > 0 then
+		createArchetypeRecords(world.componentIndex, archetype, prev)
+	end
 
 	return archetype
 end
@@ -164,6 +180,7 @@ function World.new()
 		nextId = 0,
 		nextArchetypeId = 0,
 		_size = 0,
+		_changedStorage = {},
 	}, World)
 
 	self.ROOT_ARCHETYPE = archetypeOf(self, {}, nil)
@@ -265,20 +282,6 @@ function World.ensureRecord(world: World, entityId: i53)
 	return entityIndex[id]
 end
 
-function World.insert(world: World, entityId: i53, ...)
-	debug.profilebegin("insert")
-
-	if not world:contains(entityId) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
-	for i = 1, select("#", ...) do
-		componentAdd(world, entityId, select(i, ...))
-	end
-
-	debug.profileend()
-end
-
 local function archetypeTraverseRemove(world: World, componentId: i53, archetype: Archetype?): Archetype
 	local from = (archetype or world.ROOT_ARCHETYPE) :: Archetype
 	local edge = ensureEdge(from, componentId)
@@ -294,8 +297,12 @@ end
 
 local function get(componentIndex: ComponentIndex, record: Record, componentId: i24): ComponentInstance?
 	local archetype = record.archetype
-	local archetypeRecord = componentIndex[componentId].sparse[archetype.id]
+	local map = componentIndex[componentId]
+	if map == nil then
+		return nil
+	end
 
+	local archetypeRecord = map.sparse[archetype.id]
 	if not archetypeRecord then
 		return nil
 	end
@@ -348,10 +355,10 @@ function World.get(
 	world: World,
 	entityId: i53,
 	a: Component,
-	b: Component,
-	c: Component,
-	d: Component,
-	e: Component
+	b: Component?,
+	c: Component?,
+	d: Component?,
+	e: Component?
 ): any
 	local componentIndex = world.componentIndex
 	local record = world.entityIndex[entityId]
@@ -374,6 +381,32 @@ function World.get(
 	end
 end
 
+function World.insert(world: World, entityId: i53, ...)
+	debug.profilebegin("insert")
+
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	for i = 1, select("#", ...) do
+		local newComponent = select(i, ...)
+		assertValidComponentInstance(newComponent, i)
+
+		print("Insert", newComponent, getmetatable(newComponent))
+		if getmetatable(newComponent) == nil then
+			print(debug.traceback())
+		end
+
+		local metatable = getmetatable(newComponent)
+		local oldComponent = world:get(entityId, metatable)
+		componentAdd(world, entityId, newComponent)
+
+		world:_trackChanged(metatable, entityId, oldComponent, newComponent)
+	end
+
+	debug.profileend()
+end
+
 function World.entity(world: World)
 	world.nextId += 1
 	return world.nextId
@@ -383,37 +416,30 @@ function World:__iter()
 	return error("NOT IMPLEMENTED YET")
 end
 
---[=[
-	Spawns a new entity in the world with the given components.
+function World._trackChanged(world: World, metatable, id, old, new)
+	if not world._changedStorage[metatable] then
+		return
+	end
 
-	@param ... ComponentInstance -- The component values to spawn the entity with.
-	@return number -- The new entity ID.
-]=]
-function World.spawn(world: World, ...: ComponentInstance)
-	return world:spawnAt(world.nextId, ...)
-end
+	if old == new then
+		return
+	end
 
-function World.despawn(world: World, entityId: i53)
-	-- TODO: handle archetypes
-	world.entityIndex[entityId] = nil
-	world._size -= 1
-end
+	local record = table.freeze({
+		old = old,
+		new = new,
+	})
 
-function World.clear(world: World)
-	world.entityIndex = {}
-	world.componentIndex = {}
-	world.archetypes = {}
-	world.archetypeIndex = {}
-	world._size = 0
-	world.ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
-end
-
-function World.size(world: World)
-	return world._size
-end
-
-function World.contains(world: World, entityId: i53)
-	return world.entityIndex[entityId] ~= nil
+	for _, storage in ipairs(world._changedStorage[metatable]) do
+		-- If this entity has changed since the last time this system read it,
+		-- we ensure that the "old" value is whatever the system saw it as last, instead of the
+		-- "old" value we have here.
+		if storage[id] then
+			storage[id] = table.freeze({ old = storage[id].old, new = new })
+		else
+			storage[id] = record
+		end
+	end
 end
 
 --[=[
@@ -447,11 +473,46 @@ function World.spawnAt(world: World, entityId: i53, ...: ComponentInstance)
 			error(("Duplicate component type at index %d"):format(i), 2)
 		end
 
+		world:_trackChanged(metatable, entityId, nil, component)
+
 		components[metatable] = component
 		componentAdd(world, entityId, component)
 	end
 
 	return entityId
+end
+
+--[=[
+	Spawns a new entity in the world with the given components.
+
+	@param ... ComponentInstance -- The component values to spawn the entity with.
+	@return number -- The new entity ID.
+]=]
+function World.spawn(world: World, ...: ComponentInstance)
+	return world:spawnAt(world.nextId, ...)
+end
+
+function World.despawn(world: World, entityId: i53)
+	-- TODO: handle archetypes
+	world.entityIndex[entityId] = nil
+	world._size -= 1
+end
+
+function World.clear(world: World)
+	world.entityIndex = {}
+	world.componentIndex = {}
+	world.archetypes = {}
+	world.archetypeIndex = {}
+	world._size = 0
+	world.ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
+end
+
+function World.size(world: World)
+	return world._size
+end
+
+function World.contains(world: World, entityId: i53)
+	return world.entityIndex[entityId] ~= nil
 end
 
 local function noop(): any
@@ -917,6 +978,64 @@ function World.query(world: World, ...: Component): any
 	-- Only want to include archetype selection?
 	debug.profileend()
 	return queryResult(compatibleArchetypes, components :: any, queryLength, a, b, c, d, e)
+end
+
+local function cleanupQueryChanged(hookState)
+	local world = hookState.world
+	local componentToTrack = hookState.componentToTrack
+
+	for index, object in world._changedStorage[componentToTrack] do
+		if object == hookState.storage then
+			table.remove(world._changedStorage[componentToTrack], index)
+			break
+		end
+	end
+
+	if next(world._changedStorage[componentToTrack]) == nil then
+		world._changedStorage[componentToTrack] = nil
+	end
+end
+
+function World.queryChanged(world: World, componentToTrack, ...: nil)
+	if ... then
+		error("World:queryChanged does not take any additional parameters", 2)
+	end
+
+	local hookState = topoRuntime.useHookState(componentToTrack, cleanupQueryChanged) :: any
+	if hookState.storage then
+		return function(): any
+			local entityId, record = next(hookState.storage)
+
+			if entityId then
+				hookState.storage[entityId] = nil
+
+				return entityId, record
+			end
+			return
+		end
+	end
+
+	if not world._changedStorage[componentToTrack] then
+		world._changedStorage[componentToTrack] = {}
+	end
+
+	local storage = {}
+	hookState.storage = storage
+	hookState.world = world
+	hookState.componentToTrack = componentToTrack
+
+	table.insert(world._changedStorage[componentToTrack], storage)
+
+	local queryResult = world:query(componentToTrack)
+
+	return function(): any
+		local entityId, component = queryResult:next()
+
+		if entityId then
+			return entityId, table.freeze({ new = component })
+		end
+		return
+	end
 end
 
 return World
