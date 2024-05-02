@@ -40,7 +40,7 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describeFOCUS("World", function()
+	describe("World", function()
 		it("should be iterable", function()
 			local world = World.new()
 			local A = component()
