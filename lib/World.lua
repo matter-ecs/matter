@@ -502,8 +502,11 @@ function World.spawn(world: World, ...: ComponentInstance)
 end
 
 function World.despawn(world: World, entityId: i53)
-	-- TODO: handle archetypes
-	world.entityIndex[entityId] = nil
+	local entityIndex = world.entityIndex
+	local record = entityIndex[entityId]
+	moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
+	world.ROOT_ARCHETYPE.entities[record.row] = nil
+	entityIndex[entityId] = nil
 	world._size -= 1
 end
 
@@ -543,9 +546,7 @@ local emptyQueryResult = setmetatable({
 		}
 	end,
 }, {
-	__iter = function()
-		return noop
-	end,
+	__iter = noop,
 	__call = noop,
 })
 
@@ -669,7 +670,7 @@ local function queryResult(compatibleArchetypes, components: { number }, queryLe
 
 		lastArchetype, archetype = next(compatibleArchetypes)
 		if not lastArchetype then
-			return noop()
+			return emptyQueryResult
 		end
 
 		return self
