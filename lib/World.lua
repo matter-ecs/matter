@@ -457,6 +457,30 @@ local function noop(): any
 	return function() end
 end
 
+type QueryResult = {
+	next: any,
+	snapshot: any,
+}
+
+local emptyQueryResult = setmetatable({
+	next = function()
+		return nil, nil
+	end,
+	snapshot = function()
+		return {}
+	end,
+	without = function(self)
+		return self
+	end,
+}, {
+	__iter = function()
+		return noop
+	end,
+	__call = function()
+		return noop
+	end,
+})
+
 --[=[
 	Performs a query against the entities in this World. Returns a [QueryResult](/api/QueryResult), which iterates over
 	the results of the query.
@@ -485,9 +509,7 @@ function World.query(world: World, ...: Component): any
 	local a: any, b: any, c: any, d: any, e: any = ...
 
 	if queryLength == 0 then
-		-- TODO:
-		-- return noop query
-		warn("TODO noop query")
+		return emptyQueryResult
 	end
 
 	if queryLength == 1 then
@@ -585,10 +607,7 @@ function World.query(world: World, ...: Component): any
 	for _, componentId in (components :: any) :: { number } do
 		local map = componentIndex[componentId]
 		if not map then
-			-- TODO:
-			-- see what upstream does in this case
-			-- currently replicating jecs
-			error(tostring(componentId) .. " has not been added to an entity")
+			return emptyQueryResult
 		end
 
 		if firstArchetypeMap == nil or map.size < firstArchetypeMap.size then
@@ -617,7 +636,7 @@ function World.query(world: World, ...: Component): any
 
 	local lastArchetype, archetype = next(compatibleArchetypes)
 	if not lastArchetype then
-		return noop()
+		return emptyQueryResult
 	end
 
 	local lastRow
@@ -686,6 +705,8 @@ function World.query(world: World, ...: Component): any
 	local QueryResult = {}
 	QueryResult.__index = QueryResult
 
+	-- TODO:
+	-- remove in matter 1.0
 	function QueryResult:__call()
 		return iterate()
 	end
@@ -747,19 +768,14 @@ function World.query(world: World, ...: Component): any
 		local list = setmetatable({}, Snapshot) :: any
 
 		local function iter()
-			--local entry = table.pack(iterate())
-			--return if #entry == 0 then nil else entry
-			print(iterate())
-			return "x"
+			local entry = table.pack(iterate())
+			return if #entry == 0 then nil else entry
 		end
 
 		for data in iter :: any do
-			if data[1] then
-				table.insert(list, data)
-			end
+			table.insert(list, data)
 		end
 
-		print("entityId", list[1])
 		return list
 	end
 

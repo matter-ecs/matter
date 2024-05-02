@@ -196,8 +196,6 @@ return function()
 					[Player] = player,
 					[Health] = health,
 				}
-
-				print("eId", entityId)
 			end
 
 			expect(foundCount).to.equal(2)
@@ -535,51 +533,26 @@ return function()
 			local Health = component()
 			local Poison = component()
 
-			local one = world:spawn(
-				Player({
-					name = "alice",
-				}),
-				Health({
-					value = 100,
-				}),
-				Poison()
-			)
+			world:spawn(Player({ name = "Alice" }), Health({ health = 0 }))
+			world:spawn(Player({ name = "Bob" }), Health({ health = 0 }))
 
-			world:spawn( -- Spawn something we don't want to get back
-				component()(),
-				component()()
-			)
+			local query = world:query(Player, Health)
+			local snapshot = world:query(Player, Health):snapshot()
 
-			local two = world:spawn(
-				Player({
-					name = "bob",
-				}),
-				Health({
-					value = 99,
-				})
-			)
-
-			--print("entityId", two)
-			local query = world:query(Health, Player)
-			local snapshot = query:snapshot()
-
-			for entityId, health, player in snapshot do
-				expect(type(entityId)).to.equal("number")
-				expect(type(player.name)).to.equal("string")
-				expect(type(health.value)).to.equal("number")
+			-- selene: allow(manual_table_clone)
+			local snapshotEntities = {}
+			for entityId, player in snapshot do
+				snapshotEntities[entityId] = player
 			end
 
-			world:remove(two, Health)
-			world:despawn(one)
-
-			print(snapshot)
-			if snapshot[2][1] == 3 then
-				expect(snapshot[1][1]).to.equal(1)
-			else
-				expect(snapshot[2][1]).to.equal(1)
+			local count = 0
+			for entityId, player in query do
+				count += 1
+				expect(snapshotEntities[entityId]).to.equal(player)
 			end
 
-			expect(#world:query(Player):without(Poison):snapshot()).to.equal(1)
+			expect(#snapshot).to.equal(count)
+			expect(#world:query(Player, Health, Poison):snapshot()).to.equal(0)
 		end)
 
 		it("should contain entity in view", function()
@@ -722,6 +695,42 @@ return function()
 				world:remove(id, B)
 			end
 			expect(count).to.equal(10)
+		end)
+
+		itFOCUS("should have empty queries with similar methods", function()
+			local world = World.new()
+			local A = component()
+			local B = component()
+			world:spawn(A({}))
+
+			local ignoreReturnType = {
+				"next",
+				"__call",
+			}
+
+			for key, value in getmetatable(world:query(A)) do
+				if typeof(value) ~= "function" then
+					continue
+				end
+
+				local filledQuery = world:query(A)
+				local emptyQuery = world:query(B)
+
+				local realFunction = rawget(filledQuery, key) or getmetatable(filledQuery)[key]
+				local fakeFunction = rawget(emptyQuery, key) or getmetatable(emptyQuery)[key]
+				expect(fakeFunction).to.be.ok()
+				expect(typeof(fakeFunction)).to.equal("function")
+
+				if table.find(ignoreReturnType, key) then
+					continue
+				end
+
+				-- This does not check multiple return types.
+				-- Not sure if that's a problem worth solving
+				local realType = typeof(realFunction(filledQuery))
+				local fakeType = typeof(fakeFunction(emptyQuery))
+				expect(fakeType).to.equal(realType)
+			end
 		end)
 	end)
 end
