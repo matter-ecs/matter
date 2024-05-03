@@ -59,11 +59,6 @@ local function transitionArchetype(
 	from: Archetype,
 	sourceRow: i24
 )
-	-- local columns = sourceArchetype.columns
-	-- local sourceEntities = sourceArchetype.entities
-	-- local destinationEntities = destinationArchetype.entities
-	-- local destinationColumns = destinationArchetype.columns
-
 	local columns = from.columns
 	local sourceEntities = from.entities
 	local destinationEntities = to.entities
@@ -175,6 +170,7 @@ function World.new()
 	local self = setmetatable({
 		entityIndex = {},
 		componentIndex = {},
+		componentIdToComponent = {},
 		archetypes = {},
 		archetypeIndex = {},
 		nextId = 0,
@@ -248,7 +244,12 @@ local function archetypeTraverseAdd(world: World, componentId: i53, archetype: A
 end
 
 local function componentAdd(world: World, entityId: i53, componentInstance)
-	local componentId = #getmetatable(componentInstance)
+	local component = getmetatable(componentInstance)
+	local componentId = #component
+
+	-- TODO:
+	-- This never gets cleaned up
+	world.componentIdToComponent[componentId] = component
 
 	local record = world:ensureRecord(entityId)
 	local sourceArchetype = record.archetype
@@ -297,12 +298,11 @@ end
 
 local function get(componentIndex: ComponentIndex, record: Record, componentId: i24): ComponentInstance?
 	local archetype = record.archetype
-	local map = componentIndex[componentId]
-	if map == nil then
+	if archetype == nil then
 		return nil
 	end
 
-	local archetypeRecord = map.sparse[archetype.id]
+	local archetypeRecord = archetype.records[componentId]
 	if not archetypeRecord then
 		return nil
 	end
@@ -382,8 +382,6 @@ function World.get(
 end
 
 function World.insert(world: World, entityId: i53, ...)
-	debug.profilebegin("insert")
-
 	if not world:contains(entityId) then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -398,8 +396,6 @@ function World.insert(world: World, entityId: i53, ...)
 
 		world:_trackChanged(metatable, entityId, oldComponent, newComponent)
 	end
-
-	debug.profileend()
 end
 
 function World.replace(world: World, entityId: i53, ...: ComponentInstance)
@@ -422,7 +418,29 @@ function World.entity(world: World)
 end
 
 function World:__iter()
-	return error("NOT IMPLEMENTED YET")
+	local previous = nil
+	return function()
+		local entityId, data = next(self.entityIndex, previous)
+		previous = entityId
+
+		if entityId == nil then
+			return nil
+		end
+
+		local archetype = data.archetype
+		if not archetype then
+			return entityId, {}
+		end
+
+		local columns = archetype.columns
+		local components = {}
+		for i, map in columns do
+			local componentId = archetype.types[i]
+			components[self.componentIdToComponent[componentId]] = map[data.row]
+		end
+
+		return entityId, components
+	end
 end
 
 function World._trackChanged(world: World, metatable, id, old, new)
@@ -855,7 +873,6 @@ end
 	@return QueryResult -- See [QueryResult](/api/QueryResult) docs.
 ]=]
 function World.query(world: World, ...: Component): any
-	debug.profilebegin("world:query")
 	local compatibleArchetypes = {}
 	local components = { ... }
 	local archetypes = world.archetypes
@@ -985,8 +1002,6 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	-- Only want to include archetype selection?
-	debug.profileend()
 	return queryResult(compatibleArchetypes, components :: any, queryLength, a, b, c, d, e)
 end
 

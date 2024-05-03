@@ -41,14 +41,110 @@ end
 
 return function()
 	describe("World", function()
-		it("should be iterable", function()
+		itSKIP("marcus test", function()
+			local ecs = World.new()
+
+			local D1 = component()
+			local D2 = component()
+			local D3 = component()
+			local D4 = component()
+			local D5 = component()
+			local D6 = component()
+			local D7 = component()
+			local D8 = component()
+
+			local function flip()
+				return math.random() >= 0.15
+			end
+
+			local added = 0
+			local archetypes = {}
+			for i = 1, 2 ^ 16 - 2 do
+				local entity = ecs:spawn()
+
+				local combination = ""
+
+				if flip() then
+					combination ..= "B"
+					ecs:insert(entity, D2({ value = true }))
+				end
+				if flip() then
+					combination ..= "C"
+					ecs:insert(entity, D3({ value = true }))
+				end
+				if flip() then
+					combination ..= "D"
+					ecs:insert(entity, D4({ value = true }))
+				end
+				if flip() then
+					combination ..= "E"
+					ecs:insert(entity, D5({ value = true }))
+				end
+				if flip() then
+					combination ..= "F"
+					ecs:insert(entity, D6({ value = true }))
+				end
+				if flip() then
+					combination ..= "G"
+					ecs:insert(entity, D7({ value = true }))
+				end
+				if flip() then
+					combination ..= "H"
+					ecs:insert(entity, D8({ value = true }))
+				end
+
+				if #combination == 7 then
+					added += 1
+					ecs:insert(entity, D1({ value = true }))
+				end
+				archetypes[combination] = true
+			end
+
+			local iter = 0
+			for _ in ecs:query(D1, D2) do
+				iter += 1
+			end
+
+			print(iter)
+		end)
+
+		it("rah", function()
+			local world = World.new()
+			local A = component()
+			local entity = world:spawn()
+			local otherEntity = world:spawn()
+			world:insert(entity, A({}))
+			world:get(otherEntity, A) -- errors
+		end)
+
+		it("should only iterate over proper archetypes", function()
 			local world = World.new()
 			local A = component()
 			local B = component()
+			for i = 1, 2 ^ 16 do
+				local id = world:spawn()
+				world:insert(id, if i > (2 ^ 16 / 2) then B({}) else A({}))
+			end
 
-			local eA = world:spawn(A())
-			local eB = world:spawn(B())
-			local eAB = world:spawn(A(), B())
+			local iterated = 0
+			for _ in world:query(A) do
+				iterated += 1
+			end
+
+			iterated = 0
+			for _ in world:query(B) do
+				iterated += 1
+			end
+		end)
+
+		it("should be iterable", function()
+			local world = World.new()
+			local A = component("A")
+			local B = component("B")
+
+			local eA = world:spawn(A({ first_a = true }))
+			local eB = world:spawn(B({ first_b = true }))
+			local eAB = world:spawn(A({ third_a = true }), B({ second_b = true }))
 
 			local count = 0
 			for id, data in world do
