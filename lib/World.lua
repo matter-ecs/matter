@@ -351,34 +351,22 @@ function World.remove(world: World, entityId: i53, ...)
 	return unpack(removed, 1, length)
 end
 
-function World.get(
-	world: World,
-	entityId: i53,
-	a: Component,
-	b: Component?,
-	c: Component?,
-	d: Component?,
-	e: Component?
-): any
+function World.get(world: World, entityId: i53, ...: Component): any
 	local componentIndex = world.componentIndex
 	local record = world.entityIndex[entityId]
 	if not record then
 		return nil
 	end
 
-	local va = get(componentIndex, record, #a)
-
-	if b == nil then
-		return va
-	elseif c == nil then
-		return va, get(componentIndex, record, #b)
-	elseif d == nil then
-		return va, get(componentIndex, record, #b), get(componentIndex, record, #c)
-	elseif e == nil then
-		return va, get(componentIndex, record, #b), get(componentIndex, record, #c), get(componentIndex, record, #d)
-	else
-		error("args exceeded")
+	local length = select("#", ...)
+	local components = {}
+	for i = 1, length do
+		local metatable = select(i, ...)
+		assertValidComponent(metatable, i)
+		components[i] = get(componentIndex, record, #metatable)
 	end
+
+	return unpack(components, 1, length)
 end
 
 function World.insert(world: World, entityId: i53, ...)
@@ -522,8 +510,11 @@ end
 function World.despawn(world: World, entityId: i53)
 	local entityIndex = world.entityIndex
 	local record = entityIndex[entityId]
-	moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
-	world.ROOT_ARCHETYPE.entities[record.row] = nil
+	if record.archetype then
+		moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
+		world.ROOT_ARCHETYPE.entities[record.row] = nil
+	end
+
 	entityIndex[entityId] = nil
 	world._size -= 1
 end

@@ -108,7 +108,7 @@ return function()
 			print(iter)
 		end)
 
-		it("rah", function()
+		it("test", function()
 			local world = World.new()
 			local A = component()
 			local entity = world:spawn()
@@ -166,7 +166,7 @@ return function()
 			expect(count).to.equal(3)
 		end)
 
-		it("should have correct size", function()
+		itFOCUS("should have correct size", function()
 			local world = World.new()
 			world:spawn()
 			world:spawn()
@@ -180,6 +180,18 @@ return function()
 			world:clear()
 
 			expect(world:size()).to.equal(0)
+		end)
+
+		itFOCUS("should let you get many components", function()
+			local world = World.new()
+			local components = {}
+			for i = 1, 16 do
+				table.insert(components, component(tostring(i)))
+			end
+
+			local entityId = world:spawn()
+			local result = table.pack(world:get(entityId, unpack(components)))
+			expect(result.n).to.equal(#components)
 		end)
 
 		it("should report contains correctly", function()
@@ -320,7 +332,7 @@ return function()
 			expect(withoutCount).to.equal(1)
 		end)
 
-		it("should allow getting single components", function()
+		itFOCUS("should allow getting single components", function()
 			local world = World.new()
 
 			local Player = component()
