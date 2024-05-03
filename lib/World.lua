@@ -569,7 +569,7 @@ local emptyQueryResult = setmetatable({
 })
 
 local function queryResult(compatibleArchetypes, components: { number }, queryLength, ...): any
-	local a: any, b: any, c: any, d: any, e: any = ...
+	local a: any, b: any, c: any, d: any, e: any, f: any, g: any, h: any = ...
 	local lastArchetype, archetype = next(compatibleArchetypes)
 	if not lastArchetype then
 		return emptyQueryResult
@@ -615,6 +615,31 @@ local function queryResult(compatibleArchetypes, components: { number }, queryLe
 				columns[archetypeRecords[c]][row],
 				columns[archetypeRecords[d]][row],
 				columns[archetypeRecords[e]][row]
+		elseif queryLength == 6 then
+			return entityId,
+				columns[archetypeRecords[a]][row],
+				columns[archetypeRecords[b]][row],
+				columns[archetypeRecords[c]][row],
+				columns[archetypeRecords[d]][row],
+				columns[archetypeRecords[e]][row],
+				columns[archetypeRecords[f]][row]
+		elseif queryLength == 7 then
+			return columns[archetypeRecords[a]][row],
+				columns[archetypeRecords[b]][row],
+				columns[archetypeRecords[c]][row],
+				columns[archetypeRecords[d]][row],
+				columns[archetypeRecords[e]][row],
+				columns[archetypeRecords[f]][row],
+				columns[archetypeRecords[g]][row]
+		elseif queryLength == 8 then
+			return columns[archetypeRecords[a]][row],
+				columns[archetypeRecords[b]][row],
+				columns[archetypeRecords[c]][row],
+				columns[archetypeRecords[d]][row],
+				columns[archetypeRecords[e]][row],
+				columns[archetypeRecords[f]][row],
+				columns[archetypeRecords[g]][row],
+				columns[archetypeRecords[h]][row]
 		end
 
 		for i, componentId in components do
@@ -877,7 +902,7 @@ function World.query(world: World, ...: Component): any
 	local components = { ... }
 	local archetypes = world.archetypes
 	local queryLength = select("#", ...)
-	local a: any, b: any, c: any, d: any, e: any = ...
+	local a: any, b: any, c: any, d: any, e: any, f: any, g: any, h: any = ...
 
 	if queryLength == 0 then
 		return emptyQueryResult
@@ -967,6 +992,36 @@ function World.query(world: World, ...: Component): any
 		e = #e
 
 		components = { a, b, c, d, e }
+	elseif queryLength == 6 then
+		a = #a
+		b = #b
+		c = #c
+		d = #d
+		e = #e
+		f = #f
+
+		components = { a, b, c, d, e, f }
+	elseif queryLength == 7 then
+		a = #a
+		b = #b
+		c = #c
+		d = #d
+		e = #e
+		f = #f
+		g = #g
+
+		components = { a, b, c, d, e, f, g }
+	elseif queryLength == 8 then
+		a = #a
+		b = #b
+		c = #c
+		d = #d
+		e = #e
+		f = #f
+		g = #g
+		h = #h
+
+		components = { a, b, c, d, e, f, g, h }
 	else
 		for i, component in components do
 			components[i] = (#component) :: any
@@ -1002,7 +1057,7 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	return queryResult(compatibleArchetypes, components :: any, queryLength, a, b, c, d, e)
+	return queryResult(compatibleArchetypes, components :: any, queryLength, a, b, c, d, e, f, g, h)
 end
 
 local function cleanupQueryChanged(hookState)
