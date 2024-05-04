@@ -74,8 +74,9 @@ local function transitionArchetype(
 
 		if sourceRow ~= #column then
 			column[sourceRow] = column[#column]
-			column[#column] = nil
 		end
+
+		column[#column] = nil
 	end
 
 	destinationEntities[destinationRow] = sourceEntities[sourceRow]
@@ -310,7 +311,7 @@ local function get(componentIndex: ComponentIndex, record: Record, componentId: 
 	return archetype.columns[archetypeRecord][record.row]
 end
 
-local function componentRemove(world: World, entityId: i53, component: Component)
+local function componentRemove(world: World, entityId: i53, component: Component): ComponentInstance?
 	local componentId = #component
 	local record = world:ensureRecord(entityId)
 	local sourceArchetype = record.archetype
@@ -319,6 +320,10 @@ local function componentRemove(world: World, entityId: i53, component: Component
 	-- TODO:
 	-- There is a better way to get the component for returning
 	local componentInstance = get(world.componentIndex, record, componentId)
+	if componentInstance == nil then
+		return nil
+	end
+
 	if sourceArchetype and not (sourceArchetype == destinationArchetype) then
 		moveEntity(world.entityIndex, entityId, record, destinationArchetype)
 	end
@@ -345,7 +350,14 @@ function World.remove(world: World, entityId: i53, ...)
 	local length = select("#", ...)
 	local removed = {}
 	for i = 1, length do
-		table.insert(removed, componentRemove(world, entityId, select(i, ...)))
+		local oldComponent = componentRemove(world, entityId, select(i, ...))
+		if not oldComponent then
+			continue
+		end
+
+		table.insert(removed, oldComponent)
+
+		world:_trackChanged(select(i, ...), entityId, oldComponent, nil)
 	end
 
 	return unpack(removed, 1, length)
@@ -1097,14 +1109,24 @@ function World.queryChanged(world: World, componentToTrack, ...: nil)
 
 	table.insert(world._changedStorage[componentToTrack], storage)
 
-	local queryResult = world:query(componentToTrack)
-
+	-- TODO:
+	-- Go back to lazy evaluation of the query
+	-- Switched because next is not working
+	local snapshot = world:query(componentToTrack):snapshot()
+	local last
 	return function(): any
-		local entityId, component = queryResult:next()
+		local index, entry = next(snapshot, last)
+		last = index
 
+		if not index then
+			return
+		end
+
+		local entityId, component = entry[1], entry[2]
 		if entityId then
 			return entityId, table.freeze({ new = component })
 		end
+
 		return
 	end
 end

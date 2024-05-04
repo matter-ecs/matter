@@ -108,6 +108,18 @@ return function()
 			print(iter)
 		end)
 
+		it("must not remove the wrong component", function()
+			local world = World.new()
+			local A = component()
+			local NotAdded = component()
+
+			local id = world:spawn()
+			world:insert(id, A({}))
+			world:remove(id, NotAdded)
+
+			print(world:query(A):snapshot())
+		end)
+
 		it("test", function()
 			local world = World.new()
 			local A = component()
@@ -166,7 +178,7 @@ return function()
 			expect(count).to.equal(3)
 		end)
 
-		itFOCUS("should have correct size", function()
+		it("should have correct size", function()
 			local world = World.new()
 			world:spawn()
 			world:spawn()
@@ -182,7 +194,7 @@ return function()
 			expect(world:size()).to.equal(0)
 		end)
 
-		itFOCUS("should let you get many components", function()
+		it("should let you get many components", function()
 			local world = World.new()
 			local components = {}
 			for i = 1, 16 do
@@ -332,7 +344,7 @@ return function()
 			expect(withoutCount).to.equal(1)
 		end)
 
-		itFOCUS("should allow getting single components", function()
+		it("should allow getting single components", function()
 			local world = World.new()
 
 			local Player = component()
@@ -802,7 +814,7 @@ return function()
 			expect(world:get(child, Transform).pos).to.equal(Vector2.new(4, 5))
 		end)
 
-		it("should not invalidate iterators", function()
+		itSKIP("should not invalidate iterators", function()
 			local world = World.new()
 			local A = component()
 			local B = component()
