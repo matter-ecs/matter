@@ -117,6 +117,7 @@ return function()
 			world:insert(id, A({}))
 			world:remove(id, NotAdded)
 
+			local snapshot = world:query(A):snapshot()
 			print(world:query(A):snapshot())
 		end)
 

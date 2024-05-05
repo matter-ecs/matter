@@ -72,20 +72,23 @@ local function transitionArchetype(
 			targetColumn[destinationRow] = column[sourceRow]
 		end
 
-		if sourceRow ~= #column then
-			column[sourceRow] = column[#column]
+		local last = #column
+		if sourceRow ~= last then
+			column[sourceRow] = column[last]
 		end
 
-		column[#column] = nil
+		column[last] = nil
 	end
 
-	destinationEntities[destinationRow] = sourceEntities[sourceRow]
-	entityIndex[sourceEntities[sourceRow]].row = destinationRow
+	local atSourceRow = sourceEntities[sourceRow]
+	destinationEntities[destinationRow] = atSourceRow
+	entityIndex[atSourceRow].row = destinationRow
 
 	local movedAway = #sourceEntities
 	if sourceRow ~= movedAway then
-		sourceEntities[sourceRow] = sourceEntities[movedAway]
-		entityIndex[sourceEntities[movedAway]].row = sourceRow
+		local atMovedAway = sourceEntities[movedAway]
+		sourceEntities[sourceRow] = atMovedAway
+		entityIndex[atMovedAway].row = sourceRow
 	end
 
 	sourceEntities[movedAway] = nil
@@ -118,17 +121,20 @@ local function hash(arr): string | number
 end
 
 local function createArchetypeRecords(componentIndex: ComponentIndex, to: Archetype)
-	local destinationCount = #to.types
 	local destinationIds = to.types
+	local records = to.records
+	local id = to.id
 
-	for i = 1, destinationCount do
-		local destinationId = destinationIds[i]
+	for i, destinationId in destinationIds do
+		local archetypesMap = componentIndex[destinationId]
 
-		if not componentIndex[destinationId] then
-			componentIndex[destinationId] = { sparse = {}, size = 0 }
+		if not archetypesMap then
+			archetypesMap = { size = 0, sparse = {} }
+			componentIndex[destinationId] = archetypesMap
 		end
-		componentIndex[destinationId].sparse[to.id] = i
-		to.records[destinationId] = i
+
+		archetypesMap.sparse[id] = i
+		records[destinationId] = i
 	end
 end
 
@@ -138,10 +144,11 @@ local function archetypeOf(world: World, types: { i24 }, prev: Archetype?): Arch
 	world.nextArchetypeId = (world.nextArchetypeId :: number) + 1
 	local id = world.nextArchetypeId
 
-	local columns = {} :: { any }
+	local length = #types
+	local columns = table.create(length) :: { any }
 
-	for _ in types do
-		table.insert(columns, {})
+	for index in types do
+		columns[index] = {}
 	end
 
 	local archetype = {
@@ -157,8 +164,8 @@ local function archetypeOf(world: World, types: { i24 }, prev: Archetype?): Arch
 	world.archetypeIndex[ty] = archetype
 	world.archetypes[id] = archetype
 
-	if #types > 0 then
-		createArchetypeRecords(world.componentIndex, archetype, prev)
+	if length > 0 then
+		createArchetypeRecords(world.componentIndex, archetype)
 	end
 
 	return archetype
@@ -178,9 +185,9 @@ function World.new()
 		nextArchetypeId = 0,
 		_size = 0,
 		_changedStorage = {},
+		ROOT_ARCHETYPE = (nil :: any) :: Archetype,
 	}, World)
 
-	self.ROOT_ARCHETYPE = archetypeOf(self, {}, nil)
 	return self
 end
 
@@ -201,9 +208,7 @@ local function ensureArchetype(world: World, types, prev)
 end
 
 local function findInsert(types: { i53 }, toAdd: i53)
-	local count = #types
-	for i = 1, count do
-		local id = types[i]
+	for i, id in types do
 		if id == toAdd then
 			return -1
 		end
@@ -211,7 +216,8 @@ local function findInsert(types: { i53 }, toAdd: i53)
 			return i
 		end
 	end
-	return count + 1
+
+	return #types + 1
 end
 
 local function findArchetypeWith(world: World, node: Archetype, componentId: i53)
@@ -227,21 +233,49 @@ local function findArchetypeWith(world: World, node: Archetype, componentId: i53
 end
 
 local function ensureEdge(archetype: Archetype, componentId: i53)
-	if not archetype.edges[componentId] then
-		archetype.edges[componentId] = {} :: any
+	local edges = archetype.edges
+	local edge = edges[componentId]
+	if not edge then
+		edge = {} :: any
+		edges[componentId] = edge
 	end
-	return archetype.edges[componentId]
+
+	return edge
 end
 
-local function archetypeTraverseAdd(world: World, componentId: i53, archetype: Archetype?): Archetype
-	local from = (archetype or world.ROOT_ARCHETYPE) :: Archetype
-	local edge = ensureEdge(from, componentId)
+local function archetypeTraverseAdd(world: World, componentId: i53, from: Archetype?): Archetype
+	if not from then
+		-- If there was no source archetype then it should return the ROOT_ARCHETYPE
+		local ROOT_ARCHETYPE = world.ROOT_ARCHETYPE
+		if not ROOT_ARCHETYPE then
+			ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
+			world.ROOT_ARCHETYPE = ROOT_ARCHETYPE :: never
+		end
 
-	if not edge.add then
-		edge.add = findArchetypeWith(world, from, componentId)
+		from = ROOT_ARCHETYPE
 	end
 
-	return edge.add
+	local edge = ensureEdge(from :: Archetype, componentId)
+	local add = edge.add
+	if not add then
+		-- Save an edge using the component ID to the archetype to allow
+		-- faster traversals to adjacent archetypes.
+		add = findArchetypeWith(world, from :: Archetype, componentId)
+		edge.add = add :: never
+	end
+
+	return add
+end
+
+local function ensureRecord(entityIndex, entityId): Record
+	local record = entityIndex[entityId]
+
+	if not record then
+		record = {}
+		entityIndex[entityId] = record
+	end
+
+	return record :: Record
 end
 
 local function componentAdd(world: World, entityId: i53, componentInstance)
@@ -252,7 +286,7 @@ local function componentAdd(world: World, entityId: i53, componentInstance)
 	-- This never gets cleaned up
 	world.componentIdToComponent[componentId] = component
 
-	local record = world:ensureRecord(entityId)
+	local record = ensureRecord(world.entityIndex, entityId)
 	local sourceArchetype = record.archetype
 	local destinationArchetype = archetypeTraverseAdd(world, componentId, sourceArchetype)
 
@@ -275,29 +309,22 @@ local function componentAdd(world: World, entityId: i53, componentInstance)
 	destinationArchetype.columns[archetypeRecord][record.row] = componentInstance
 end
 
-function World.ensureRecord(world: World, entityId: i53)
-	local entityIndex = world.entityIndex
-	local id = entityId
-	if not entityIndex[id] then
-		entityIndex[id] = {} :: Record
-	end
-	return entityIndex[id]
-end
-
 local function archetypeTraverseRemove(world: World, componentId: i53, archetype: Archetype?): Archetype
 	local from = (archetype or world.ROOT_ARCHETYPE) :: Archetype
 	local edge = ensureEdge(from, componentId)
 
-	if not edge.remove then
+	local remove = edge.remove
+	if not remove then
 		local to = table.clone(from.types)
 		table.remove(to, table.find(to, componentId))
-		edge.remove = ensureArchetype(world, to, from)
+		remove = ensureArchetype(world, to, from)
+		edge.remove = remove :: never
 	end
 
-	return edge.remove
+	return remove
 end
 
-local function get(componentIndex: ComponentIndex, record: Record, componentId: i24): ComponentInstance?
+local function get(record: Record, componentId: i24): ComponentInstance?
 	local archetype = record.archetype
 	if archetype == nil then
 		return nil
@@ -313,13 +340,13 @@ end
 
 local function componentRemove(world: World, entityId: i53, component: Component): ComponentInstance?
 	local componentId = #component
-	local record = world:ensureRecord(entityId)
+	local record = ensureRecord(world.entityIndex, entityId)
 	local sourceArchetype = record.archetype
 	local destinationArchetype = archetypeTraverseRemove(world, componentId, sourceArchetype)
 
 	-- TODO:
 	-- There is a better way to get the component for returning
-	local componentInstance = get(world.componentIndex, record, componentId)
+	local componentInstance = get(record, componentId)
 	if componentInstance == nil then
 		return nil
 	end
@@ -375,7 +402,7 @@ function World.get(world: World, entityId: i53, ...: Component): any
 	for i = 1, length do
 		local metatable = select(i, ...)
 		assertValidComponent(metatable, i)
-		components[i] = get(componentIndex, record, #metatable)
+		components[i] = get(record, #metatable)
 	end
 
 	return unpack(components, 1, length)
@@ -488,7 +515,7 @@ function World.spawnAt(world: World, entityId: i53, ...: ComponentInstance)
 	end
 
 	world._size += 1
-	world:ensureRecord(entityId)
+	ensureRecord(world.entityIndex, entityId)
 
 	local components = {}
 	for i = 1, select("#", ...) do
@@ -522,6 +549,9 @@ end
 function World.despawn(world: World, entityId: i53)
 	local entityIndex = world.entityIndex
 	local record = entityIndex[entityId]
+
+	-- TODO:
+	-- Track despawn changes
 	if record.archetype then
 		moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
 		world.ROOT_ARCHETYPE.entities[record.row] = nil
