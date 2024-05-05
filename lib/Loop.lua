@@ -300,9 +300,7 @@ function Loop:_sortSystems()
 						error(
 							`Unable to schedule "{systemName(system)}" because the system "{systemName(dependency)}" is not scheduled.\n\nEither schedule "{systemName(
 								dependency
-							)}" before "{systemName(
-								system
-							)}" or consider scheduling these systems together with Loop:scheduleSystems`
+							)}" before "{systemName(system)}" or consider scheduling these systems together with Loop:scheduleSystems`
 						)
 					end
 				end
@@ -417,9 +415,9 @@ function Loop:begin(events)
 						)
 					end
 
-					for world in dirtyWorlds do
+					--[[for world in dirtyWorlds do
 						world:optimizeQueries()
-					end
+					end]]
 					table.clear(dirtyWorlds)
 
 					if not success then
