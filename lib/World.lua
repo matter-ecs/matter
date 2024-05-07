@@ -375,7 +375,9 @@ local function noop() end
 
 local noopQuery = setmetatable({
 	next = noop,
-	snapshot = function() return {} end,
+	snapshot = function()
+		return {}
+	end,
 	without = function(self)
 		return self
 	end,
@@ -613,7 +615,7 @@ end
 
 	Provides random access to the results of a query.
 
-	Calling the View is equivalent to iterating a query. 
+	Calling the View is equivalent to iterating a query.
 
 	```lua
 	for id, player, health, poison in world:query(Player, Health, Poison):view() do
@@ -634,7 +636,7 @@ end
 
 	for _ in world:query(Damage):view() do end -- You can still iterate views if you want!
 	```
-	
+
 	@return View See [View](/api/View) docs.
 ]=]
 
@@ -694,9 +696,9 @@ function QueryResult:view()
 
 	--[=[
 		@within View
-		Equivalent to `world:contains()`	
+		Equivalent to `world:contains()`
 		@param entity number - the entity ID
-		@return boolean 
+		@return boolean
 	]=]
 
 	function View:contains(entity)
