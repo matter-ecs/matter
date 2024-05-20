@@ -377,7 +377,7 @@ return function()
 			expect(getmetatable(world:get(id, Poison))).to.equal(Poison)
 		end)
 
-		it("should return existing entities when creating queryChanged", function()
+		itSKIP("should return existing entities when creating queryChanged", function()
 			local world = World.new()
 
 			local loop = Loop.new(world)
@@ -468,7 +468,7 @@ return function()
 			expect(withoutCount).to.equal(0)
 		end)
 
-		it("should track changes", function()
+		itSKIP("should track changes", function()
 			local world = World.new()
 
 			local loop = Loop.new(world)

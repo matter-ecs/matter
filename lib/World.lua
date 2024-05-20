@@ -1,7 +1,6 @@
 --!optimize 2
 --!native
 --!strict
-local component = require(script.Parent.component)
 local topoRuntime = require(script.Parent.topoRuntime)
 local Component = require(script.Parent.component)
 
@@ -13,11 +12,11 @@ local ERROR_DUPLICATE_ENTITY =
 	"The world already contains an entity with ID %d. Use World:replace instead if this is intentional."
 local ERROR_NO_COMPONENTS = "Missing components"
 
+type Component = { [any]: any }
+type ComponentInstance = { [any]: any }
+
 type i53 = number
 type i24 = number
-
-type Component = { [any]: any }
-type ComponentInstance = Component
 
 type Ty = { i53 }
 type ArchetypeId = number
@@ -25,10 +24,9 @@ type ArchetypeId = number
 type Column = { any }
 
 type Archetype = {
-	-- Unique identifier of this archetype
 	id: number,
 	edges: {
-		[i24]: {
+		[i53]: {
 			add: Archetype,
 			remove: Archetype,
 		},
@@ -43,13 +41,33 @@ type Archetype = {
 type Record = {
 	archetype: Archetype,
 	row: number,
+	dense: i24,
+	componentRecord: ArchetypeMap,
 }
 
-type EntityIndex = { [i24]: Record }
-type ComponentIndex = { [i24]: ArchetypeMap }
+type EntityIndex = { dense: { [i24]: i53 }, sparse: { [i53]: Record } }
 
 type ArchetypeRecord = number
-type ArchetypeMap = { sparse: { [ArchetypeId]: ArchetypeRecord }, size: number }
+--[[
+TODO:
+{
+	index: number,
+	count: number,
+	column: number
+} 
+
+]]
+
+type ArchetypeMap = {
+	cache: { [number]: ArchetypeRecord },
+	first: ArchetypeMap,
+	second: ArchetypeMap,
+	parent: ArchetypeMap,
+	size: number,
+}
+
+type ComponentIndex = { [i24]: ArchetypeMap }
+
 type Archetypes = { [ArchetypeId]: Archetype }
 
 local function transitionArchetype(
@@ -94,10 +112,11 @@ local function transitionArchetype(
 	sourceEntities[movedAway] = nil
 end
 
-local function archetypeAppend(entity: i53, archetype: Archetype): i24
+local function archetypeAppend(entityId: number, archetype: Archetype): number
 	local entities = archetype.entities
-	table.insert(entities, entity)
-	return #entities
+	local length = #entities + 1
+	entities[length] = entityId
+	return length
 end
 
 local function newEntity(entityId: i53, record: Record, archetype: Archetype)
@@ -120,78 +139,126 @@ local function hash(arr): string | number
 	return table.concat(arr, "_")
 end
 
-local function createArchetypeRecords(componentIndex: ComponentIndex, to: Archetype)
-	local destinationIds = to.types
-	local records = to.records
-	local id = to.id
+local function ensureComponentRecord(
+	componentIndex: ComponentIndex,
+	archetypeId: ArchetypeId,
+	componentId: number,
+	i: number
+): ArchetypeMap
+	local archetypesMap = componentIndex[componentId]
 
-	for i, destinationId in destinationIds do
-		local archetypesMap = componentIndex[destinationId]
-
-		if not archetypesMap then
-			archetypesMap = { size = 0, sparse = {} }
-			componentIndex[destinationId] = archetypesMap
-		end
-
-		archetypesMap.sparse[id] = i
-		records[destinationId] = i
+	if not archetypesMap then
+		archetypesMap = { size = 0, cache = {}, first = {}, second = {} } :: ArchetypeMap
+		componentIndex[componentId] = archetypesMap
 	end
+
+	archetypesMap.cache[archetypeId] = i
+	archetypesMap.size += 1
+
+	return archetypesMap
 end
 
-local function archetypeOf(world: World, types: { i24 }, prev: Archetype?): Archetype
+local function archetypeOf(world: any, types: { i24 }, prev: Archetype?): Archetype
 	local ty = hash(types)
 
-	world.nextArchetypeId = (world.nextArchetypeId :: number) + 1
-	local id = world.nextArchetypeId
+	local id = world.nextArchetypeId + 1
+	world.nextArchetypeId = id
 
 	local length = #types
-	local columns = table.create(length) :: { any }
+	local columns = table.create(length)
+	local componentIndex = world.componentIndex
 
-	for index in types do
-		columns[index] = {}
+	local records = {}
+	for i, componentId in types do
+		ensureComponentRecord(componentIndex, id, componentId, i)
+		records[componentId] = i
+		columns[i] = {}
 	end
 
 	local archetype = {
-		id = id,
-		types = types,
-		type = ty,
 		columns = columns,
-		entities = {},
 		edges = {},
-		records = {},
+		entities = {},
+		id = id,
+		records = records,
+		type = ty,
+		types = types,
 	}
 
 	world.archetypeIndex[ty] = archetype
 	world.archetypes[id] = archetype
 
-	if length > 0 then
-		createArchetypeRecords(world.componentIndex, archetype)
-	end
-
 	return archetype
 end
 
+--[=[
+	@class World
+
+	A World contains entities which have components.
+	The World is queryable and can be used to get entities with a specific set of components.
+	Entities are simply ever-increasing integers.
+]=]
 local World = {}
 World.__index = World
 
+--[=[
+	Creates a new World.
+]=]
 function World.new()
-	local self = setmetatable({
-		entityIndex = {},
+	local world = setmetatable({
+		entityIndex = {
+			-- Used for checking if an entity is alive
+			-- Maps an ID without generation and flags to an ID with
+			-- A densely populated map of existing ids
+			dense = {},
+
+			-- TBA
+			sparse = {},
+		},
 		componentIndex = {},
 		componentIdToComponent = {},
 		archetypes = {},
 		archetypeIndex = {},
-		nextId = 0,
+		_nextId = 0,
 		nextArchetypeId = 0,
 		_size = 0,
 		_changedStorage = {},
 		ROOT_ARCHETYPE = (nil :: any) :: Archetype,
 	}, World)
 
-	return self
+	world.ROOT_ARCHETYPE = archetypeOf(world, {})
+	return world
 end
 
 type World = typeof(World.new())
+
+local function destructColumns(columns, count, row)
+	if row == count then
+		for _, column in columns do
+			column[count] = nil
+		end
+	else
+		for _, column in columns do
+			column[row] = column[count]
+			column[count] = nil
+		end
+	end
+end
+
+local function archetypeDelete(world: World, id: i53)
+	local componentIndex = world.componentIndex
+	local archetypesMap = componentIndex[id]
+	local archetypes = world.archetypes
+	if archetypesMap then
+		for archetypeId in archetypesMap.cache do
+			for _, entity in archetypes[archetypeId].entities do
+				world:remove(entity, id)
+			end
+		end
+
+		componentIndex[id] = nil
+	end
+end
 
 local function ensureArchetype(world: World, types, prev)
 	if #types < 1 then
@@ -222,12 +289,18 @@ end
 
 local function findArchetypeWith(world: World, node: Archetype, componentId: i53)
 	local types = node.types
+
+	-- Component IDs are added incrementally, so inserting and sorting
+	-- them each time would be expensive. Instead this insertion sort can find the insertion
+	-- point in the types array.
+	local destinationType = table.clone(node.types)
 	local at = findInsert(types, componentId)
 	if at == -1 then
+		-- If it finds a duplicate, it just means it is the same archetype so it can return it
+		-- directly instead of needing to hash types for a lookup to the archetype.
 		return node
 	end
 
-	local destinationType = table.clone(node.types)
 	table.insert(destinationType, at, componentId)
 	return ensureArchetype(world, destinationType, node)
 end
@@ -243,39 +316,19 @@ local function ensureEdge(archetype: Archetype, componentId: i53)
 	return edge
 end
 
-local function archetypeTraverseAdd(world: World, componentId: i53, from: Archetype?): Archetype
-	if not from then
-		-- If there was no source archetype then it should return the ROOT_ARCHETYPE
-		local ROOT_ARCHETYPE = world.ROOT_ARCHETYPE
-		if not ROOT_ARCHETYPE then
-			ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
-			world.ROOT_ARCHETYPE = ROOT_ARCHETYPE :: never
-		end
+local function archetypeTraverseAdd(world: World, componentId: i53, from: Archetype): Archetype
+	from = from or world.ROOT_ARCHETYPE
 
-		from = ROOT_ARCHETYPE
-	end
-
-	local edge = ensureEdge(from :: Archetype, componentId)
+	local edge = ensureEdge(from, componentId)
 	local add = edge.add
 	if not add then
 		-- Save an edge using the component ID to the archetype to allow
 		-- faster traversals to adjacent archetypes.
-		add = findArchetypeWith(world, from :: Archetype, componentId)
+		add = findArchetypeWith(world, from, componentId)
 		edge.add = add :: never
 	end
 
 	return add
-end
-
-local function ensureRecord(entityIndex, entityId): Record
-	local record = entityIndex[entityId]
-
-	if not record then
-		record = {}
-		entityIndex[entityId] = record
-	end
-
-	return record :: Record
 end
 
 local function componentAdd(world: World, entityId: i53, componentInstance)
@@ -286,27 +339,31 @@ local function componentAdd(world: World, entityId: i53, componentInstance)
 	-- This never gets cleaned up
 	world.componentIdToComponent[componentId] = component
 
-	local record = ensureRecord(world.entityIndex, entityId)
-	local sourceArchetype = record.archetype
-	local destinationArchetype = archetypeTraverseAdd(world, componentId, sourceArchetype)
+	local entityIndex = world.entityIndex
+	local record = entityIndex.sparse[entityId]
+	local from = record.archetype
+	local to = archetypeTraverseAdd(world, componentId, from)
 
-	if sourceArchetype == destinationArchetype then
-		local archetypeRecord = destinationArchetype.records[componentId]
-		destinationArchetype.columns[archetypeRecord][record.row] = componentInstance
+	if from == to then
+		-- If the archetypes are the same it can avoid moving the entity
+		-- and just set the data directly.
+		local archetypeRecord = to.records[componentId]
+		from.columns[archetypeRecord][record.row] = componentInstance
 		return
 	end
 
-	if sourceArchetype then
-		moveEntity(world.entityIndex, entityId, record, destinationArchetype)
+	if from then
+		-- If there was a previous archetype, then the entity needs to move the archetype
+		moveEntity(entityIndex, entityId, record, to)
 	else
-		-- if it has any components, then it wont be the root archetype
-		if #destinationArchetype.types > 0 then
-			newEntity(entityId, record, destinationArchetype)
+		if #to.types > 0 then
+			-- When there is no previous archetype it should create the archetype
+			newEntity(entityId, record, to)
 		end
 	end
 
-	local archetypeRecord = destinationArchetype.records[componentId]
-	destinationArchetype.columns[archetypeRecord][record.row] = componentInstance
+	local archetypeRecord = to.records[componentId]
+	to.columns[archetypeRecord][record.row] = componentInstance
 end
 
 local function archetypeTraverseRemove(world: World, componentId: i53, archetype: Archetype?): Archetype
@@ -340,7 +397,8 @@ end
 
 local function componentRemove(world: World, entityId: i53, component: Component): ComponentInstance?
 	local componentId = #component
-	local record = ensureRecord(world.entityIndex, entityId)
+	local entityIndex = world.entityIndex
+	local record = entityIndex.sparse[entityId]
 	local sourceArchetype = record.archetype
 	local destinationArchetype = archetypeTraverseRemove(world, componentId, sourceArchetype)
 
@@ -352,126 +410,52 @@ local function componentRemove(world: World, entityId: i53, component: Component
 	end
 
 	if sourceArchetype and not (sourceArchetype == destinationArchetype) then
-		moveEntity(world.entityIndex, entityId, record, destinationArchetype)
+		moveEntity(entityIndex, entityId, record, destinationArchetype)
 	end
 
 	return componentInstance
 end
 
---[=[
-	Removes a component (or set of components) from an existing entity.
-
-	```lua
-	local removedA, removedB = world:remove(entityId, ComponentA, ComponentB)
-	```
-
-	@param entityId number -- The entity ID
-	@param ... Component -- The components to remove
-	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
-]=]
-function World.remove(world: World, entityId: i53, ...)
-	if not world:contains(entityId) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
-	local length = select("#", ...)
-	local removed = {}
-	for i = 1, length do
-		local oldComponent = componentRemove(world, entityId, select(i, ...))
-		if not oldComponent then
-			continue
-		end
-
-		table.insert(removed, oldComponent)
-
-		world:_trackChanged(select(i, ...), entityId, oldComponent, nil)
-	end
-
-	return unpack(removed, 1, length)
-end
-
-function World.get(world: World, entityId: i53, ...: Component): any
-	local componentIndex = world.componentIndex
-	local record = world.entityIndex[entityId]
-	if not record then
-		return nil
-	end
-
-	local length = select("#", ...)
-	local components = {}
-	for i = 1, length do
-		local metatable = select(i, ...)
-		assertValidComponent(metatable, i)
-		components[i] = get(record, #metatable)
-	end
-
-	return unpack(components, 1, length)
-end
-
-function World.insert(world: World, entityId: i53, ...)
-	if not world:contains(entityId) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-		local oldComponent = world:get(entityId, metatable)
-		componentAdd(world, entityId, newComponent)
-
-		world:_trackChanged(metatable, entityId, oldComponent, newComponent)
-	end
-end
-
-function World.replace(world: World, entityId: i53, ...: ComponentInstance)
-	error("Replace is unimplemented")
-
-	if not world:contains(entityId) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
-	--moveEntity(entityId, record, world.ROOT_ARCHETYPE)
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-		assertValidComponentInstance(newComponent, i)
-	end
-end
-
 function World.entity(world: World)
-	world.nextId += 1
-	return world.nextId
+	world._nextId += 1
+	return world._nextId
 end
 
-function World:__iter()
-	local previous = nil
+function World.__iter(world: World)
+	local dense = world.entityIndex.dense
+	local sparse = world.entityIndex.sparse
+	local last
+
 	return function()
-		local entityId, data = next(self.entityIndex, previous)
-		previous = entityId
-
-		if entityId == nil then
-			return nil
+		local lastEntity, entityId = next(dense, last)
+		if not lastEntity then
+			return
 		end
+		last = lastEntity
 
-		local archetype = data.archetype
+		local record = sparse[entityId]
+		local archetype = record.archetype
 		if not archetype then
-			return entityId, {}
+			-- Returns only the entity id as an entity without data should not return
+			-- data and allow the user to get an error if they don't handle the case.
+			return entityId
 		end
 
+		local row = record.row
+		local types = archetype.types
 		local columns = archetype.columns
-		local components = {}
-		for i, map in columns do
-			local componentId = archetype.types[i]
-			components[self.componentIdToComponent[componentId]] = map[data.row]
+		local entityData = {}
+		for i, column in columns do
+			-- We use types because the key should be the component ID not the column index
+			entityData[types[i]] = column[row]
 		end
 
-		return entityId, components
+		return entityId, entityData
 	end
 end
 
-function World._trackChanged(world: World, metatable, id, old, new)
-	if not world._changedStorage[metatable] then
+function World._trackChanged(world: World, componentId: number, id, old, new)
+	if not world._changedStorage[componentId] then
 		return
 	end
 
@@ -484,7 +468,7 @@ function World._trackChanged(world: World, metatable, id, old, new)
 		new = new,
 	})
 
-	for _, storage in ipairs(world._changedStorage[metatable]) do
+	for _, storage in ipairs(world._changedStorage[componentId]) do
 		-- If this entity has changed since the last time this system read it,
 		-- we ensure that the "old" value is whatever the system saw it as last, instead of the
 		-- "old" value we have here.
@@ -494,6 +478,16 @@ function World._trackChanged(world: World, metatable, id, old, new)
 			storage[id] = record
 		end
 	end
+end
+
+--[=[
+	Spawns a new entity in the world with the given components.
+
+	@param ... ComponentInstance -- The component values to spawn the entity with.
+	@return number -- The new entity ID.
+]=]
+function World.spawn(world: World, ...: ComponentInstance)
+	return world:spawnAt(world._nextId, ...)
 end
 
 --[=[
@@ -510,42 +504,63 @@ function World.spawnAt(world: World, entityId: i53, ...: ComponentInstance)
 		error(string.format(ERROR_DUPLICATE_ENTITY, entityId), 2)
 	end
 
-	if entityId >= world.nextId then
-		world.nextId = entityId + 1
+	world._size += 1
+	if entityId >= world._nextId then
+		world._nextId = entityId + 1
 	end
 
-	world._size += 1
-	ensureRecord(world.entityIndex, entityId)
+	local entityIndex = world.entityIndex
+	entityIndex.sparse[entityId] = {
+		dense = 
+	}
+	entityIndex.dense[entityId] = entityId
 
 	local components = {}
 	for i = 1, select("#", ...) do
-		local component = select(i, ...)
-		assertValidComponentInstance(component, i)
+		local newComponent = select(i, ...)
+		assertValidComponentInstance(newComponent, i)
 
-		local metatable = getmetatable(component)
-		if components[metatable] then
-			error(("Duplicate component type at index %d"):format(i), 2)
+		local metatable = getmetatable(newComponent)
+		local componentId = #metatable
+		if components[componentId] then
+			error(("Duplicate component type at index %d (%s)"):format(i, tostring(metatable)), 2)
 		end
 
-		world:_trackChanged(metatable, entityId, nil, component)
+		world:_trackChanged(componentId, entityId, nil, newComponent)
 
-		components[metatable] = component
-		componentAdd(world, entityId, component)
+		components[componentId] = newComponent
+		componentAdd(world, entityId, newComponent)
 	end
 
 	return entityId
 end
 
 --[=[
-	Spawns a new entity in the world with the given components.
+	Replaces a given entity by ID with an entirely new set of components.
+	Equivalent to removing all components from an entity, and then adding these ones.
 
+	@param id number -- The entity ID
 	@param ... ComponentInstance -- The component values to spawn the entity with.
-	@return number -- The new entity ID.
 ]=]
-function World.spawn(world: World, ...: ComponentInstance)
-	return world:spawnAt(world.nextId, ...)
+function World.replace(world: World, entityId: i53, ...: ComponentInstance)
+	error("Replace is unimplemented")
+
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	--moveEntity(entityId, record, world.ROOT_ARCHETYPE)
+	for i = 1, select("#", ...) do
+		local newComponent = select(i, ...)
+		assertValidComponentInstance(newComponent, i)
+	end
 end
 
+--[=[
+	Despawns a given entity by ID, removing it and all its components from the world entirely.
+
+	@param id number -- The entity ID
+]=]
 function World.despawn(world: World, entityId: i53)
 	local entityIndex = world.entityIndex
 	local record = entityIndex[entityId]
@@ -561,6 +576,13 @@ function World.despawn(world: World, entityId: i53)
 	world._size -= 1
 end
 
+--[=[
+	Removes all entities from the world.
+
+	:::caution
+	Removing entities in this way is not reported by `queryChanged`.
+	:::
+]=]
 function World.clear(world: World)
 	world.entityIndex = {}
 	world.componentIndex = {}
@@ -570,12 +592,38 @@ function World.clear(world: World)
 	world.ROOT_ARCHETYPE = archetypeOf(world, {}, nil)
 end
 
-function World.size(world: World)
-	return world._size
-end
+--[=[
+	Checks if the given entity ID is currently spawned in this world.
 
+	@param id number -- The entity ID
+	@return bool -- `true` if the entity exists
+]=]
 function World.contains(world: World, entityId: i53)
 	return world.entityIndex[entityId] ~= nil
+end
+
+--[=[
+	Gets a specific component (or set of components) from a specific entity in this world.
+
+	@param id number -- The entity ID
+	@param ... Component -- The components to fetch
+	@return ... -- Returns the component values in the same order they were passed in
+]=]
+function World.get(world: World, entityId: i53, ...: Component): any
+	local record = world.entityIndex.sparse[entityId]
+	if not record then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local length = select("#", ...)
+	local components = {}
+	for i = 1, length do
+		local metatable = select(i, ...)
+		assertValidComponent(metatable, i)
+		components[i] = get(record, #metatable)
+	end
+
+	return unpack(components, 1, length)
 end
 
 local function noop(): any
@@ -1061,7 +1109,7 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	local firstArchetypeMap
+	local firstArchetypeMap: ArchetypeMap
 	local componentIndex = world.componentIndex
 	for _, componentId in (components :: any) :: { number } do
 		local map = componentIndex[componentId]
@@ -1074,7 +1122,7 @@ function World.query(world: World, ...: Component): any
 		end
 	end
 
-	for id in firstArchetypeMap.sparse do
+	for id in firstArchetypeMap.cache do
 		local archetype = archetypes[id]
 		local archetypeRecords = archetype.records
 		local matched = true
@@ -1159,6 +1207,84 @@ function World.queryChanged(world: World, componentToTrack, ...: nil)
 
 		return
 	end
+end
+
+--[=[
+	Inserts a component (or set of components) into an existing entity.
+
+	If another instance of a given component already exists on this entity, it is replaced.
+
+	```lua
+	world:insert(
+		entityId,
+		ComponentA({
+			foo = "bar"
+		}),
+		ComponentB({
+			baz = "qux"
+		})
+	)
+	```
+
+	@param id number -- The entity ID
+	@param ... ComponentInstance -- The component values to insert
+]=]
+function World.insert(world: World, entityId: i53, ...)
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	for i = 1, select("#", ...) do
+		local newComponent = select(i, ...)
+		assertValidComponentInstance(newComponent, i)
+
+		local metatable = getmetatable(newComponent)
+		local componentId = #metatable
+		local oldComponent = world:get(entityId, metatable)
+		componentAdd(world, entityId, newComponent)
+
+		world:_trackChanged(componentId, entityId, oldComponent, newComponent)
+	end
+end
+
+--[=[
+	Removes a component (or set of components) from an existing entity.
+
+	```lua
+	local removedA, removedB = world:remove(entityId, ComponentA, ComponentB)
+	```
+
+	@param entityId number -- The entity ID
+	@param ... Component -- The components to remove
+	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
+]=]
+function World.remove(world: World, entityId: i53, ...)
+	if not world:contains(entityId) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local length = select("#", ...)
+	local removed = {}
+	for i = 1, length do
+		local component = select(i, ...)
+		local componentId = #getmetatable(component)
+		local oldComponent = componentRemove(world, entityId, component)
+		if not oldComponent then
+			continue
+		end
+
+		table.insert(removed, oldComponent)
+		world:_trackChanged(componentId, entityId, oldComponent, nil)
+	end
+
+	return unpack(removed, 1, length)
+end
+
+--[=[
+	Returns the number of entities currently spawned in the world.
+]=]
+function World.size(world: World)
+	return world._size
 end
 
 return World
