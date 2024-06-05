@@ -400,7 +400,7 @@ local function componentRemove(world: World, entityId: i53, component: Component
 
 	-- TODO:
 	-- There is a better way to get the component for returning
-	print("Requesting remove for", entityId, component, record)
+	--print("Requesting remove for", entityId, component, record)
 	local componentInstance = get(record, componentId)
 	if componentInstance == nil then
 		return nil
@@ -1307,12 +1307,12 @@ function World.remove(world: World, entityId: i53, ...)
 		local componentId = #component
 		local oldComponent = componentRemove(world, entityId, component)
 		if not oldComponent then
-			print("NO OLD COMPONENT FOR", entityId, component, componentId)
+			--print("NO OLD COMPONENT FOR", entityId, component, componentId)
 			continue
 		end
 
 		table.insert(removed, oldComponent)
-		print("Removal change tracking...", entityId, component, componentId, world._componentIdToComponent)
+		--print("Removal change tracking...", entityId, component, componentId, world._componentIdToComponent)
 		world:_trackChanged(componentId, entityId, oldComponent, nil)
 	end
 
