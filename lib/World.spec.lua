@@ -40,7 +40,7 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describe("World", function()
+	describeFOCUS("World", function()
 		itSKIP("marcus test", function()
 			local ecs = World.new()
 
@@ -161,6 +161,7 @@ return function()
 
 			local count = 0
 			for id, data in world do
+				print(id, data)
 				count += 1
 				if id == eA then
 					expect(data[A]).to.be.ok()

@@ -84,38 +84,51 @@ local function transitionArchetype(
 	local tr = to.records
 	local types = from.types
 
-	for componentId, column in columns do
-		local targetColumn = destinationColumns[tr[types[componentId]]]
+	for i, column in columns do
+		-- Retrieves the new column index from the source archetype's record from each component
+		-- We have to do this because the columns are tightly packed and indexes may not correspond to each other.
+		local targetColumn = destinationColumns[tr[types[i]]]
+
+		-- Sometimes target column may not exist, e.g. when you remove a component.
 		if targetColumn then
 			targetColumn[destinationRow] = column[sourceRow]
 		end
-
+		-- If the entity is the last row in the archetype then swapping it would be meaningless.
 		local last = #column
 		if sourceRow ~= last then
+			-- Swap rempves columns to ensure there are no holes in the archetype.
 			column[sourceRow] = column[last]
 		end
-
 		column[last] = nil
 	end
 
-	local atSourceRow = sourceEntities[sourceRow]
-	destinationEntities[destinationRow] = atSourceRow
-	entityIndex[atSourceRow].row = destinationRow
-
+	local sparse = entityIndex.sparse
 	local movedAway = #sourceEntities
+
+	-- Move the entity from the source to the destination archetype.
+	-- Because we have swapped columns we now have to update the records
+	-- corresponding to the entities' rows that were swapped.
+	local e1 = sourceEntities[sourceRow]
+	local e2 = sourceEntities[movedAway]
+
 	if sourceRow ~= movedAway then
-		local atMovedAway = sourceEntities[movedAway]
-		sourceEntities[sourceRow] = atMovedAway
-		entityIndex[atMovedAway].row = sourceRow
+		sourceEntities[sourceRow] = e2
 	end
 
 	sourceEntities[movedAway] = nil
+	destinationEntities[destinationRow] = e1
+
+	local record1 = sparse[e1]
+	local record2 = sparse[e2]
+
+	record1.row = destinationRow
+	record2.row = sourceRow
 end
 
-local function archetypeAppend(entityId: number, archetype: Archetype): number
+local function archetypeAppend(entity: number, archetype: Archetype): number
 	local entities = archetype.entities
 	local length = #entities + 1
-	entities[length] = entityId
+	entities[length] = entity
 	return length
 end
 
@@ -126,7 +139,7 @@ local function newEntity(entityId: i53, record: Record, archetype: Archetype)
 	return record
 end
 
-local function moveEntity(entityIndex, entityId: i53, record: Record, to: Archetype)
+local function moveEntity(entityIndex: EntityIndex, entityId: i53, record: Record, to: Archetype)
 	local sourceRow = record.row
 	local from = record.archetype
 	local destinationRow = archetypeAppend(entityId, to)
@@ -141,7 +154,7 @@ end
 
 local function ensureComponentRecord(
 	componentIndex: ComponentIndex,
-	archetypeId: ArchetypeId,
+	archetypeId: number,
 	componentId: number,
 	i: number
 ): ArchetypeMap
@@ -184,7 +197,6 @@ local function archetypeOf(world: any, types: { i24 }, prev: Archetype?): Archet
 		type = ty,
 		types = types,
 	}
-
 	world.archetypeIndex[ty] = archetype
 	world.archetypes[id] = archetype
 
@@ -216,7 +228,7 @@ function World.new()
 			sparse = {},
 		},
 		componentIndex = {},
-		componentIdToComponent = {},
+		_componentIdToComponent = {},
 		archetypes = {},
 		archetypeIndex = {},
 		_nextId = 0,
@@ -289,10 +301,10 @@ end
 
 local function findArchetypeWith(world: World, node: Archetype, componentId: i53)
 	local types = node.types
-
 	-- Component IDs are added incrementally, so inserting and sorting
 	-- them each time would be expensive. Instead this insertion sort can find the insertion
 	-- point in the types array.
+
 	local destinationType = table.clone(node.types)
 	local at = findInsert(types, componentId)
 	if at == -1 then
@@ -312,7 +324,6 @@ local function ensureEdge(archetype: Archetype, componentId: i53)
 		edge = {} :: any
 		edges[componentId] = edge
 	end
-
 	return edge
 end
 
@@ -337,7 +348,7 @@ local function componentAdd(world: World, entityId: i53, componentInstance)
 
 	-- TODO:
 	-- This never gets cleaned up
-	world.componentIdToComponent[componentId] = component
+	world._componentIdToComponent[componentId] = component
 
 	local entityIndex = world.entityIndex
 	local record = entityIndex.sparse[entityId]
@@ -426,6 +437,8 @@ function World.__iter(world: World)
 	local sparse = world.entityIndex.sparse
 	local last
 
+	local componentIdToComponent = world._componentIdToComponent
+	print(componentIdToComponent)
 	return function()
 		local lastEntity, entityId = next(dense, last)
 		if not lastEntity then
@@ -447,7 +460,7 @@ function World.__iter(world: World)
 		local entityData = {}
 		for i, column in columns do
 			-- We use types because the key should be the component ID not the column index
-			entityData[types[i]] = column[row]
+			entityData[componentIdToComponent[types[i]]] = column[row]
 		end
 
 		return entityId, entityData
@@ -511,8 +524,8 @@ function World.spawnAt(world: World, entityId: i53, ...: ComponentInstance)
 
 	local entityIndex = world.entityIndex
 	entityIndex.sparse[entityId] = {
-		dense = 
-	}
+		dense = entityId,
+	} :: Record
 	entityIndex.dense[entityId] = entityId
 
 	local components = {}
@@ -565,14 +578,15 @@ function World.despawn(world: World, entityId: i53)
 	local entityIndex = world.entityIndex
 	local record = entityIndex[entityId]
 
-	-- TODO:
-	-- Track despawn changes
-	if record.archetype then
-		moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
-		world.ROOT_ARCHETYPE.entities[record.row] = nil
-	end
+	archetypeDelete(world, entityId)
+	-- -- TODO:
+	-- -- Track despawn changes
+	-- if record.archetype then
+	-- 	moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
+	-- 	world.ROOT_ARCHETYPE.entities[record.row] = nil
+	-- end
 
-	entityIndex[entityId] = nil
+	-- entityIndex[entityId] = nil
 	world._size -= 1
 end
 
@@ -599,7 +613,7 @@ end
 	@return bool -- `true` if the entity exists
 ]=]
 function World.contains(world: World, entityId: i53)
-	return world.entityIndex[entityId] ~= nil
+	return world.entityIndex.sparse[entityId] ~= nil
 end
 
 --[=[
