@@ -41,6 +41,18 @@ end
 
 return function()
 	describeFOCUS("World", function()
+		itFOCUS("replace", function()
+			local world = World.new()
+
+			local A = component()
+			local B = component()
+			local C = component()
+
+			local id = world:spawn(A({}), B({}))
+			world:replace(id, C({ c = "true" }))
+
+			print(world:get(id, C))
+		end)
 		itSKIP("marcus test", function()
 			local ecs = World.new()
 
@@ -161,7 +173,6 @@ return function()
 
 			local count = 0
 			for id, data in world do
-				print(id, data)
 				count += 1
 				if id == eA then
 					expect(data[A]).to.be.ok()
@@ -378,7 +389,7 @@ return function()
 			expect(getmetatable(world:get(id, Poison))).to.equal(Poison)
 		end)
 
-		itSKIP("should return existing entities when creating queryChanged", function()
+		it("should return existing entities when creating queryChanged", function()
 			local world = World.new()
 
 			local loop = Loop.new(world)
@@ -469,14 +480,14 @@ return function()
 			expect(withoutCount).to.equal(0)
 		end)
 
-		itSKIP("should track changes", function()
+		itFOCUS("should track changes", function()
 			local world = World.new()
 
 			local loop = Loop.new(world)
 
-			local A = component()
-			local B = component()
-			local C = component()
+			local A = component("A")
+			local B = component("B")
+			local C = component("C")
 
 			local expectedResults = {
 				nil,
@@ -557,10 +568,12 @@ return function()
 			loop:scheduleSystem({
 				system = function(w)
 					infrequentCount += 1
+					print("--------- Running infrequent", infrequentCount)
 
 					local count = 0
 					local results = {}
 					for entityId, record in w:queryChanged(A) do
+						print("A Changed!", entityId, record)
 						count += 1
 						results[entityId - 1] = record
 					end
@@ -571,6 +584,7 @@ return function()
 						if infrequentCount == 2 then
 							expect(count).to.equal(2)
 
+							print("INF2", results)
 							expect(results[0].old).to.equal(nil)
 							expect(results[0].new.generation).to.equal(2)
 							expect(results[1].old).to.equal(nil)
@@ -583,6 +597,8 @@ return function()
 							error("infrequentCount too high")
 						end
 					end
+
+					print("----- Done")
 				end,
 				event = "infrequent",
 			})
@@ -630,12 +646,22 @@ return function()
 			defaultBindable:Fire()
 			defaultBindable:Fire()
 
-			--world:replace(secondEntityId, B())
+			print("\n")
+			print("Before replacment..", world:get(secondEntityId, A))
+			world:replace(secondEntityId, B())
+			print("After replacement..", world:get(secondEntityId, A))
+			print("-> Changed Storage:", world._changedStorage)
+			print("-> Component Ids", world._componentIdToComponent)
 			world:remove(secondEntityId, A, C)
+			print(world:get(secondEntityId, A))
 			world:insert(secondEntityId, B())
+			print(world:get(secondEntityId, A))
 
+			print("Firing infrequent bindable")
+			print("\n")
 			infrequentBindable:Fire()
 
+			print("Despawning")
 			world:despawn(entityId)
 
 			defaultBindable:Fire()

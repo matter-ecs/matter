@@ -231,7 +231,7 @@ function World.new()
 		_componentIdToComponent = {},
 		archetypes = {},
 		archetypeIndex = {},
-		_nextId = 0,
+		_nextId = 1,
 		nextArchetypeId = 0,
 		_size = 0,
 		_changedStorage = {},
@@ -254,21 +254,6 @@ local function destructColumns(columns, count, row)
 			column[row] = column[count]
 			column[count] = nil
 		end
-	end
-end
-
-local function archetypeDelete(world: World, id: i53)
-	local componentIndex = world.componentIndex
-	local archetypesMap = componentIndex[id]
-	local archetypes = world.archetypes
-	if archetypesMap then
-		for archetypeId in archetypesMap.cache do
-			for _, entity in archetypes[archetypeId].entities do
-				world:remove(entity, id)
-			end
-		end
-
-		componentIndex[id] = nil
 	end
 end
 
@@ -415,6 +400,7 @@ local function componentRemove(world: World, entityId: i53, component: Component
 
 	-- TODO:
 	-- There is a better way to get the component for returning
+	print("Requesting remove for", entityId, component, record)
 	local componentInstance = get(record, componentId)
 	if componentInstance == nil then
 		return nil
@@ -438,7 +424,6 @@ function World.__iter(world: World)
 	local last
 
 	local componentIdToComponent = world._componentIdToComponent
-	print(componentIdToComponent)
 	return function()
 		local lastEntity, entityId = next(dense, last)
 		if not lastEntity then
@@ -467,8 +452,9 @@ function World.__iter(world: World)
 	end
 end
 
-function World._trackChanged(world: World, componentId: number, id, old, new)
+function World._trackChanged(world: World, componentId: number, entityId: number, old, new)
 	if not world._changedStorage[componentId] then
+		--warn("There Is No Storage For", componentId)
 		return
 	end
 
@@ -481,14 +467,16 @@ function World._trackChanged(world: World, componentId: number, id, old, new)
 		new = new,
 	})
 
+	--	print("New Change Record", `e{entityId}`, record)
 	for _, storage in ipairs(world._changedStorage[componentId]) do
 		-- If this entity has changed since the last time this system read it,
 		-- we ensure that the "old" value is whatever the system saw it as last, instead of the
 		-- "old" value we have here.
-		if storage[id] then
-			storage[id] = table.freeze({ old = storage[id].old, new = new })
+		--print("EntityID:", entityId, debug.traceback())
+		if storage[entityId] then
+			storage[entityId] = table.freeze({ old = storage[entityId].old, new = new })
 		else
-			storage[id] = record
+			storage[entityId] = record
 		end
 	end
 end
@@ -556,17 +544,21 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World.replace(world: World, entityId: i53, ...: ComponentInstance)
-	error("Replace is unimplemented")
-
 	if not world:contains(entityId) then
 		error(ERROR_NO_ENTITY, 2)
 	end
 
-	--moveEntity(entityId, record, world.ROOT_ARCHETYPE)
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-		assertValidComponentInstance(newComponent, i)
+	-- Remove all components
+	local record = world.entityIndex.sparse[entityId]
+	local archetype = record.archetype :: Archetype
+	if archetype ~= nil then
+		for _, componentId in archetype.types do
+			--componentRemove(world, entityId, world._componentIdToComponent[componentId])
+			world:remove(entityId, world._componentIdToComponent[componentId])
+		end
 	end
+
+	world:insert(entityId, ...)
 end
 
 --[=[
@@ -575,18 +567,42 @@ end
 	@param id number -- The entity ID
 ]=]
 function World.despawn(world: World, entityId: i53)
-	local entityIndex = world.entityIndex
-	local record = entityIndex[entityId]
+	world:replace(entityId)
+	-- local entityIndex = world.entityIndex
+	-- local record = entityIndex.sparse[entityId]
 
-	archetypeDelete(world, entityId)
-	-- -- TODO:
-	-- -- Track despawn changes
-	-- if record.archetype then
-	-- 	moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
-	-- 	world.ROOT_ARCHETYPE.entities[record.row] = nil
+	-- local entityIndex = world.entityIndex
+	-- local sparse, dense = entityIndex.sparse, entityIndex.dense
+	-- local archetype = record.archetype
+	-- local row = record.row
+
+	-- if archetype then
+	-- 	local entities = archetype.entities
+	-- 	local last = #entities
+
+	-- 	if row ~= last then
+	-- 		local entityToMove = entities[last]
+	-- 		dense[record.dense] = entityToMove
+	-- 		sparse[entityToMove] = record
+	-- 	end
+
+	-- 	entities[row], entities[last] = entities[last], nil
+
+	-- 	local columns = archetype.columns
+
+	-- 	destructColumns(columns, last, row)
 	-- end
 
-	-- entityIndex[entityId] = nil
+	-- sparse[entityId] = nil
+	-- dense[#dense] = nil
+	-- -- -- TODO:
+	-- -- -- Track despawn changes
+	-- -- if record.archetype then
+	-- -- 	moveEntity(entityIndex, entityId, record, world.ROOT_ARCHETYPE)
+	-- -- 	world.ROOT_ARCHETYPE.entities[record.row] = nil
+	-- -- end
+
+	-- -- entityIndex[entityId] = nil
 	world._size -= 1
 end
 
@@ -1004,6 +1020,10 @@ function World.query(world: World, ...: Component): any
 	end
 
 	if queryLength == 1 then
+		if typeof(a) == "number" then
+			--	print(debug.traceback())
+		end
+
 		a = #a
 		components = { a }
 		-- local archetypesMap = world.componentIndex[a]
@@ -1158,16 +1178,17 @@ end
 local function cleanupQueryChanged(hookState)
 	local world = hookState.world
 	local componentToTrack = hookState.componentToTrack
+	local componentId = #componentToTrack
 
-	for index, object in world._changedStorage[componentToTrack] do
+	for index, object in world._changedStorage[componentId] do
 		if object == hookState.storage then
-			table.remove(world._changedStorage[componentToTrack], index)
+			table.remove(world._changedStorage[componentId], index)
 			break
 		end
 	end
 
-	if next(world._changedStorage[componentToTrack]) == nil then
-		world._changedStorage[componentToTrack] = nil
+	if next(world._changedStorage[componentId]) == nil then
+		world._changedStorage[componentId] = nil
 	end
 end
 
@@ -1186,12 +1207,14 @@ function World.queryChanged(world: World, componentToTrack, ...: nil)
 
 				return entityId, record
 			end
+
 			return
 		end
 	end
 
-	if not world._changedStorage[componentToTrack] then
-		world._changedStorage[componentToTrack] = {}
+	local componentId = #componentToTrack
+	if not world._changedStorage[componentId] then
+		world._changedStorage[componentId] = {}
 	end
 
 	local storage = {}
@@ -1199,7 +1222,7 @@ function World.queryChanged(world: World, componentToTrack, ...: nil)
 	hookState.world = world
 	hookState.componentToTrack = componentToTrack
 
-	table.insert(world._changedStorage[componentToTrack], storage)
+	table.insert(world._changedStorage[componentId], storage)
 
 	-- TODO:
 	-- Go back to lazy evaluation of the query
@@ -1281,13 +1304,15 @@ function World.remove(world: World, entityId: i53, ...)
 	local removed = {}
 	for i = 1, length do
 		local component = select(i, ...)
-		local componentId = #getmetatable(component)
+		local componentId = #component
 		local oldComponent = componentRemove(world, entityId, component)
 		if not oldComponent then
+			print("NO OLD COMPONENT FOR", entityId, component, componentId)
 			continue
 		end
 
 		table.insert(removed, oldComponent)
+		print("Removal change tracking...", entityId, component, componentId, world._componentIdToComponent)
 		world:_trackChanged(componentId, entityId, oldComponent, nil)
 	end
 
