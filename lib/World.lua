@@ -409,9 +409,7 @@ local noopQuery = setmetatable({
 local QueryResult = {}
 QueryResult.__index = QueryResult
 
-function QueryResult.new(world, 
-	expand, queryArchetype, compatibleArchetypes, metatables)
-
+function QueryResult.new(world, expand, queryArchetype, compatibleArchetypes, metatables)
 	return setmetatable({
 		world = world,
 		seenEntities = {},
@@ -646,11 +644,11 @@ end
 function QueryResult:view()
 	local columns = {}
 	local records = {}
-	for i, metatable in self.metatables do 
+	for i, metatable in self.metatables do
 		columns[i] = {}
-		records[metatable] = i	
+		records[metatable] = i
 	end
-	
+
 	local function iter()
 		return nextItem(self)
 	end
@@ -662,10 +660,10 @@ function QueryResult:view()
 	for entityId, entityData in iter do
 		row += 1
 
-		for metatable, i in records do 
+		for metatable, i in records do
 			columns[i][entityId] = entityData[metatable]
 		end
-		
+
 		entities[row] = entityId
 		rows[entityId] = row
 	end
@@ -675,7 +673,7 @@ function QueryResult:view()
 
 	local tuple = {}
 	local function expand(entity)
-		for i, column in columns do 
+		for i, column in columns do
 			tuple[i] = column[entity]
 		end
 		return unpack(tuple)
@@ -705,7 +703,7 @@ function QueryResult:view()
 			return
 		end
 
-		return expand(entity) 
+		return expand(entity)
 	end
 
 	--[=[
@@ -719,10 +717,8 @@ function QueryResult:view()
 		return rows[entity] ~= nil
 	end
 
-
 	return setmetatable({}, View)
 end
-
 
 --[=[
 	Performs a query against the entities in this World. Returns a [QueryResult](/api/QueryResult), which iterates over
@@ -805,8 +801,7 @@ function World:query(...)
 		self:_markStorageDirty()
 	end
 
-	return QueryResult.new(
-		self, expand, archetype, compatibleArchetypes, metatables)
+	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
 end
 
 local function cleanupQueryChanged(hookState)
