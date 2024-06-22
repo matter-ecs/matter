@@ -389,6 +389,7 @@ local noopQuery = setmetatable({
 	__iter = function()
 		return noop
 	end,
+	__call = noop,
 })
 
 --[=[
