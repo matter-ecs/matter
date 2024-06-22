@@ -73,6 +73,14 @@ local function start(containers)
 	loop:scheduleSystems(firstRunSystems)
 	firstRunSystems = nil
 
+	debugger.queryForWatchedEntities = function(world)
+		return world:query(components.Model)
+	end
+
+	debugger.labelForWatchedEntities = function(entityId)
+		return world:get(entityId, components.Model).model.Name
+	end
+
 	debugger:autoInitialize(loop)
 
 	-- Begin running our systems
