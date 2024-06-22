@@ -409,13 +409,16 @@ local noopQuery = setmetatable({
 local QueryResult = {}
 QueryResult.__index = QueryResult
 
-function QueryResult.new(world, expand, queryArchetype, compatibleArchetypes)
+function QueryResult.new(world, 
+	expand, queryArchetype, compatibleArchetypes, metatables)
+
 	return setmetatable({
 		world = world,
 		seenEntities = {},
 		currentCompatibleArchetype = next(compatibleArchetypes),
 		compatibleArchetypes = compatibleArchetypes,
 		storageIndex = 1,
+		metatables = metatables,
 		_expand = expand,
 		_queryArchetype = queryArchetype,
 	}, QueryResult)
@@ -641,27 +644,53 @@ end
 ]=]
 
 function QueryResult:view()
+	local columns = {}
+	local records = {}
+	for i, metatable in self.metatables do 
+		columns[i] = {}
+		records[metatable] = i	
+	end
+	
 	local function iter()
 		return nextItem(self)
 	end
 
-	local fetches = {}
-	local list = {} :: any
+	local entities = {}
+	local row = 0
+	local rows = {}
+
+	for entityId, entityData in iter do
+		row += 1
+
+		for metatable, i in records do 
+			columns[i][entityId] = entityData[metatable]
+		end
+		
+		entities[row] = entityId
+		rows[entityId] = row
+	end
 
 	local View = {}
 	View.__index = View
 
+	local tuple = {}
+	local function expand(entity)
+		for i, column in columns do 
+			tuple[i] = column[entity]
+		end
+		return unpack(tuple)
+	end
+
 	function View:__iter()
-		local current = list.head
+		local i = 0
 		return function()
-			if not current then
+			i += 1
+			local entity = entities[i]
+			if not entity then
 				return
 			end
-			local entity = current.entity
-			local fetch = fetches[entity]
-			current = current.next
 
-			return entity, unpack(fetch, 1, fetch.n)
+			return entity, expand(entity)
 		end
 	end
 
@@ -676,22 +705,7 @@ function QueryResult:view()
 			return
 		end
 
-		local fetch = fetches[entity]
-		local queryLength = fetch.n
-
-		if queryLength == 1 then
-			return fetch[1]
-		elseif queryLength == 2 then
-			return fetch[1], fetch[2]
-		elseif queryLength == 3 then
-			return fetch[1], fetch[2], fetch[3]
-		elseif queryLength == 4 then
-			return fetch[1], fetch[2], fetch[3], fetch[4]
-		elseif queryLength == 5 then
-			return fetch[1], fetch[2], fetch[3], fetch[4], fetch[5]
-		end
-
-		return unpack(fetch, 1, fetch.n)
+		return expand(entity) 
 	end
 
 	--[=[
@@ -702,31 +716,13 @@ function QueryResult:view()
 	]=]
 
 	function View:contains(entity)
-		return fetches[entity] ~= nil
+		return rows[entity] ~= nil
 	end
 
-	for entityId, entityData in iter do
-		if entityId then
-			-- We start at 2 on Select since we don't need want to pack the entity id.
-			local fetch = table.pack(select(2, self._expand(entityId, entityData)))
-			local node = { entity = entityId, next = nil }
-
-			fetches[entityId] = fetch
-
-			if not list.head then
-				list.head = node
-			else
-				local current = list.head
-				while current.next do
-					current = current.next
-				end
-				current.next = node
-			end
-		end
-	end
 
 	return setmetatable({}, View)
 end
+
 
 --[=[
 	Performs a query against the entities in this World. Returns a [QueryResult](/api/QueryResult), which iterates over
@@ -809,7 +805,8 @@ function World:query(...)
 		self:_markStorageDirty()
 	end
 
-	return QueryResult.new(self, expand, archetype, compatibleArchetypes)
+	return QueryResult.new(
+		self, expand, archetype, compatibleArchetypes, metatables)
 end
 
 local function cleanupQueryChanged(hookState)
