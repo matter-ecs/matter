@@ -1,6 +1,6 @@
+local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
 local topoRuntime = require(script.Parent.topoRuntime)
-local Component = require(script.Parent.component)
 
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
@@ -643,11 +643,11 @@ end
 ]=]
 
 function QueryResult:view()
-	local columns = {}
-	local records = {}
-	for i, metatable in self.metatables do
-		columns[i] = {}
-		records[metatable] = i
+	local components = {}
+	local componentRecords = {}
+	for index, metatable in self.metatables do
+		components[index] = {}
+		componentRecords[metatable] = index
 	end
 
 	local function iter()
@@ -655,18 +655,18 @@ function QueryResult:view()
 	end
 
 	local entities = {}
-	local row = 0
-	local rows = {}
+	local entityIndex = 0
+	local entityRecords = {}
 
 	for entityId, entityData in iter do
-		row += 1
+		entityIndex += 1
 
-		for metatable, i in records do
-			columns[i][entityId] = entityData[metatable]
+		for metatable, componentIndex in componentRecords do
+			components[componentIndex][entityId] = entityData[metatable]
 		end
 
-		entities[row] = entityId
-		rows[entityId] = row
+		entities[entityIndex] = entityId
+		entityRecords[entityId] = entityIndex
 	end
 
 	local View = {}
@@ -674,17 +674,17 @@ function QueryResult:view()
 
 	local tuple = {}
 	local function expand(entity)
-		for i, column in columns do
-			tuple[i] = column[entity]
+		for index, componentField in components do
+			tuple[index] = componentField[entity]
 		end
 		return unpack(tuple)
 	end
 
 	function View:__iter()
-		local i = 0
+		local index = 0
 		return function()
-			i += 1
-			local entity = entities[i]
+			index += 1
+			local entity = entities[index]
 			if not entity then
 				return
 			end
@@ -715,7 +715,7 @@ function QueryResult:view()
 	]=]
 
 	function View:contains(entity)
-		return rows[entity] ~= nil
+		return entityRecords[entity] ~= nil
 	end
 
 	return setmetatable({}, View)
