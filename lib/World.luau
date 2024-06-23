@@ -644,8 +644,10 @@ end
 
 function QueryResult:view()
 	local components = {}
+	local metatables = self.metatables
+	local queryLength = #metatables
 	local componentRecords = {}
-	for index, metatable in self.metatables do
+	for index, metatable in metatables do
 		components[index] = {}
 		componentRecords[metatable] = index
 	end
@@ -674,9 +676,31 @@ function QueryResult:view()
 
 	local tuple = {}
 	local function expand(entity)
+		if queryLength == 1 then
+			return components[1][entity]
+		elseif queryLength == 2 then
+			return components[1][entity], components[2][entity]
+		elseif queryLength == 3 then
+			return components[1][entity], components[2][entity], components[3][entity]
+		elseif queryLength == 4 then
+			return 
+				components[1][entity], 
+				components[2][entity], 
+				components[3][entity],
+				components[4][entity]
+		elseif queryLength == 5 then
+			return 
+				components[1][entity], 
+				components[2][entity], 
+				components[3][entity],
+				components[4][entity], 
+				components[5][entity]
+		end
+
 		for index, componentField in components do
 			tuple[index] = componentField[entity]
 		end
+
 		return unpack(tuple)
 	end
 
