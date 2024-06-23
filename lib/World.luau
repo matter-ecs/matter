@@ -683,17 +683,12 @@ function QueryResult:view()
 		elseif queryLength == 3 then
 			return components[1][entity], components[2][entity], components[3][entity]
 		elseif queryLength == 4 then
-			return 
-				components[1][entity], 
-				components[2][entity], 
-				components[3][entity],
-				components[4][entity]
+			return components[1][entity], components[2][entity], components[3][entity], components[4][entity]
 		elseif queryLength == 5 then
-			return 
-				components[1][entity], 
-				components[2][entity], 
+			return components[1][entity],
+				components[2][entity],
 				components[3][entity],
-				components[4][entity], 
+				components[4][entity],
 				components[5][entity]
 		end
 
