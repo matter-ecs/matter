@@ -1,3 +1,5 @@
 # Migrate code style with StyLua 0.19.1
-
 5d8a63b791baabdebced5ee2f52204494be806ae
+
+# Rename .lua files to .luau
+55f89901a3c17e4e7765a6776064f0d504194218
