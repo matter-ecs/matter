@@ -224,6 +224,21 @@ return function()
 			expect(withoutCount).to.equal(1)
 		end)
 
+		it("should return an empty query with the same methods", function()
+			local world = World.new()
+
+			local Player = component()
+			local Enemy = component()
+
+			expect(world:query(Player):next()).to.equal(nil)
+			expect(#world:query(Player):snapshot()).to.equal(0)
+
+			expect(world:query(Player):without(Enemy):next()).to.equal(world:query(Player):next())
+
+			expect(world:query(Player):view():get()).to.equal(nil)
+			expect(world:query(Player):view():contains()).to.equal(false)
+		end)
+
 		it("should allow getting single components", function()
 			local world = World.new()
 

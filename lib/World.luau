@@ -381,10 +381,14 @@ local noopQuery = setmetatable({
 	without = function(self)
 		return self
 	end,
-	view = {
-		get = noop,
-		contains = noop,
-	},
+	view = function()
+		return {
+			get = noop,
+			contains = function()
+				return false
+			end,
+		}
+	end,
 }, {
 	__iter = function()
 		return noop
