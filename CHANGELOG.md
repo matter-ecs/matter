@@ -14,7 +14,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Fixed
 - Fixed the `:view()` arm on an empty Query to return a function rather than a handle.
-- Snapshot now correctly returns an empty list rather tahn nil on an empty Query.l
+- Snapshot now correctly returns an empty list rather than nil on an empty Query.
 - Fixed an error that would happen when calling an empty Query.
 
 ### Changed
