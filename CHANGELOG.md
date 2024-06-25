@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 ## [0.8.2] - 2024-06-25
 
 ### Fixed
-- Fixed the `:view()` arm on an empty Query to return a function rather than a handle.
+- Calling `:view()` on an empty query will no longer error.
 - Fixed `:snapshot()` on an empty query returning nil instead of an empty array.
 - Fixed an error that would happen when calling an empty Query.
 
