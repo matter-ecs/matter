@@ -10,6 +10,21 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.2] - 2024-06-25
+
+### Fixed
+- Calling `:view()` on an empty query will no longer error.
+- Fixed `:snapshot()` on an empty query returning nil instead of an empty array.
+- Fixed an error that would happen when calling an empty Query.
+
+### Changed
+- Optimized `Views` performance.
+  - No longer allocates a table for each entity in the view, making it much cheaper for queries that match against many entities.
+- Converted the lua files to luau files.
+- Reverted the changes to the format of the debugger table.
+
+## [0.8.1] - 2024-04-23
+
 ### Fixed
 - `QueryResult:without` now correctly matches against entity archetype after cache has been invalidated from transitioning archetype.
 
