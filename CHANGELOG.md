@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+- Iterating over an empty view now correctly returns no enities.
+
 ## [0.8.2] - 2024-06-25
 
 ### Changed
