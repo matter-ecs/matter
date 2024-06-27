@@ -10,7 +10,10 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.3] - 2024-06-27
+
 ### Fixed
+
 - Iterating empty views properly iterates over nothing rather than the data structure members.
 
 ## [0.8.2] - 2024-06-25
@@ -285,7 +288,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 - Initial release
 
-[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.2...HEAD
+[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/matter-ecs/matter/releases/tag/v0.8.3
 [0.8.2]: https://github.com/matter-ecs/matter/releases/tag/v0.8.2
 [0.8.1]: https://github.com/matter-ecs/matter/releases/tag/v0.8.1
 [0.8.0]: https://github.com/matter-ecs/matter/releases/tag/v0.8.0
