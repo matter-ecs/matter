@@ -237,6 +237,13 @@ return function()
 
 			expect(world:query(Player):view():get()).to.equal(nil)
 			expect(world:query(Player):view():contains()).to.equal(false)
+
+			local viewCount = 0
+			for _ in world:query(Player):view() do
+				viewCount += 1
+			end
+
+			expect(viewCount).to.equal(0)
 		end)
 
 		it("should allow getting single components", function()

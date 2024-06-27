@@ -382,12 +382,17 @@ local noopQuery = setmetatable({
 		return self
 	end,
 	view = function()
-		return {
+		return setmetatable({
 			get = noop,
 			contains = function()
 				return false
 			end,
-		}
+		}, {
+			__iter = function()
+				return noop
+			end,
+			__call = noop,
+		})
 	end,
 }, {
 	__iter = function()
