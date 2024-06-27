@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 ## [Unreleased]
 
 ### Fixed
-- Iterating over an empty view now correctly returns no entities.
+- Iterating empty views properly iterates over nothing rather than the data structure members.
 
 ## [0.8.2] - 2024-06-25
 
