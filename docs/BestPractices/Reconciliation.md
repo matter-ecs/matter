@@ -30,7 +30,7 @@ We can create another component (in the [Matter example game](https://github.com
 
 We can loop over all Ships that don't also have a Model, and create one for it.
 
-```lua title="ships.lua"
+```lua title="ships.luau"
 for id, ship in world:query(Ship):without(Model) do
 	local model = prefabs.Ship:Clone() -- assuming prefabs is a place where you store pre-made models
 	model.Parent = workspace
@@ -43,7 +43,7 @@ end
 
 Now, whenever there's an entity with Ship without Model, we create the model and insert the Model component. We can then loop over all Ships that have Models, and update the position of the Model.
 
-```lua title="ships.lua"
+```lua title="ships.luau"
 for id, ship, model in world:query(Ship, Model) do
 	model.instance.BodyPosition.Position = ship.goalPosition
 end
@@ -53,7 +53,7 @@ Keep in mind, both of these loops are performed every frame - that's what a syst
 
 We have a problem now, though: whenever an entity with both Ship and Model is despawned, the physical ship Instance in the Data Model will stick around. Since the Model component is generic and could be reused with any other component (it's not specific to just Ship), we can create another system that handles this case for anything that uses Model.
 
-```lua title="removeModels.lua"
+```lua title="removeModels.luau"
 for _id, modelRecord in world:queryChanged(Model) do
 	if modelRecord.new == nil then
 		if modelRecord.old and modelRecord.old.instance then
@@ -75,7 +75,7 @@ While we generally want our state to flow in one direction (Lua into the DataMod
 
 As an example, let's say we wanted the Ship to despawn if it was touched by anything. We can use Matter's [`useEvent`](/api/Matter#useEvent) utility to collect events that fire in a frame and loop over them.
 
-```lua title="ships.lua"
+```lua title="ships.luau"
 for id, model in world:query(Model, Ship) do
 	for _ in Matter.useEvent(model.Instance, "Touched") do
 		world:despawn(id)
@@ -89,7 +89,7 @@ Sometimes, instances can be removed from the Data Model or destroyed without us 
 
 To account for this, we can simply loop over every Model and check if it's still in the world. If not, we can either remove the Model component or despawn the entire entity (whichever makes more sense for your game).
 
-```lua title="removeModels.lua"
+```lua title="removeModels.luau"
 for id, model in world:query(Model) do
 	if model.instance:IsDescendantOf(game) == false then
 		world:remove(id, Model)
@@ -111,7 +111,7 @@ There are two potential ways we could want to use this component:
 
 We can make a system that handles both of these cases for us.
 
-```lua title="updateTransforms.lua"
+```lua title="updateTransforms.luau"
 -- Handle Transform added/changed to existing entity with Model
 for id, transformRecord in world:queryChanged(Transform) do
 
