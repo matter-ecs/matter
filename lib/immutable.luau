@@ -14,7 +14,7 @@ local function merge(one, two)
 	return new
 end
 
--- https://github.com/freddylist/llama/blob/master/src/List/toSet.luau
+-- https://github.com/freddylist/llama/blob/master/src/List/toSet.lua
 local function toSet(list)
 	local set = {}
 
@@ -25,7 +25,7 @@ local function toSet(list)
 	return set
 end
 
--- https://github.com/freddylist/llama/blob/master/src/Dictionary/values.luau
+-- https://github.com/freddylist/llama/blob/master/src/Dictionary/values.lua
 local function values(dictionary)
 	local valuesList = {}
 

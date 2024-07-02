@@ -22,7 +22,7 @@
       },
       "$className": "TestService",
       "run": {
-        "$path": "tests.server.luau"
+        "$path": "tests.server.lua"
       }
     }
   }
