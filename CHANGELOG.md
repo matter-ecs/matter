@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
-## [0.8.3] - 2024-06-27
+## [0.8.3] - 2024-07-02
 
 ### Fixed
 - Converted the remaining lua files in the example project to luau files.
