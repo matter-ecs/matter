@@ -16,7 +16,7 @@ Here's how you scaffold a project with Matter.
 
 First, import Matter at the top of your file. Then, create your [`World`](/api/World) and your [`Loop`](/api/Loop).
 
-```lua title="init.server.lua"
+```lua title="init.server.luau"
 local Matter = require(ReplicatedStorage.Matter)
 
 local world = Matter.World.new()
@@ -26,7 +26,7 @@ local loop = Matter.Loop.new(world) -- This makes Loop pass the world to all you
 
 Then, we should collect all of your systems and schedule them. Assuming they're in a `systems` folder inside this script:
 
-```lua title="init.server.lua"
+```lua title="init.server.luau"
 local systems = {}
 for _, child in ipairs(script.systems:GetChildren()) do
 	if child:IsA("ModuleScript") then
@@ -39,7 +39,7 @@ loop:scheduleSystems(systems)
 
 Then, simply start the loop.
 
-```lua title="init.server.lua"
+```lua title="init.server.luau"
 loop:begin({
 	default = RunService.Heartbeat
 })
@@ -47,7 +47,7 @@ loop:begin({
 
 Now your systems would run every heartbeat, if you had any. Let's make some.
 
-```lua title="systems/myFirstSystem.lua"
+```lua title="systems/myFirstSystem.luau"
 local function myFirstSystem()
 	print("Hello world!")
 end
@@ -59,7 +59,7 @@ Now we're printing something 60 times per second. We should probably do somethin
 
 Let's create a couple components.
 
-```lua title="components.lua"
+```lua title="components.luau"
 local Matter = require(ReplicatedStorage.Matter)
 
 return {
@@ -70,7 +70,7 @@ return {
 
 Let's make a system that removes 0.1 health every frame from things that are poisoned.
 
-```lua title="systems/poisonHurts.lua"
+```lua title="systems/poisonHurts.luau"
 local Components = require(script.Parent.components)
 local Health = Components.Health
 local Poison = Components.Poison
