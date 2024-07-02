@@ -75,7 +75,7 @@ We can reuse our `Health` component from earlier. Let's say that in our game, we
 
 A good way to name systems is by declaring something about the world that they do. In this case: "Health Regenerates."
 
-```lua title="healthRegenerates.lua"
+```lua title="healthRegenerates.luau"
 for id, health in world:query(Health) do
     if health.current < health.max then
         world:insert(id, health:patch({
