@@ -96,11 +96,11 @@ for component in replicatedComponents do
 			changes[key][name] = { data = record.new }
 		end
 	end
+end
 
-	-- Check if there are any changes in our buffer before sending the changes to all clients.
-	if next(changes) then
-		RemoteEvent:FireAllClients(changes)
-	end
+-- Check if there are any changes in our buffer before sending the changes to all clients.
+if next(changes) then
+	RemoteEvent:FireAllClients(changes)
 end
 ```
 
