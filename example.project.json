@@ -48,7 +48,7 @@
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
         "Game": {
-          "$path": "example/src/game.client.lua"
+          "$path": "example/src/game.client.luau"
         }
       }
     }

@@ -2,7 +2,7 @@
 
 Replication is not built into Matter, but it's easy to implement yourself. This guide will give you an overview of one way to implement replication with Matter.
 
-This article will cover the way the [Matter example game](https://github.com/matter-ecs/matter/blob/main/example/shared/start.lua) implements replication.
+This article will cover the way the [Matter example game](https://github.com/matter-ecs/matter/blob/main/example/shared/start.luau) implements replication.
 
 ## Deciding which components to replicate
 
@@ -35,7 +35,7 @@ RemoteEvent.Name = "MatterRemote"
 RemoteEvent.Parent = ReplicatedStorage
 ```
 
-Let's convert the list of component names into actual components. This is assuming you have a Components module that exports your components, like [the matter example game does](https://github.com/matter-ecs/matter/blob/main/example/shared/components.lua).
+Let's convert the list of component names into actual components. This is assuming you have a Components module that exports your components, like [the matter example game does](https://github.com/matter-ecs/matter/blob/main/example/shared/components.luau).
 
 ```lua
 local replicatedComponents = {}
@@ -96,11 +96,11 @@ for component in replicatedComponents do
 			changes[key][name] = { data = record.new }
 		end
 	end
+end
 
-	-- Check if there are any changes in our buffer before sending the changes to all clients.
-	if next(changes) then
-		RemoteEvent:FireAllClients(changes)
-	end
+-- Check if there are any changes in our buffer before sending the changes to all clients.
+if next(changes) then
+	RemoteEvent:FireAllClients(changes)
 end
 ```
 
