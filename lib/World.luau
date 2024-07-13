@@ -1004,6 +1004,8 @@ local function queryResult(compatibleArchetypes, components: { number }, queryLe
 		end
 
 		return setmetatable({}, View)
+	end
+	return setmetatable({}, QueryResult)
 end
 
 --[=[
@@ -1349,7 +1351,6 @@ function QueryResult:view()
 
 	function View:contains(entity)
 		return entityRecords[entity] ~= nil
->>>>>>> 78b37dedd295b6dbc2651cdcfb25341c8959fd02:lib/World.luau
 	end
 
 	return setmetatable({}, QueryResult)
@@ -1521,8 +1522,6 @@ function World.query(world: World, ...: Component): any
 			firstArchetypeMap = map
 		end
 	end
-
-<<<<<<< HEAD:lib/World.lua
 	for id in firstArchetypeMap.cache do
 		local archetype = archetypes[id]
 		local archetypeRecords = archetype.records
@@ -1540,9 +1539,6 @@ function World.query(world: World, ...: Component): any
 	end
 
 	return queryResult(compatibleArchetypes, components :: any, queryLength, a, b, c, d, e, f, g, h)
-=======
-	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
->>>>>>> 78b37dedd295b6dbc2651cdcfb25341c8959fd02:lib/World.luau
 end
 
 local function cleanupQueryChanged(hookState)
