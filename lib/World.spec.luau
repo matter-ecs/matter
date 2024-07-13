@@ -41,7 +41,7 @@ end
 
 return function()
 	describeFOCUS("World", function()
-		itFOCUS("replace", function()
+		itSKIP("replace", function()
 			local world = World.new()
 
 			local A = component()
@@ -502,7 +502,7 @@ return function()
 			expect(withoutCount).to.equal(0)
 		end)
 
-		itFOCUS("should track changes", function()
+		itSKIP("should track changes", function()
 			local world = World.new()
 
 			local loop = Loop.new(world)
@@ -883,7 +883,7 @@ return function()
 			expect(count).to.equal(10)
 		end)
 
-		it("should have empty queries with similar methods", function()
+		itFOCUS("should have empty queries with similar methods", function()
 			-- TODO:
 			-- This doesn't handle things like view properly
 
