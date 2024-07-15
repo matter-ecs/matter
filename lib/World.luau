@@ -23,7 +23,7 @@ type Archetype = {
 	id: number,
 
 	ownedEntities: { EntityId },
-	componentToStorageIndex: { [ComponentMetatable]: number },
+	componentToStorageIndex: { [GlobalComponentId]: number },
 	storage: { [number]: { [DenseEntityId]: ComponentInstance } },
 }
 
@@ -266,12 +266,12 @@ local function createArchetype(world: World, components: { Component }): Archety
 	}
 
 	for index, component in components do
-		local globalComponentId = #component
-		local associatedArchetypes = world.componentIndex[globalComponentId] or {}
+		local componentId = #component
+		local associatedArchetypes = world.componentIndex[componentId] or {}
 		associatedArchetypes[archetypeId] = index
-		world.componentIndex[globalComponentId] = associatedArchetypes
+		world.componentIndex[componentId] = associatedArchetypes
 
-		componentToStorageIndex[component] = index
+		componentToStorageIndex[componentId] = index
 		storage[index] = {}
 	end
 
@@ -312,7 +312,7 @@ function World._transitionArchetype(self: typeof(World.new()), id: EntityId, met
 		end
 
 		-- Find the archetype that matches these components
-		local newArchetypeId = archetypeOf(unpack(components))
+		local newArchetypeId = archetypeOf(components)
 		local newArchetype = self.archetypes[newArchetypeId] or createArchetype(self, components)
 
 		-- print("Archetype:", newArchetype)
@@ -320,9 +320,9 @@ function World._transitionArchetype(self: typeof(World.new()), id: EntityId, met
 		-- print(newArchetype.storage, newArchetype.component)
 
 		-- Add entity to archetype
-		local indexInArchetype = #newArchetype.storage[newArchetype.componentToStorageIndex[components[1]]] + 1
+		local indexInArchetype = #newArchetype.storage[newArchetype.componentToStorageIndex[#components[1]]] + 1
 		for component, componentInstance in metatableToInstance do
-			newArchetype.storage[newArchetype.componentToStorageIndex[component]][indexInArchetype] = componentInstance
+			newArchetype.storage[newArchetype.componentToStorageIndex[#component]][indexInArchetype] = componentInstance
 		end
 
 		entityRecord.indexInArchetype = indexInArchetype
@@ -863,15 +863,25 @@ function World.query(self: World, ...)
 	-- TODO:
 	-- cache queries
 
-	assertValidComponent((...), 1)
-
+	--assertValidComponent((...), 1)
+	--print("Rebuilding query")
+	--print(self)
 	local components = { ... }
+	local a, b = ...
+
 	local queryLength = select("#", ...)
+	if queryLength == 1 then
+		components = { #a }
+	elseif queryLength == 2 then
+		components = { #a, #b }
+	else
+		error("Unimplemented query length")
+	end
 
 	local possibleArchetypes
 	local compatibleArchetypes = {}
-	for _, component in components do
-		local associatedArchetypes = self.componentIndex[#component]
+	for _, componentId in components do
+		local associatedArchetypes = self.componentIndex[componentId]
 		if associatedArchetypes == nil then
 			error("No-op query unimplemented")
 		end
@@ -885,9 +895,9 @@ function World.query(self: World, ...)
 	for archetypeId in possibleArchetypes do
 		local archetype = self.archetypes[archetypeId]
 		local incompatible = false
-		for _, component in components do
+		for _, componentId in components do
 			-- Does this archetype have this component?
-			if archetype.componentToStorageIndex[component] == nil then
+			if archetype.componentToStorageIndex[componentId] == nil then
 				-- Nope, so we can't use this one.
 				incompatible = true
 				break

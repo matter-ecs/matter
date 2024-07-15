@@ -16,44 +16,51 @@ local function getValueId(value)
 	return valueId
 end
 
-function archetypeOf(...)
-	debug.profilebegin("archetypeOf")
-
-	local length = select("#", ...)
-
-	local currentNode = archetypeCache
-
-	for i = 1, length do
-		local nextNode = currentNode[select(i, ...)]
-
-		if not nextNode then
-			nextNode = {}
-			currentNode[select(i, ...)] = nextNode
-		end
-
-		currentNode = nextNode
+function archetypeOf(components)
+	local archetype = ""
+	for _, component in components do
+		archetype = archetype .. "_" .. #component
 	end
 
-	if currentNode._archetype then
-		debug.profileend()
-		return currentNode._archetype
-	end
-
-	local list = table.create(length)
-
-	for i = 1, length do
-		list[i] = getValueId(select(i, ...))
-	end
-
-	table.sort(list)
-
-	local archetype = table.concat(list, "_")
-
-	currentNode._archetype = archetype
-
-	debug.profileend()
-
+	--print("Archetype for", components, archetype)
 	return archetype
+	-- debug.profilebegin("archetypeOf")
+
+	-- local length = select("#", ...)
+
+	-- local currentNode = archetypeCache
+
+	-- for i = 1, length do
+	-- 	local nextNode = currentNode[select(i, ...)]
+
+	-- 	if not nextNode then
+	-- 		nextNode = {}
+	-- 		currentNode[select(i, ...)] = nextNode
+	-- 	end
+
+	-- 	currentNode = nextNode
+	-- end
+
+	-- if currentNode._archetype then
+	-- 	debug.profileend()
+	-- 	return currentNode._archetype
+	-- end
+
+	-- local list = table.create(length)
+
+	-- for i = 1, length do
+	-- 	list[i] = getValueId(select(i, ...))
+	-- end
+
+	-- table.sort(list)
+
+	-- local archetype = table.concat(list, "_")
+
+	-- currentNode._archetype = archetype
+
+	-- debug.profileend()
+
+	-- return archetype
 end
 
 function negateArchetypeOf(...)
