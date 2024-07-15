@@ -16,14 +16,15 @@ local function getValueId(value)
 	return valueId
 end
 
-function archetypeOf(components)
-	local archetype = ""
-	for _, component in components do
-		archetype = archetype .. "_" .. #component
-	end
+function archetypeOf(componentIds: { number })
+	return table.concat(componentIds, "_")
+	-- local archetype = ""
+	-- for _, component in componentIds do
+	-- 	archetype = archetype .. "_" .. componentId
+	-- end
 
-	--print("Archetype for", components, archetype)
-	return archetype
+	-- --print("Archetype for", components, archetype)
+	-- return archetype
 	-- debug.profilebegin("archetypeOf")
 
 	-- local length = select("#", ...)
