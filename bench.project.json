@@ -1,0 +1,29 @@
+{
+    "name": "Benchmark Suite",
+    "tree": {
+        "$className": "DataModel",
+        "StarterPlayer": {
+            "$className": "StarterPlayer",
+            "StarterPlayerScripts": {
+                "$className": "StarterPlayerScripts",
+                "$path": "tests"
+            }
+        },
+        "ReplicatedStorage": {
+            "$className": "ReplicatedStorage",
+            "$path": "DevPackages",
+            "Matter": {
+                "$path": "lib"
+            },
+            "PinnedMatter": {
+                "$path": "PinnedMatter.rbxm"
+            }
+        },
+        "ServerStorage": {
+            "$className": "ServerStorage",
+            "Benchmarks": {
+                "$path": "benchmarks"
+            }
+        }
+    }
+}
