@@ -260,6 +260,8 @@ local function createArchetype(world: World, components: { Component }): Archety
 		id = archetypeId,
 		componentToStorageIndex = componentToStorageIndex,
 		storage = storage,
+
+		-- Keep track of all entity ids for fast iteration in queries
 		ownedEntities = {},
 	}
 
@@ -866,7 +868,6 @@ function World.query(self: World, ...)
 	local components = { ... }
 	local queryLength = select("#", ...)
 
-	local archetypeId = archetypeOf(...)
 	local possibleArchetypes
 	local compatibleArchetypes = {}
 	for _, component in components do
@@ -901,10 +902,11 @@ function World.query(self: World, ...)
 	end
 
 	local currentArchetype = self.archetypes[next(compatibleArchetypes)]
+	local currentArchetypeNumEntities = #currentArchetype.ownedEntities
 	local currentEntityIndex = 0
 	local function nextEntity()
 		currentEntityIndex += 1
-		if currentArchetype.storage[1][currentEntityIndex] == nil then
+		if currentEntityIndex > currentArchetypeNumEntities then
 			currentArchetype = self.archetypes[next(compatibleArchetypes, currentArchetype.id)]
 			currentEntityIndex = 0
 			if currentArchetype == nil then
@@ -930,7 +932,8 @@ function World.query(self: World, ...)
 
 	local function iter()
 		currentArchetype = self.archetypes[next(compatibleArchetypes)]
-		currentEntity = 0
+		currentArchetypeNumEntities = #currentArchetype.ownedEntities
+		currentEntityIndex = 0
 
 		return nextEntity
 	end
