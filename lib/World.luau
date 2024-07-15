@@ -1,5 +1,6 @@
 local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
+local entityInspect = require(script.Parent.debugger.widgets.entityInspect)
 local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstance = Component.assertValidComponentInstance
@@ -15,14 +16,14 @@ type Component = { [any]: any }
 type ComponentInstance = { [any]: any }
 type ComponentMetatable = { [any]: any }
 type ComponentMetatables = { ComponentMetatable }
-type ComponentId = ComponentMetatable
+type ComponentToId = { [Component]: number }
 
 type ArchetypeId = string
 type Archetype = {
 	id: number,
 
-	componentMetatables: ComponentMetatables,
-	components: { [ComponentId]: { [DenseEntityId]: ComponentInstance } },
+	componentToStorageIndex: { [ComponentMetatable]: number },
+	storage: { [number]: { [DenseEntityId]: ComponentInstance } },
 }
 
 type EntityRecord = {
@@ -61,9 +62,9 @@ function World.new()
 	local firstStorage: Storage = {}
 
 	return setmetatable({
-		_entityIndex = {} :: EntityIndex,
-		_componentIndex = {} :: ComponentIndex,
-		_archetypes = {} :: Archetypes,
+		entityIndex = {} :: EntityIndex,
+		componentIndex = {} :: ComponentIndex,
+		archetypes = {} :: Archetypes,
 
 		-- List of maps from archetype string --> entity ID --> entity data
 		_storages = { firstStorage } :: Storages,
@@ -95,6 +96,8 @@ function World.new()
 		_changedStorage = {},
 	}, World)
 end
+
+export type World = typeof(World.new())
 
 -- Searches all archetype storages for the entity with the given archetype
 -- Returns the storage that the entity is in if it exists, otherwise nil
@@ -247,13 +250,33 @@ function World:_updateQueryCache(entityArchetype)
 	end
 end
 
+local function createArchetype(world: World, components: { Component }): Archetype
+	local componentToStorageIndex = {}
+	local length = #components
+	local storage = table.create(length)
+	for index, component in components do
+		componentToStorageIndex[component] = index
+		storage[index] = {}
+	end
+
+	local archetypeId = archetypeOf(components)
+	local archetype: Archetype = {
+		id = archetypeId,
+		componentToStorageIndex = componentToStorageIndex,
+		storage = storage,
+	}
+
+	world.archetypes[archetypeId] = archetype
+	return archetype
+end
+
 function World._transitionArchetype(self: typeof(World.new()), id: EntityId, metatableToInstance: { [any]: any }?)
 	print("transitionArchetype", id, metatableToInstance)
 	debug.profilebegin("transitionArchetype")
 
 	if metatableToInstance == nil then
 		-- Remove all components
-		local entityRecord = self._entityIndex[id]
+		local entityRecord = self.entityIndex[id]
 		assert(entityRecord, "..")
 
 		for metatable in entityRecord.archetype.components do
@@ -265,37 +288,29 @@ function World._transitionArchetype(self: typeof(World.new()), id: EntityId, met
 		entityRecord.archetype = nil
 		entityRecord.indexInArchetype = nil
 	else
-		local metatables = {}
-		for metatable in metatableToInstance do
-			table.insert(metatables, metatable)
+		local components = {}
+		for component in metatableToInstance do
+			table.insert(components, component)
 		end
 
-		local entityRecord = self._entityIndex[id]
+		local entityRecord = self.entityIndex[id]
 		if entityRecord == nil then
 			entityRecord = {}
-			self._entityIndex[id] = entityRecord
+			self.entityIndex[id] = entityRecord
 		end
 
 		-- Find the archetype that matches these components
-		local newArchetypeId = archetypeOf(unpack(metatables))
-		local newArchetype = self._archetypes[newArchetypeId]
-		if newArchetype == nil then
-			local archetypeComponents = {}
-			for metatable, _ in metatableToInstance do
-				archetypeComponents[metatable] = {}
-			end
+		local newArchetypeId = archetypeOf(unpack(components))
+		local newArchetype = self.archetypes[newArchetypeId] or createArchetype(self, components)
 
-			newArchetype = {
-				components = archetypeComponents,
-			} :: Archetype
-
-			self._archetypes[newArchetypeId] = newArchetype
-		end
+		print("Archetype:", newArchetype)
+		print(newArchetype.componentToStorageIndex[components[1]])
+		print(newArchetype.storage, newArchetype.component)
 
 		-- Add entity to archetype
-		local indexInArchetype = #newArchetype.components[metatables[1]] + 1
-		for componentMetatable, componentInstance in metatableToInstance do
-			newArchetype.components[componentMetatable][indexInArchetype] = componentInstance
+		local indexInArchetype = #newArchetype.storage[newArchetype.componentToStorageIndex[components[1]]] + 1
+		for component, componentInstance in metatableToInstance do
+			newArchetype.storage[newArchetype.componentToStorageIndex[component]][indexInArchetype] = componentInstance
 		end
 
 		entityRecord.indexInArchetype = indexInArchetype
@@ -393,7 +408,7 @@ end
 	@return bool -- `true` if the entity exists
 ]=]
 function World.contains(self: typeof(World.new()), id)
-	return self._entityIndex[id] ~= nil
+	return self.entityIndex[id] ~= nil
 end
 
 --[=[
@@ -404,30 +419,32 @@ end
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
 function World.get(self: typeof(World.new()), id, ...: Component)
-	local entityRecord = self._entityIndex[id]
+	local entityRecord = self.entityIndex[id]
 	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
 	end
 
-	local archetype = entityRecord.archetype
-	print("Get archetype:", archetype)
-	-- TODO:
-	-- handle nil archetype
-
 	local length = select("#", ...)
-	local componentInstances = {}
+	local componentInstances = table.create(length, nil)
+
+	local archetype = entityRecord.archetype
+	if archetype == nil then
+		return componentInstances
+	end
+
+	local componentToStorageIndex = archetype.componentToStorageIndex
 	for i = 1, length do
 		local component = select(i, ...)
 		assertValidComponent(component, i)
 
 		-- Does this component belong to the archetype that this entity is in?
-		if archetype.components[component] == nil then
-			-- No, so it doesn't have the value
-			table.insert(componentInstances, nil)
-		else
-			-- Yes
-			table.insert(componentInstances, archetype.components[component][entityRecord.indexInArchetype])
+		local storageIndex = componentToStorageIndex[component]
+		if storageIndex == nil then
+			continue
 		end
+
+		-- Yes
+		componentInstances[i] = archetype.storage[storageIndex][entityRecord.indexInArchetype]
 	end
 
 	return unpack(componentInstances, 1, length)
@@ -1114,7 +1131,9 @@ end
 	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
 ]=]
 function World.remove(self: typeof(World.new()), id, ...: ComponentMetatable)
-	local entityRecord = self._entityIndex[id]
+	error("unimplemented")
+
+	local entityRecord = self.entityIndex[id]
 	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
 	end
