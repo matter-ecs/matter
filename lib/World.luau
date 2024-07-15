@@ -898,22 +898,25 @@ function World.query(self: World, ...)
 			continue
 		end
 
-		compatibleArchetypes[archetypeId] = true
+		table.insert(compatibleArchetypes, archetype)
 	end
 
-	local currentArchetype = self.archetypes[next(compatibleArchetypes)]
+	local currentArchetypeIndex = 1
+	local currentArchetype = compatibleArchetypes[currentArchetypeIndex]
 	local currentArchetypeNumEntities = #currentArchetype.ownedEntities
 	local currentEntityIndex = 0
 	local function nextEntity()
 		currentEntityIndex += 1
 		if currentEntityIndex > currentArchetypeNumEntities then
-			currentArchetype = self.archetypes[next(compatibleArchetypes, currentArchetype.id)]
 			currentEntityIndex = 0
+			currentArchetypeIndex += 1
+			currentArchetype = compatibleArchetypes[currentArchetypeIndex]
 			if currentArchetype == nil then
 				-- Out of entities.
 				return nil
 			end
 
+			currentArchetypeNumEntities = #currentArchetype.ownedEntities
 			return nextEntity()
 		end
 
@@ -931,9 +934,9 @@ function World.query(self: World, ...)
 	end
 
 	local function iter()
-		currentArchetype = self.archetypes[next(compatibleArchetypes)]
-		currentArchetypeNumEntities = #currentArchetype.ownedEntities
-		currentEntityIndex = 0
+		-- currentArchetype = self.archetypes[next(compatibleArchetypes)]
+		-- currentArchetypeNumEntities = #currentArchetype.ownedEntities
+		-- currentEntityIndex = 0
 
 		return nextEntity
 	end
