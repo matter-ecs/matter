@@ -19,7 +19,7 @@
                 "$path": "PinnedMatter.rbxm"
             },
             "Jecs": {
-                "$path": "Jecs.luau"
+                "$path": "PinnedJecs.luau"
             }
         },
         "ServerStorage": {

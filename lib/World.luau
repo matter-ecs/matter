@@ -938,6 +938,11 @@ function World.query(self: World, ...)
 			return entityId,
 				storage[componentToStorageIndex[components[1]]][currentEntityIndex],
 				storage[componentToStorageIndex[components[2]]][currentEntityIndex]
+		elseif queryLength == 3 then
+			return entityId,
+				storage[componentToStorageIndex[components[1]]][currentEntityIndex],
+				storage[componentToStorageIndex[components[2]]][currentEntityIndex],
+				storage[componentToStorageIndex[components[3]]][currentEntityIndex]
 		else
 			error("Unimplemented Query Length")
 		end
