@@ -41,7 +41,7 @@ end
 
 return function()
 	describeFOCUS("World", function()
-		itFOCUS("should buffer commands if enabled", function()
+		it("should buffer commands if enabled", function()
 			local world = World.new()
 			world:startDeferring()
 
@@ -348,6 +348,8 @@ return function()
 				c = 3,
 			}))
 
+			world:commitCommands()
+
 			defaultBindable:Fire()
 			expect(runCount).to.equal(2)
 		end)
@@ -519,6 +521,8 @@ return function()
 				C()
 			)
 
+			world:commitCommands()
+
 			defaultBindable:Fire()
 
 			additionalQuery = nil
@@ -544,14 +548,20 @@ return function()
 				C()
 			)
 
+			world:commitCommands()
+
 			defaultBindable:Fire()
 			defaultBindable:Fire()
 
 			world:replace(secondEntityId, B())
 
+			world:commitCommands()
+
 			infrequentBindable:Fire()
 
 			world:despawn(entityId)
+
+			world:commitCommands()
 
 			defaultBindable:Fire()
 

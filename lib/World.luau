@@ -146,6 +146,7 @@ end
 
 local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("insert")
+
 	local id = insertCommand.entityId
 	if not world:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
