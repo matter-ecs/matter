@@ -212,6 +212,35 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profileend()
 end
 
+local function executeRemove(world: World, removeCommand: RemoveCommand)
+	local id = removeCommand.entityId
+	if not world:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local entity = world:_getEntity(id)
+
+	local removed = {}
+	for index, metatable in removeCommand.components do
+		assertValidComponent(metatable, index)
+
+		local oldComponent = entity[metatable]
+		removed[index] = oldComponent
+
+		world:_trackChanged(metatable, id, oldComponent, nil)
+		entity[metatable] = nil
+	end
+
+	-- Rebuild entity metatable cache
+	local metatables = {}
+	for metatable in pairs(entity) do
+		table.insert(metatables, metatable)
+	end
+
+	world._entityMetatablesCache[id] = metatables
+	world:_transitionArchetype(id, entity)
+end
+
 local function processCommand(world: World, command: Command)
 	if command.type == "spawn" then
 		executeSpawn(world, command)
@@ -219,6 +248,8 @@ local function processCommand(world: World, command: Command)
 		executeInsert(world, command)
 	elseif command.type == "despawn" then
 		executeDespawn(world, command)
+	elseif command.type == "remove" then
+		executeRemove(world, command)
 	else
 		error(`Unknown command type: {command.type}`)
 	end
@@ -282,6 +313,9 @@ end
 	@return number -- The same entity ID that was passed in
 ]=]
 function World:spawnAt(id, ...)
+	-- TODO:
+	-- Spawn should probably insert at the same time, because spawn used to check that you
+	-- didn't pass any duplicate components
 	bufferCommand(self, { type = "spawn", entityId = id })
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = { ... } })
 	return id
@@ -1111,44 +1145,13 @@ end
 
 	@param id number -- The entity ID
 	@param ... Component -- The components to remove
-	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
 ]=]
 function World:remove(id, ...)
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	local components = { ... }
+	bufferCommand(self, { type = "remove", entityId = id, components = components })
 
-	local entity = self:_getEntity(id)
-
-	local length = select("#", ...)
-	local removed = {}
-
-	for i = 1, length do
-		local metatable = select(i, ...)
-
-		assertValidComponent(metatable, i)
-
-		local oldComponent = entity[metatable]
-
-		removed[i] = oldComponent
-
-		self:_trackChanged(metatable, id, oldComponent, nil)
-
-		entity[metatable] = nil
-	end
-
-	-- Rebuild entity metatable cache
-	local metatables = {}
-
-	for metatable in pairs(entity) do
-		table.insert(metatables, metatable)
-	end
-
-	self._entityMetatablesCache[id] = metatables
-
-	self:_transitionArchetype(id, entity)
-
-	return unpack(removed, 1, length)
+	-- TODO:
+	-- Return current state of components you are removing
 end
 
 --[=[
