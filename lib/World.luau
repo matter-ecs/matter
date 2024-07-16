@@ -24,10 +24,15 @@ type InsertCommand = {
 }
 type RemoveCommand = {
 	type: "remove",
-	DebugContext: DebugContext?,
+	debugContext: DebugContext?,
 	entityId: number,
 	components: { [any]: any },
 }
+-- type ReplaceCommand = {
+-- 	type: "replace",
+-- 	debugContext: DebugContext?,
+-- 	entityId: number
+-- }
 type Command = SpawnCommand | DespawnCommand | InsertCommand | RemoveCommand
 
 --[=[
@@ -147,6 +152,7 @@ end
 local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("insert")
 
+	print("Insert context", insertCommand)
 	local id = insertCommand.entityId
 	if not world:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
@@ -233,6 +239,11 @@ function World:setDebugContext(debugContext: DebugContext?)
 	self.debugContext = debugContext
 end
 
+--[=[
+	Starts deferring entity commands.
+
+	If you are using a [`Loop`](/api/Loop), this is done for you.
+]=]
 function World:startDeferring()
 	if self.deferring then
 		return
@@ -241,6 +252,12 @@ function World:startDeferring()
 	self.deferring = true
 end
 
+--[=[
+	Sequentially processes all of the commands in the buffer.
+
+	If you are using a [`Loop`](/api/Loop), this is called after every system.
+	However, you can call it more often if you want.
+]=]
 function World:commitCommands()
 	for _, command in self.commands do
 		processCommand(self, command)
@@ -249,6 +266,9 @@ function World:commitCommands()
 	table.clear(self.commands)
 end
 
+--[=[
+	Stops deferring entity commands and processes all commands left in the buffer.
+]=]
 function World:stopDeferring()
 	if not self.deferring then
 		return
@@ -283,7 +303,7 @@ end
 function World:spawnAt(id, ...)
 	-- TODO:
 	-- Spawn should probably insert at the same time, because spawn used to check that you
-	-- didn't pass any duplicate components
+	-- didn't pass any duplicate components.
 	if id >= self._nextId then
 		self._nextId = id + 1
 	end
@@ -367,6 +387,9 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
+	-- TODO:
+	-- Buffer this
+
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -1140,7 +1163,7 @@ end
 	the World. Calling this function combines the separate storage back into the main storage, which speeds things up
 	again.
 
-	@deprecated v0.9 -- This method no longer does anything.
+	@deprecated v0.9.0 -- This method no longer does anything.
 ]=]
 function World:optimizeQueries() end
 
