@@ -41,9 +41,9 @@ end
 
 return function()
 	describeFOCUS("World", function()
-		itSKIP("should buffer commands if enabled", function()
+		itFOCUS("should buffer commands if enabled", function()
 			local world = World.new()
-			world:deferCommands()
+			world:startDeferring()
 
 			local A = component()
 			local B = component()
@@ -55,18 +55,21 @@ return function()
 			}))
 
 			world:commitCommands()
-			world:deferCommands()
+
 			world:despawn(1)
 			expect(world:contains(1)).to.equal(true)
+
 			world:commitCommands()
+
 			expect(world:contains(1)).to.equal(false)
-			world:deferCommands()
 
 			-- Insert
 			local b = B({})
 			world:insert(2, b)
 			expect(world:get(2, B)).to.never.be.ok()
+
 			world:commitCommands()
+
 			expect(world:get(2, B)).to.equal(b)
 		end)
 		it("should be iterable", function()
@@ -761,14 +764,14 @@ return function()
 				world:spawn(A(), B())
 			end
 
-			world:deferCommands()
+			world:startDeferring()
 			local count = 0
 			for id in world:query(A) do
 				count += 1
 				world:insert(id, C())
 				world:remove(id, B)
 			end
-			world:commitCommands()
+			world:stopDeferring()
 			expect(count).to.equal(10)
 		end)
 	end)

@@ -364,12 +364,12 @@ function Loop:begin(events)
 
 			generation = not generation
 
-			local dirtyWorlds: { [any]: true } = {}
 			local profiling = self.profiling
 
 			-- TODO:
 			-- Technically, this doesn't have to be the world.
 			local primaryWorld = self._state[1]
+			primaryWorld:startDeferring()
 
 			for _, system in ipairs(self._orderedSystemsByEvent[eventName]) do
 				topoRuntime.start({
@@ -377,7 +377,6 @@ function Loop:begin(events)
 					frame = {
 						generation = generation,
 						deltaTime = deltaTime,
-						dirtyWorlds = dirtyWorlds,
 						logs = self._systemLogs[system],
 					},
 					currentSystem = system,
@@ -394,7 +393,6 @@ function Loop:begin(events)
 
 					local thread = coroutine.create(fn)
 
-					primaryWorld:deferCommands()
 					local startTime = os.clock()
 					local success, errorValue = coroutine.resume(thread, unpack(self._state, 1, self._stateLength))
 
@@ -421,11 +419,6 @@ function Loop:begin(events)
 					end
 
 					primaryWorld:commitCommands()
-
-					for world in dirtyWorlds do
-						world:optimizeQueries()
-					end
-					table.clear(dirtyWorlds)
 
 					if not success then
 						if os.clock() - recentErrorLastTime > 10 then

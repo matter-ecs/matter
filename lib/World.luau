@@ -232,7 +232,7 @@ function World:setDebugContext(debugContext: DebugContext?)
 	self.debugContext = debugContext
 end
 
-function World:deferCommands()
+function World:startDeferring()
 	if self.deferring then
 		return
 	end
@@ -241,16 +241,20 @@ function World:deferCommands()
 end
 
 function World:commitCommands()
-	if not self.deferring then
-		return
-	end
-
 	for _, command in self.commands do
 		processCommand(self, command)
 	end
 
+	table.clear(self.commands)
+end
+
+function World:stopDeferring()
+	if not self.deferring then
+		return
+	end
+
+	self:commitCommands()
 	self.deferring = false
-	self.commands = {}
 end
 
 --[=[
