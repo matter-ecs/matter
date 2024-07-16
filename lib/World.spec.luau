@@ -41,6 +41,34 @@ end
 
 return function()
 	describe("World", function()
+		itFOCUS("should buffer commands if enabled", function()
+			local world = World.new()
+			world:deferCommands()
+
+			local A = component()
+			local B = component()
+			world:spawn(A({
+				a = 1,
+			}))
+			world:spawn(A({
+				a = 2,
+			}))
+
+			world:commitCommands()
+			world:deferCommands()
+			world:despawn(1)
+			expect(world:contains(1)).to.equal(true)
+			world:commitCommands()
+			expect(world:contains(1)).to.equal(false)
+			world:deferCommands()
+
+			-- Insert
+			local b = B({})
+			world:insert(2, b)
+			expect(world:get(2, B)).to.never.be.ok()
+			world:commitCommands()
+			expect(world:get(2, B)).to.equal(b)
+		end)
 		it("should be iterable", function()
 			local world = World.new()
 			local A = component()

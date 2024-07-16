@@ -300,9 +300,7 @@ function Loop:_sortSystems()
 						error(
 							`Unable to schedule "{systemName(system)}" because the system "{systemName(dependency)}" is not scheduled.\n\nEither schedule "{systemName(
 								dependency
-							)}" before "{systemName(
-								system
-							)}" or consider scheduling these systems together with Loop:scheduleSystems`
+							)}" before "{systemName(system)}" or consider scheduling these systems together with Loop:scheduleSystems`
 						)
 					end
 				end
@@ -369,6 +367,10 @@ function Loop:begin(events)
 			local dirtyWorlds: { [any]: true } = {}
 			local profiling = self.profiling
 
+			-- TODO:
+			-- Technically, this doesn't have to be the world.
+			local primaryWorld = self._state[1]
+
 			for _, system in ipairs(self._orderedSystemsByEvent[eventName]) do
 				topoRuntime.start({
 					system = self._systemState[system],
@@ -392,6 +394,7 @@ function Loop:begin(events)
 
 					local thread = coroutine.create(fn)
 
+					primaryWorld:deferCommands()
 					local startTime = os.clock()
 					local success, errorValue = coroutine.resume(thread, unpack(self._state, 1, self._stateLength))
 
@@ -416,6 +419,8 @@ function Loop:begin(events)
 							):format(systemName(system))
 						)
 					end
+
+					primaryWorld:commitCommands()
 
 					for world in dirtyWorlds do
 						world:optimizeQueries()

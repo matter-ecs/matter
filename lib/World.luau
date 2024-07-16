@@ -10,6 +10,19 @@ local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 
+type DebugContext = { [any]: any }
+
+type SpawnCommand = { type: "spawn", debugContext: DebugContext?, entityId: number }
+type DespawnCommand = { type: "despawn", debugContext: DebugContext?, entityId: number }
+type InsertCommand = {
+	type: "insert",
+	debugContext: DebugContext?,
+	entityId: number,
+	componentInstances: { [any]: any },
+	[string]: nil,
+}
+type Command = SpawnCommand | DespawnCommand | InsertCommand
+
 --[=[
 	@class World
 
@@ -29,6 +42,11 @@ function World.new()
 	return setmetatable({
 		-- List of maps from archetype string --> entity ID --> entity data
 		_storages = { firstStorage },
+
+		deferring = false,
+		commands = {} :: { Command },
+		debugContext = nil :: DebugContext?,
+
 		-- The most recent storage that has not been dirtied by an iterator
 		_pristineStorage = firstStorage,
 
@@ -56,6 +74,8 @@ function World.new()
 		_changedStorage = {},
 	}, World)
 end
+
+export type World = typeof(World.new())
 
 -- Searches all archetype storages for the entity with the given archetype
 -- Returns the storage that the entity is in if it exists, otherwise nil
@@ -121,6 +141,117 @@ function World:__iter()
 	return World._next, self
 end
 
+local function executeSpawn(world: World, spawnCommand: SpawnCommand)
+	print("Execute spawn", spawnCommand)
+	local id = spawnCommand.entityId
+	if world:contains(id) then
+		error(
+			string.format(
+				"The world already contains an entity with ID %d. Use World:replace instead if this is intentional.",
+				id
+			),
+			2
+		)
+	end
+
+	world._entityMetatablesCache[id] = {}
+	world:_transitionArchetype(id, {})
+end
+
+local function executeDespawn(world: World, despawnCommand: DespawnCommand)
+	local id = despawnCommand.entityId
+	local entity = world:_getEntity(id)
+
+	for metatable, component in pairs(entity) do
+		world:_trackChanged(metatable, id, component, nil)
+	end
+
+	world._entityMetatablesCache[id] = nil
+	world:_transitionArchetype(id, nil)
+
+	world._size -= 1
+end
+
+local function executeInsert(world: World, insertCommand: InsertCommand)
+	print("Execute insert", insertCommand)
+
+	debug.profilebegin("insert")
+	local id = insertCommand.entityId
+	if not world:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local entity = world:_getEntity(id)
+	local wasNew = false
+	for i, componentInstance in insertCommand.componentInstances do
+		assertValidComponentInstance(componentInstance, i)
+
+		local metatable = getmetatable(componentInstance)
+		local oldComponent = entity[metatable]
+
+		if not oldComponent then
+			wasNew = true
+			table.insert(world._entityMetatablesCache[id], metatable)
+		end
+
+		world:_trackChanged(metatable, id, oldComponent, componentInstance)
+		entity[metatable] = componentInstance
+	end
+
+	if wasNew then
+		world:_transitionArchetype(id, entity)
+	end
+
+	debug.profileend()
+end
+
+local function processCommand(world: World, command: Command)
+	if command.type == "spawn" then
+		executeSpawn(world, command)
+	elseif command.type == "insert" then
+		executeInsert(world, command)
+	elseif command.type == "despawn" then
+		executeDespawn(world, command)
+	else
+		error(`Unknown command type: {command.type}`)
+	end
+end
+
+local function bufferCommand(world: World, command: Command)
+	if world.deferring then
+		-- Attach current debug context because we don't know when this command will be processed.
+		(command :: any).debugContext = world.debugContext
+		table.insert(world.commands, command)
+	else
+		processCommand(world, command)
+	end
+end
+
+function World:setDebugContext(debugContext: DebugContext?)
+	self.debugContext = debugContext
+end
+
+function World:deferCommands()
+	if self.deferring then
+		return
+	end
+
+	self.deferring = true
+end
+
+function World:commitCommands()
+	if not self.deferring then
+		return
+	end
+
+	for _, command in self.commands do
+		processCommand(self, command)
+	end
+
+	self.deferring = false
+	self.commands = {}
+end
+
 --[=[
 	Spawns a new entity in the world with the given components.
 
@@ -128,7 +259,10 @@ end
 	@return number -- The new entity ID.
 ]=]
 function World:spawn(...)
-	return self:spawnAt(self._nextId, ...)
+	local entityId = self._nextId
+	self._nextId += 1
+
+	return self:spawnAt(entityId, ...)
 end
 
 --[=[
@@ -141,46 +275,8 @@ end
 	@return number -- The same entity ID that was passed in
 ]=]
 function World:spawnAt(id, ...)
-	if self:contains(id) then
-		error(
-			string.format(
-				"The world already contains an entity with ID %d. Use World:replace instead if this is intentional.",
-				id
-			),
-			2
-		)
-	end
-
-	self._size += 1
-
-	if id >= self._nextId then
-		self._nextId = id + 1
-	end
-
-	local components = {}
-	local metatables = {}
-
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-
-		if components[metatable] then
-			error(("Duplicate component type at index %d"):format(i), 2)
-		end
-
-		self:_trackChanged(metatable, id, nil, newComponent)
-
-		components[metatable] = newComponent
-		table.insert(metatables, metatable)
-	end
-
-	self._entityMetatablesCache[id] = metatables
-
-	self:_transitionArchetype(id, components)
-
+	bufferCommand(self, { type = "spawn", entityId = id })
+	bufferCommand(self, { type = "insert", entityId = id, componentInstances = { ... } })
 	return id
 end
 
@@ -301,16 +397,7 @@ end
 	@param id number -- The entity ID
 ]=]
 function World:despawn(id)
-	local entity = self:_getEntity(id)
-
-	for metatable, component in pairs(entity) do
-		self:_trackChanged(metatable, id, component, nil)
-	end
-
-	self._entityMetatablesCache[id] = nil
-	self:_transitionArchetype(id, nil)
-
-	self._size -= 1
+	bufferCommand(self, { type = "despawn", entityId = id })
 end
 
 --[=[
@@ -1000,44 +1087,12 @@ end
 		})
 	)
 	```
-
+ 
 	@param id number -- The entity ID
 	@param ... ComponentInstance -- The component values to insert
 ]=]
 function World:insert(id, ...)
-	debug.profilebegin("insert")
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
-	local entity = self:_getEntity(id)
-
-	local wasNew = false
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-
-		local oldComponent = entity[metatable]
-
-		if not oldComponent then
-			wasNew = true
-
-			table.insert(self._entityMetatablesCache[id], metatable)
-		end
-
-		self:_trackChanged(metatable, id, oldComponent, newComponent)
-
-		entity[metatable] = newComponent
-	end
-
-	if wasNew then -- wasNew
-		self:_transitionArchetype(id, entity)
-	end
-
-	debug.profileend()
+	bufferCommand(self, { type = "insert", entityId = id, componentInstances = { ... } })
 end
 
 --[=[
