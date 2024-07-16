@@ -40,7 +40,7 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describeFOCUS("World", function()
+	describe("World", function()
 		it("should buffer commands if enabled", function()
 			local world = World.new()
 			world:startDeferring()

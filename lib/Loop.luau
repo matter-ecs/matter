@@ -1,4 +1,6 @@
 local RunService = game:GetService("RunService")
+
+local World = require(script.Parent.World)
 local rollingAverage = require(script.Parent.rollingAverage)
 local topoRuntime = require(script.Parent.topoRuntime)
 
@@ -367,9 +369,16 @@ function Loop:begin(events)
 			local profiling = self.profiling
 
 			-- TODO:
-			-- Technically, this doesn't have to be the world.
-			local primaryWorld = self._state[1]
-			primaryWorld:startDeferring()
+			-- Should probably handle other worlds.
+			-- Also, TBD if this is a good way to detect this, or if it should even handle this at all.
+			local primaryWorld: World.World? = if typeof(self._state[1]) == "table"
+					and getmetatable(self._state[1]) == World
+				then self._state[1]
+				else nil
+
+			if primaryWorld then
+				primaryWorld:startDeferring()
+			end
 
 			for _, system in ipairs(self._orderedSystemsByEvent[eventName]) do
 				topoRuntime.start({
@@ -418,7 +427,9 @@ function Loop:begin(events)
 						)
 					end
 
-					primaryWorld:commitCommands()
+					if primaryWorld then
+						primaryWorld:commitCommands()
+					end
 
 					if not success then
 						if os.clock() - recentErrorLastTime > 10 then
