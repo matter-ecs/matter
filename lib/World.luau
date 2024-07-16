@@ -312,15 +312,13 @@ end
 
 function World:_transitionArchetype(id, components)
 	debug.profilebegin("transitionArchetype")
+	local storage = self.storage
 	local newArchetype = nil
 	local oldArchetype = self._entityArchetypes[id]
-	local oldStorage
 
 	if oldArchetype then
-		oldStorage = self.storage
-
 		if not components then
-			oldStorage[oldArchetype][id] = nil
+			storage[oldArchetype][id] = nil
 		end
 	end
 
@@ -328,12 +326,14 @@ function World:_transitionArchetype(id, components)
 		newArchetype = archetypeOf(unpack(self._entityMetatablesCache[id]))
 
 		if oldArchetype ~= newArchetype then
-			if oldStorage then
-				oldStorage[oldArchetype][id] = nil
+			-- NOTE:
+			-- This seems... maybe wrong
+			if oldArchetype then
+				storage[oldArchetype][id] = nil
 			end
 
-			if self.storage[newArchetype] == nil then
-				self.storage[newArchetype] = {}
+			if storage[newArchetype] == nil then
+				storage[newArchetype] = {}
 			end
 
 			if self._entityArchetypeCache[newArchetype] == nil then
@@ -342,9 +342,10 @@ function World:_transitionArchetype(id, components)
 				self:_updateQueryCache(newArchetype)
 				debug.profileend()
 			end
-			self.storage[newArchetype][id] = components
+
+			storage[newArchetype][id] = components
 		else
-			oldStorage[newArchetype][id] = components
+			storage[newArchetype][id] = components
 		end
 	end
 
