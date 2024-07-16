@@ -161,6 +161,7 @@ local function executeSpawn(world: World, spawnCommand: SpawnCommand)
 		)
 	end
 
+	world._size += 1
 	world._entityMetatablesCache[id] = {}
 	world:_transitionArchetype(id, {})
 end
@@ -316,6 +317,10 @@ function World:spawnAt(id, ...)
 	-- TODO:
 	-- Spawn should probably insert at the same time, because spawn used to check that you
 	-- didn't pass any duplicate components
+	if id >= self._nextId then
+		self._nextId = id + 1
+	end
+
 	bufferCommand(self, { type = "spawn", entityId = id })
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = { ... } })
 	return id
@@ -1147,11 +1152,29 @@ end
 	@param ... Component -- The components to remove
 ]=]
 function World:remove(id, ...)
-	local components = { ... }
-	bufferCommand(self, { type = "remove", entityId = id, components = components })
+	if not self:contains(id) then
+		-- TODO:
+		-- What should we do? Should we error still?
+		return
+	end
 
-	-- TODO:
-	-- Return current state of components you are removing
+	-- NOTE:
+	-- This functionality is deprecated and will be removed in a future release.
+	local entity = self:_getEntity(id)
+	local components = { ... }
+	local length = #components
+	local removed = table.create(length, nil)
+	for index, component in components do
+		-- TODO:
+		-- Should this check also be here, or no?
+		assertValidComponent(component, index)
+
+		local oldComponent = entity[component]
+		removed[index] = oldComponent
+	end
+
+	bufferCommand(self, { type = "remove", entityId = id, components = components })
+	return unpack(removed, 1, length)
 end
 
 --[=[

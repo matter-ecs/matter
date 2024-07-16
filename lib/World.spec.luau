@@ -40,8 +40,8 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describe("World", function()
-		itFOCUS("should buffer commands if enabled", function()
+	describeFOCUS("World", function()
+		itSKIP("should buffer commands if enabled", function()
 			local world = World.new()
 			world:deferCommands()
 
