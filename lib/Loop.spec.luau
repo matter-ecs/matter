@@ -1,7 +1,5 @@
 local Loop = require(script.Parent.Loop)
 local useHookState = require(script.Parent.topoRuntime).useHookState
-local World = require(script.Parent.World)
-local component = require(script.Parent).component
 local BindableEvent = require(script.Parent.mock.BindableEvent)
 
 local bindable = BindableEvent.new()
