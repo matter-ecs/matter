@@ -12,6 +12,8 @@ local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if ne
 
 type DebugContext = { [any]: any }
 
+-- I would want to use an intersection to attach debugContext & entityId, but
+-- old solver is not great at resolving intersections w/ unions
 type SpawnCommand = { type: "spawn", debugContext: DebugContext?, entityId: number }
 type DespawnCommand = { type: "despawn", debugContext: DebugContext?, entityId: number }
 type InsertCommand = {
@@ -19,9 +21,14 @@ type InsertCommand = {
 	debugContext: DebugContext?,
 	entityId: number,
 	componentInstances: { [any]: any },
-	[string]: nil,
 }
-type Command = SpawnCommand | DespawnCommand | InsertCommand
+type RemoveCommand = {
+	type: "remove",
+	DebugContext: DebugContext?,
+	entityId: number,
+	components: { [any]: any },
+}
+type Command = SpawnCommand | DespawnCommand | InsertCommand | RemoveCommand
 
 --[=[
 	@class World
@@ -1087,7 +1094,7 @@ end
 		})
 	)
 	```
- 
+
 	@param id number -- The entity ID
 	@param ... ComponentInstance -- The component values to insert
 ]=]
