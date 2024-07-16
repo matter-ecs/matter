@@ -751,7 +751,7 @@ return function()
 			expect(world:get(child, Transform).pos).to.equal(Vector2.new(4, 5))
 		end)
 
-		it("should not invalidate iterators", function()
+		it("should not invalidate iterators when deferring", function()
 			local world = World.new()
 			local A = component()
 			local B = component()
@@ -761,12 +761,14 @@ return function()
 				world:spawn(A(), B())
 			end
 
+			world:deferCommands()
 			local count = 0
 			for id in world:query(A) do
 				count += 1
 				world:insert(id, C())
 				world:remove(id, B)
 			end
+			world:commitCommands()
 			expect(count).to.equal(10)
 		end)
 	end)

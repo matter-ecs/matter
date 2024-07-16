@@ -44,18 +44,13 @@ World.__index = World
 	Creates a new World.
 ]=]
 function World.new()
-	local firstStorage = {}
-
 	return setmetatable({
-		-- List of maps from archetype string --> entity ID --> entity data
-		_storages = { firstStorage },
+		-- Map from archetype string --> entity ID --> entity data
+		storage = {},
 
 		deferring = false,
 		commands = {} :: { Command },
 		debugContext = nil :: DebugContext?,
-
-		-- The most recent storage that has not been dirtied by an iterator
-		_pristineStorage = firstStorage,
 
 		-- Map from entity ID -> archetype string
 		_entityArchetypes = {},
@@ -84,37 +79,9 @@ end
 
 export type World = typeof(World.new())
 
--- Searches all archetype storages for the entity with the given archetype
--- Returns the storage that the entity is in if it exists, otherwise nil
-function World:_getStorageWithEntity(archetype, id)
-	for _, storage in self._storages do
-		local archetypeStorage = storage[archetype]
-		if archetypeStorage then
-			if archetypeStorage[id] then
-				return storage
-			end
-		end
-	end
-	return nil
-end
-
-function World:_markStorageDirty()
-	local newStorage = {}
-	table.insert(self._storages, newStorage)
-	self._pristineStorage = newStorage
-
-	if topoRuntime.withinTopoContext() then
-		local frameState = topoRuntime.useFrameState()
-
-		frameState.dirtyWorlds[self] = true
-	end
-end
-
 function World:_getEntity(id)
 	local archetype = self._entityArchetypes[id]
-	local storage = self:_getStorageWithEntity(archetype, id)
-
-	return storage[archetype][id]
+	return self.storage[archetype][id]
 end
 
 function World:_next(last)
@@ -124,9 +91,7 @@ function World:_next(last)
 		return nil
 	end
 
-	local storage = self:_getStorageWithEntity(archetype, entityId)
-
-	return entityId, storage[archetype][entityId]
+	return entityId, self.storage[archetype][entityId]
 end
 
 --[=[
@@ -149,7 +114,6 @@ function World:__iter()
 end
 
 local function executeSpawn(world: World, spawnCommand: SpawnCommand)
-	print("Execute spawn", spawnCommand)
 	local id = spawnCommand.entityId
 	if world:contains(id) then
 		error(
@@ -181,8 +145,6 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 end
 
 local function executeInsert(world: World, insertCommand: InsertCommand)
-	print("Execute insert", insertCommand)
-
 	debug.profilebegin("insert")
 	local id = insertCommand.entityId
 	if not world:contains(id) then
@@ -333,11 +295,9 @@ function World:_newQueryArchetype(queryArchetype)
 		return -- Archetype isn't actually new
 	end
 
-	for _, storage in self._storages do
-		for entityArchetype in storage do
-			if areArchetypesCompatible(queryArchetype, entityArchetype) then
-				self._queryCache[queryArchetype][entityArchetype] = true
-			end
+	for entityArchetype in self.storage do
+		if areArchetypesCompatible(queryArchetype, entityArchetype) then
+			self._queryCache[queryArchetype][entityArchetype] = true
 		end
 	end
 end
@@ -357,7 +317,7 @@ function World:_transitionArchetype(id, components)
 	local oldStorage
 
 	if oldArchetype then
-		oldStorage = self:_getStorageWithEntity(oldArchetype, id)
+		oldStorage = self.storage
 
 		if not components then
 			oldStorage[oldArchetype][id] = nil
@@ -372,8 +332,8 @@ function World:_transitionArchetype(id, components)
 				oldStorage[oldArchetype][id] = nil
 			end
 
-			if self._pristineStorage[newArchetype] == nil then
-				self._pristineStorage[newArchetype] = {}
+			if self.storage[newArchetype] == nil then
+				self.storage[newArchetype] = {}
 			end
 
 			if self._entityArchetypeCache[newArchetype] == nil then
@@ -382,7 +342,7 @@ function World:_transitionArchetype(id, components)
 				self:_updateQueryCache(newArchetype)
 				debug.profileend()
 			end
-			self._pristineStorage[newArchetype][id] = components
+			self.storage[newArchetype][id] = components
 		else
 			oldStorage[newArchetype][id] = components
 		end
@@ -454,9 +414,7 @@ end
 	:::
 ]=]
 function World:clear()
-	local firstStorage = {}
-	self._storages = { firstStorage }
-	self._pristineStorage = firstStorage
+	self.storage = {}
 	self._entityArchetypes = {}
 	self._entityMetatablesCache = {}
 	self._size = 0
@@ -555,7 +513,6 @@ QueryResult.__index = QueryResult
 function QueryResult.new(world, expand, queryArchetype, compatibleArchetypes, metatables)
 	return setmetatable({
 		world = world,
-		seenEntities = {},
 		currentCompatibleArchetype = next(compatibleArchetypes),
 		compatibleArchetypes = compatibleArchetypes,
 		storageIndex = 1,
@@ -568,52 +525,31 @@ end
 local function nextItem(query)
 	local world = query.world
 	local currentCompatibleArchetype = query.currentCompatibleArchetype
-	local seenEntities = query.seenEntities
 	local compatibleArchetypes = query.compatibleArchetypes
 
 	local entityId, entityData
 
-	local storages = world._storages
-	repeat
-		local nextStorage = storages[query.storageIndex]
-		local currently = nextStorage[currentCompatibleArchetype]
-		if currently then
-			entityId, entityData = next(currently, query.lastEntityId)
+	local storage = world.storage
+	local currently = storage[currentCompatibleArchetype]
+	if currently then
+		entityId, entityData = next(currently, query.lastEntityId)
+	end
+
+	while entityId == nil do
+		currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
+
+		if currentCompatibleArchetype == nil then
+			return nil
+		elseif storage[currentCompatibleArchetype] == nil then
+			continue
 		end
 
-		while entityId == nil do
-			currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
+		entityId, entityData = next(storage[currentCompatibleArchetype])
+	end
 
-			if currentCompatibleArchetype == nil then
-				query.storageIndex += 1
-
-				nextStorage = storages[query.storageIndex]
-
-				if nextStorage == nil or next(nextStorage) == nil then
-					return
-				end
-
-				currentCompatibleArchetype = nil
-
-				if world._pristineStorage == nextStorage then
-					world:_markStorageDirty()
-				end
-
-				continue
-			elseif nextStorage[currentCompatibleArchetype] == nil then
-				continue
-			end
-
-			entityId, entityData = next(nextStorage[currentCompatibleArchetype])
-		end
-
-		query.lastEntityId = entityId
-
-	until seenEntities[entityId] == nil
+	query.lastEntityId = entityId
 
 	query.currentCompatibleArchetype = currentCompatibleArchetype
-
-	seenEntities[entityId] = true
 
 	return entityId, entityData
 end
@@ -959,9 +895,9 @@ function World:query(...)
 		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	if self._pristineStorage == self._storages[1] then
-		self:_markStorageDirty()
-	end
+	-- if self._pristineStorage == self._storages[1] then
+	-- 	self:_markStorageDirty()
+	-- end
 
 	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
 end
@@ -1197,35 +1133,9 @@ end
 	[World:query]. While inside a query, any changes to the World are stored in a separate location from the rest of
 	the World. Calling this function combines the separate storage back into the main storage, which speeds things up
 	again.
+
+	@deprecated v0.9 -- This method no longer does anything.
 ]=]
-function World:optimizeQueries()
-	if #self._storages == 1 then
-		return
-	end
-
-	local firstStorage = self._storages[1]
-
-	for i = 2, #self._storages do
-		local storage = self._storages[i]
-
-		for archetype, entities in storage do
-			if firstStorage[archetype] == nil then
-				firstStorage[archetype] = entities
-			else
-				for entityId, entityData in entities do
-					if firstStorage[archetype][entityId] then
-						error("Entity ID already exists in first storage...")
-					end
-					firstStorage[archetype][entityId] = entityData
-				end
-			end
-		end
-	end
-
-	table.clear(self._storages)
-
-	self._storages[1] = firstStorage
-	self._pristineStorage = firstStorage
-end
+function World:optimizeQueries() end
 
 return World
