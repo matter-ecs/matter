@@ -398,9 +398,24 @@ function Loop:begin(events)
 					end
 
 					local fn = systemFn(system)
-					debug.profilebegin("system: " .. systemName(system))
+					local name = systemName(system)
+					if primaryWorld then
+						primaryWorld:setDebugContext({ system = name })
+					end
 
-					local thread = coroutine.create(fn)
+					debug.profilebegin("system: " .. name)
+
+					local thread = coroutine.create(function()
+						fn()
+
+						if primaryWorld then
+							primaryWorld:commitCommands()
+							-- local ok, err = pcall(primaryWorld.commitCommands, primaryWorld)
+							-- if not ok then
+							-- 	error(`Encountered an error while committing changes: {err}`)
+							-- end
+						end
+					end)
 
 					local startTime = os.clock()
 					local success, errorValue = coroutine.resume(thread, unpack(self._state, 1, self._stateLength))
@@ -427,9 +442,9 @@ function Loop:begin(events)
 						)
 					end
 
-					if primaryWorld then
-						primaryWorld:commitCommands()
-					end
+					-- if primaryWorld then
+					-- 	primaryWorld:commitCommands()
+					-- end
 
 					if not success then
 						if os.clock() - recentErrorLastTime > 10 then
@@ -437,9 +452,10 @@ function Loop:begin(events)
 							recentErrors = {}
 						end
 
-						local errorString = systemName(system)
+						local errorString = "System encountered an error: "
+							.. name
 							.. ": "
-							.. tostring(errorValue)
+							.. string.gsub(tostring(errorValue), "%[.+%]:%d+: ", "")
 							.. "\n"
 							.. debug.traceback(thread)
 

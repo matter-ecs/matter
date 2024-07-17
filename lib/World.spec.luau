@@ -41,6 +41,20 @@ end
 
 return function()
 	describe("World", function()
+		itFOCUS("debug context", function()
+			local world = World.new()
+			local loop = Loop.new(world)
+			local bindable = BindableEvent.new()
+
+			loop:scheduleSystem(function()
+				--error("hi")
+				world:spawn({})
+			end)
+
+			loop:begin({ default = bindable.Event })
+			bindable:Fire()
+		end)
+
 		it("should buffer commands if enabled", function()
 			local world = World.new()
 			world:startDeferring()
