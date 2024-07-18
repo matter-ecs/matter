@@ -41,16 +41,17 @@ end
 
 return function()
 	describe("World", function()
-		itFOCUS("debug context", function()
+		itSKIP("debug context", function()
 			local world = World.new()
 			local loop = Loop.new(world)
 			local bindable = BindableEvent.new()
 
-			loop:scheduleSystem(function()
-				--error("hi")
+			local function thisIsASystem()
+				--	error("hi")
 				world:spawn({})
-			end)
+			end
 
+			loop:scheduleSystem(thisIsASystem)
 			loop:begin({ default = bindable.Event })
 			bindable:Fire()
 		end)

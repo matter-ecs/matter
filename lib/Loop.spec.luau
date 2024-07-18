@@ -71,7 +71,7 @@ return function()
 			expect(counts[2]).to.equal(2)
 		end)
 
-		it("should allow replacing systems", function()
+		itFOCUS("should allow replacing systems", function()
 			local state = {}
 			local loop = Loop.new(state)
 

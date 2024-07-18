@@ -10,30 +10,26 @@ local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 
-type DebugContext = { [any]: any }
-
--- I would want to use an intersection to attach debugContext & entityId, but
--- old solver is not great at resolving intersections w/ unions
-type SpawnCommand = { type: "spawn", debugContext: DebugContext?, entityId: number }
-type DespawnCommand = { type: "despawn", debugContext: DebugContext?, entityId: number }
+-- The old solver is not great at resolving intersections, so we redefine entityId each time.
+type SpawnCommand = { type: "spawn", entityId: number }
+type DespawnCommand = { type: "despawn", entityId: number }
 type InsertCommand = {
 	type: "insert",
-	debugContext: DebugContext?,
 	entityId: number,
 	componentInstances: { [any]: any },
 }
 type RemoveCommand = {
 	type: "remove",
-	debugContext: DebugContext?,
 	entityId: number,
 	components: { [any]: any },
 }
--- type ReplaceCommand = {
--- 	type: "replace",
--- 	debugContext: DebugContext?,
--- 	entityId: number
--- }
-type Command = SpawnCommand | DespawnCommand | InsertCommand | RemoveCommand
+type ReplaceCommand = {
+	type: "replace",
+	entityId: number,
+	components: { [any]: any },
+}
+
+type Command = SpawnCommand | DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
 
 --[=[
 	@class World
@@ -55,7 +51,6 @@ function World.new()
 
 		deferring = false,
 		commands = {} :: { Command },
-		debugContext = nil :: DebugContext?,
 
 		-- Map from entity ID -> archetype string
 		_entityArchetypes = {},
@@ -152,7 +147,6 @@ end
 local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("insert")
 
-	print("Insert context", insertCommand)
 	local id = insertCommand.entityId
 	if not world:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
@@ -180,6 +174,40 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	end
 
 	debug.profileend()
+end
+
+local function executeReplace(world: World, replaceCommand: ReplaceCommand)
+	local id = replaceCommand.entityId
+	if not world:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local components = {}
+	local metatables = {}
+	local entity = world:_getEntity(id)
+
+	for index, component in replaceCommand.components do
+		assertValidComponentInstance(component, index)
+
+		local metatable = getmetatable(component)
+		if components[metatable] then
+			error(("Duplicate component type at index %d"):format(index), 2)
+		end
+
+		world:_trackChanged(metatable, id, entity[metatable], component)
+
+		components[metatable] = component
+		table.insert(metatables, metatable)
+	end
+
+	for metatable, component in pairs(entity) do
+		if not components[metatable] then
+			world:_trackChanged(metatable, id, component, nil)
+		end
+	end
+
+	world._entityMetatablesCache[id] = metatables
+	world:_transitionArchetype(id, components)
 end
 
 local function executeRemove(world: World, removeCommand: RemoveCommand)
@@ -220,6 +248,8 @@ local function processCommand(world: World, command: Command)
 		executeDespawn(world, command)
 	elseif command.type == "remove" then
 		executeRemove(world, command)
+	elseif command.type == "replace" then
+		executeReplace(world, command)
 	else
 		error(`Unknown command type: {command.type}`)
 	end
@@ -233,10 +263,6 @@ local function bufferCommand(world: World, command: Command)
 	else
 		processCommand(world, command)
 	end
-end
-
-function World:setDebugContext(debugContext: DebugContext?)
-	self.debugContext = debugContext
 end
 
 --[=[
@@ -398,41 +424,7 @@ end
 function World:replace(id, ...)
 	-- TODO:
 	-- Buffer this
-
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
-	local components = {}
-	local metatables = {}
-	local entity = self:_getEntity(id)
-
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-
-		if components[metatable] then
-			error(("Duplicate component type at index %d"):format(i), 2)
-		end
-
-		self:_trackChanged(metatable, id, entity[metatable], newComponent)
-
-		components[metatable] = newComponent
-		table.insert(metatables, metatable)
-	end
-
-	for metatable, component in pairs(entity) do
-		if not components[metatable] then
-			self:_trackChanged(metatable, id, component, nil)
-		end
-	end
-
-	self._entityMetatablesCache[id] = metatables
-
-	self:_transitionArchetype(id, components)
+	bufferCommand(self, { type = "replace", entityId = id, components = { ... } })
 end
 
 --[=[

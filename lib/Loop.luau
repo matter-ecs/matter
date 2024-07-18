@@ -368,7 +368,7 @@ function Loop:begin(events)
 
 			local profiling = self.profiling
 
-			-- TODO:
+			-- FIXME:
 			-- Should probably handle other worlds.
 			-- Also, TBD if this is a good way to detect this, or if it should even handle this at all.
 			local primaryWorld: World.World? = if typeof(self._state[1]) == "table"
@@ -376,6 +376,7 @@ function Loop:begin(events)
 				then self._state[1]
 				else nil
 
+			print("PrimaryWorld", primaryWorld)
 			if primaryWorld then
 				primaryWorld:startDeferring()
 			end
@@ -394,26 +395,24 @@ function Loop:begin(events)
 						if profiling then
 							profiling[system] = nil
 						end
+
 						return
 					end
 
 					local fn = systemFn(system)
 					local name = systemName(system)
-					if primaryWorld then
-						primaryWorld:setDebugContext({ system = name })
-					end
 
 					debug.profilebegin("system: " .. name)
-
+					local commitFailed = false
 					local thread = coroutine.create(function()
 						fn()
 
 						if primaryWorld then
-							primaryWorld:commitCommands()
-							-- local ok, err = pcall(primaryWorld.commitCommands, primaryWorld)
-							-- if not ok then
-							-- 	error(`Encountered an error while committing changes: {err}`)
-							-- end
+							local ok, err = pcall(primaryWorld.commitCommands, primaryWorld)
+							if not ok then
+								commitFailed = true
+								error(err)
+							end
 						end
 					end)
 
@@ -442,20 +441,17 @@ function Loop:begin(events)
 						)
 					end
 
-					-- if primaryWorld then
-					-- 	primaryWorld:commitCommands()
-					-- end
-
 					if not success then
 						if os.clock() - recentErrorLastTime > 10 then
 							recentErrorLastTime = os.clock()
 							recentErrors = {}
 						end
 
-						local errorString = "System encountered an error: "
-							.. name
+						local errorString = name
 							.. ": "
-							.. string.gsub(tostring(errorValue), "%[.+%]:%d+: ", "")
+							.. (if commitFailed
+								then string.gsub(tostring(errorValue), "%[.+%]:%d+: ", "Failed to apply commands: ")
+								else errorValue)
 							.. "\n"
 							.. debug.traceback(thread)
 
