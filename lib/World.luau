@@ -422,8 +422,6 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
-	-- TODO:
-	-- Buffer this
 	bufferCommand(self, { type = "replace", entityId = id, components = { ... } })
 end
 
