@@ -41,21 +41,8 @@ end
 
 return function()
 	describe("World", function()
-		itSKIP("debug context", function()
-			local world = World.new()
-			local loop = Loop.new(world)
-			local bindable = BindableEvent.new()
-
-			local function thisIsASystem()
-				--	error("hi")
-				world:spawn({})
-			end
-
-			loop:scheduleSystem(thisIsASystem)
-			loop:begin({ default = bindable.Event })
-			bindable:Fire()
-		end)
-
+		-- TODO:
+		-- Probably need more tests for buffering
 		it("should buffer commands if enabled", function()
 			local world = World.new()
 			world:startDeferring()
@@ -78,7 +65,6 @@ return function()
 
 			expect(world:contains(1)).to.equal(false)
 
-			-- Insert
 			local b = B({})
 			world:insert(2, b)
 			expect(world:get(2, B)).to.never.be.ok()

@@ -448,9 +448,12 @@ function Loop:begin(events)
 
 						local errorString = name
 							.. ": "
-							.. (if commitFailed
-								then string.gsub(tostring(errorValue), "%[.+%]:%d+: ", "Failed to apply commands: ")
-								else errorValue)
+							.. (
+								if commitFailed
+									-- Strip irrelevant line numbers that point to Loop / World
+									then string.gsub(errorValue, "%[.+%]:%d+: ", "Failed to apply commands: ")
+									else errorValue
+							)
 							.. "\n"
 							.. debug.traceback(thread)
 
