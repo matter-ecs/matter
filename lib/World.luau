@@ -285,20 +285,11 @@ end
 	However, you can call it more often if you want.
 ]=]
 function World:commitCommands()
-	--local errors
 	for _, command in self.commands do
 		processCommand(self, command)
-		-- if not ok then
-		-- 	if errors == nil then
-		-- 		errors = {}
-		-- 	end
-
-		-- 	table.insert(errors, err)
-		-- end
 	end
 
 	table.clear(self.commands)
-	--return errors
 end
 
 --[=[
