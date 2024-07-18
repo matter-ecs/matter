@@ -368,7 +368,7 @@ function Loop:begin(events)
 
 			local profiling = self.profiling
 
-			-- FIXME:
+			-- TODO:
 			-- Should probably handle other worlds.
 			-- Also, TBD if this is a good way to detect this, or if it should even handle this at all.
 			local primaryWorld: World.World? = if typeof(self._state[1]) == "table"
@@ -376,7 +376,6 @@ function Loop:begin(events)
 				then self._state[1]
 				else nil
 
-			print("PrimaryWorld", primaryWorld)
 			if primaryWorld then
 				primaryWorld:startDeferring()
 			end
@@ -404,8 +403,8 @@ function Loop:begin(events)
 
 					debug.profilebegin("system: " .. name)
 					local commitFailed = false
-					local thread = coroutine.create(function()
-						fn()
+					local thread = coroutine.create(function(...)
+						fn(...)
 
 						if primaryWorld then
 							local ok, err = pcall(primaryWorld.commitCommands, primaryWorld)
