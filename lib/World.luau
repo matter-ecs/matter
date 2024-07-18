@@ -434,6 +434,7 @@ end
 ]=]
 function World:clear()
 	self.storage = {}
+	self.commands = {}
 	self._entityArchetypes = {}
 	self._entityMetatablesCache = {}
 	self._size = 0
