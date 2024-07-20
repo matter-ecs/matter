@@ -1,3 +1,4 @@
+--!strict
 local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
 local topoRuntime = require(script.Parent.topoRuntime)
@@ -7,6 +8,39 @@ local assertValidComponent = Component.assertValidComponent
 local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
+
+type EntityId = number
+type DenseEntityId = number
+type ComponentId = number
+
+type Component = { [any]: any }
+type ComponentInstance = { [any]: any }
+type ComponentMetatable = { [any]: any }
+type ComponentMetatables = { ComponentMetatable }
+type ComponentToId = { [Component]: number }
+
+type ArchetypeId = string
+type Archetype = {
+	id: number,
+
+	ownedEntities: { EntityId },
+	componentToStorageIndex: { [ComponentId]: number },
+	storage: { [number]: { [DenseEntityId]: ComponentInstance } },
+}
+
+type EntityRecord = {
+	indexInArchetype: DenseEntityId?,
+	archetype: Archetype?,
+}
+
+-- find archetype for entity
+type EntityIndex = { [EntityId]: EntityRecord? }
+
+-- find archetypes containing component
+type ComponentIndex = { [ComponentId]: { [ArchetypeId]: number } }
+
+-- find archetype from all components
+type Archetypes = { [ArchetypeId]: Archetype }
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 
@@ -27,8 +61,13 @@ function World.new()
 	local firstStorage = {}
 
 	return setmetatable({
+		entityIndex = {} :: EntityIndex,
+		componentIndex = {} :: ComponentIndex,
+		archetypes = {} :: Archetypes,
+
 		-- List of maps from archetype string --> entity ID --> entity data
 		_storages = { firstStorage },
+
 		-- The most recent storage that has not been dirtied by an iterator
 		_pristineStorage = firstStorage,
 
@@ -56,6 +95,8 @@ function World.new()
 		_changedStorage = {},
 	}, World)
 end
+
+export type World = typeof(World.new())
 
 -- Searches all archetype storages for the entity with the given archetype
 -- Returns the storage that the entity is in if it exists, otherwise nil
@@ -208,45 +249,92 @@ function World:_updateQueryCache(entityArchetype)
 	end
 end
 
-function World:_transitionArchetype(id, components)
+local function createArchetype(world: World, components: { ComponentId }): Archetype
+	local archetypeId = archetypeOf(components)
+	local componentToStorageIndex = {}
+	local length = #components
+	local storage = table.create(length)
+	local archetype: Archetype = {
+		id = archetypeId,
+		componentToStorageIndex = componentToStorageIndex,
+		storage = storage,
+
+		-- Keep track of all entity ids for fast iteration in queries
+		ownedEntities = {},
+	}
+
+	for index, componentId in components do
+		local associatedArchetypes = world.componentIndex[componentId] or ({} :: any)
+		associatedArchetypes[archetypeId] = index
+		world.componentIndex[componentId] = associatedArchetypes
+
+		componentToStorageIndex[componentId] = index
+		storage[index] = {}
+	end
+
+	world.archetypes[archetypeId] = archetype
+	return archetype
+end
+
+function World._transitionArchetype(
+	self: typeof(World.new()),
+	id: EntityId,
+	myComponents: { [Component]: ComponentInstance }?
+)
 	debug.profilebegin("transitionArchetype")
-	local newArchetype = nil
-	local oldArchetype = self._entityArchetypes[id]
-	local oldStorage
-
-	if oldArchetype then
-		oldStorage = self:_getStorageWithEntity(oldArchetype, id)
-
-		if not components then
-			oldStorage[oldArchetype][id] = nil
+	if myComponents == nil then
+		-- Remove all components
+		local entityRecord = self.entityIndex[id]
+		if entityRecord == nil then
+			warn("Tried to transitionArchetype a dead entity")
+			return
 		end
-	end
 
-	if components then
-		newArchetype = archetypeOf(unpack(self._entityMetatablesCache[id]))
-
-		if oldArchetype ~= newArchetype then
-			if oldStorage then
-				oldStorage[oldArchetype][id] = nil
-			end
-
-			if self._pristineStorage[newArchetype] == nil then
-				self._pristineStorage[newArchetype] = {}
-			end
-
-			if self._entityArchetypeCache[newArchetype] == nil then
-				debug.profilebegin("update query cache")
-				self._entityArchetypeCache[newArchetype] = true
-				self:_updateQueryCache(newArchetype)
-				debug.profileend()
-			end
-			self._pristineStorage[newArchetype][id] = components
-		else
-			oldStorage[newArchetype][id] = components
+		local archetype = entityRecord.archetype
+		if archetype == nil then
+			warn("Already have no archetype")
+			return
 		end
-	end
 
-	self._entityArchetypes[id] = newArchetype
+		for _, storageIndex in archetype.componentToStorageIndex do
+			-- TODO:
+			-- swap remove
+			table.remove(archetype.storage[storageIndex], entityRecord.indexInArchetype)
+		end
+
+		entityRecord.archetype = nil
+		entityRecord.indexInArchetype = nil
+
+		-- TODO:
+		-- This is slow (and unsafe)
+		table.remove(archetype.ownedEntities, table.find(archetype.ownedEntities, id))
+	else
+		local componentIds: { ComponentId } = {}
+		for component in myComponents do
+			table.insert(componentIds, #component)
+		end
+
+		local entityRecord = self.entityIndex[id]
+		if entityRecord == nil then
+			entityRecord = {}
+			self.entityIndex[id] = entityRecord
+		end
+		assert(entityRecord, "Make typechecker happy")
+
+		-- Find the archetype that matches these components
+		local newArchetypeId = archetypeOf(componentIds)
+		local newArchetype = self.archetypes[newArchetypeId] or createArchetype(self, componentIds)
+
+		-- Add entity to archetype
+		local indexInArchetype = #newArchetype.storage[newArchetype.componentToStorageIndex[componentIds[1]]] + 1
+		for component, componentInstance in myComponents do
+			newArchetype.storage[newArchetype.componentToStorageIndex[#component]][indexInArchetype] = componentInstance
+		end
+
+		entityRecord.indexInArchetype = indexInArchetype
+		entityRecord.archetype = newArchetype
+		table.insert(newArchetype.ownedEntities, id)
+	end
 
 	debug.profileend()
 end
@@ -336,8 +424,8 @@ end
 	@param id number -- The entity ID
 	@return bool -- `true` if the entity exists
 ]=]
-function World:contains(id)
-	return self._entityArchetypes[id] ~= nil
+function World.contains(self: typeof(World.new()), id)
+	return self.entityIndex[id] ~= nil
 end
 
 --[=[
@@ -347,28 +435,36 @@ end
 	@param ... Component -- The components to fetch
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
-function World:get(id, ...)
-	if not self:contains(id) then
+function World.get(self: typeof(World.new()), id, ...: Component)
+	local entityRecord = self.entityIndex[id]
+	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
 	end
 
-	local entity = self:_getEntity(id)
-
 	local length = select("#", ...)
+	local componentInstances = table.create(length, nil)
 
-	if length == 1 then
-		assertValidComponent((...), 1)
-		return entity[...]
+	local archetype = entityRecord.archetype
+	if archetype == nil then
+		return componentInstances
 	end
 
-	local components = {}
+	local componentToStorageIndex = archetype.componentToStorageIndex
 	for i = 1, length do
-		local metatable = select(i, ...)
-		assertValidComponent(metatable, i)
-		components[i] = entity[metatable]
+		local component = select(i, ...)
+		assertValidComponent(component, i)
+
+		-- Does this component belong to the archetype that this entity is in?
+		local storageIndex = componentToStorageIndex[component]
+		if storageIndex == nil then
+			continue
+		end
+
+		-- Yes
+		componentInstances[i] = archetype.storage[storageIndex][entityRecord.indexInArchetype]
 	end
 
-	return unpack(components, 1, length)
+	return unpack(componentInstances, 1, length)
 end
 
 local function noop() end
@@ -769,69 +865,172 @@ end
 	@return QueryResult -- See [QueryResult](/api/QueryResult) docs.
 ]=]
 
-function World:query(...)
-	debug.profilebegin("World:query")
-	assertValidComponent((...), 1)
+function World.query(self: World, ...)
+	-- TODO:
+	-- cache queries
 
-	local metatables = { ... }
+	--assertValidComponent((...), 1)
+	--print("Rebuilding query")
+	--print(self)
+	local components = { ... }
+	local a, b = ...
+
 	local queryLength = select("#", ...)
-
-	local archetype = archetypeOf(...)
-
-	if self._queryCache[archetype] == nil then
-		self:_newQueryArchetype(archetype)
+	if queryLength == 1 then
+		components = { #a }
+	elseif queryLength == 2 then
+		components = { #a, #b }
+	else
+		error("Unimplemented query length")
 	end
 
-	local compatibleArchetypes = self._queryCache[archetype]
-
-	debug.profileend()
-
-	if next(compatibleArchetypes) == nil then
-		-- If there are no compatible storages avoid creating our complicated iterator
-		return noopQuery
-	end
-
-	local queryOutput = table.create(queryLength)
-
-	local function expand(entityId, entityData)
-		if not entityId then
-			return
+	local possibleArchetypes
+	local compatibleArchetypes = {}
+	for _, componentId in components do
+		local associatedArchetypes = self.componentIndex[componentId]
+		if associatedArchetypes == nil then
+			error("No-op query unimplemented")
 		end
 
+		if possibleArchetypes == nil or #possibleArchetypes > #associatedArchetypes then
+			possibleArchetypes = associatedArchetypes
+		end
+	end
+
+	-- Narrow the archetypes so only ones that contain all components are searched.
+	for archetypeId in possibleArchetypes do
+		local archetype = self.archetypes[archetypeId]
+		local incompatible = false
+		for _, componentId in components do
+			-- Does this archetype have this component?
+			if archetype.componentToStorageIndex[componentId] == nil then
+				-- Nope, so we can't use this one.
+				incompatible = true
+				break
+			end
+		end
+
+		if incompatible then
+			continue
+		end
+
+		table.insert(compatibleArchetypes, archetype)
+	end
+
+	local currentArchetypeIndex = 1
+	local currentArchetype = compatibleArchetypes[currentArchetypeIndex]
+	local currentArchetypeNumEntities = #currentArchetype.ownedEntities
+	local currentEntityIndex = 0
+	local function nextEntity()
+		currentEntityIndex += 1
+		if currentEntityIndex > currentArchetypeNumEntities then
+			currentEntityIndex = 0
+			currentArchetypeIndex += 1
+			currentArchetype = compatibleArchetypes[currentArchetypeIndex]
+			if currentArchetype == nil then
+				-- Out of entities.
+				return nil
+			end
+
+			currentArchetypeNumEntities = #currentArchetype.ownedEntities
+			return nextEntity()
+		end
+
+		local entityId = currentArchetype.ownedEntities[currentEntityIndex]
+		local storage, componentToStorageIndex = currentArchetype.storage, currentArchetype.componentToStorageIndex
 		if queryLength == 1 then
-			return entityId, entityData[metatables[1]]
+			return entityId, storage[componentToStorageIndex[components[1]]][currentEntityIndex]
 		elseif queryLength == 2 then
-			return entityId, entityData[metatables[1]], entityData[metatables[2]]
+			return entityId,
+				storage[componentToStorageIndex[components[1]]][currentEntityIndex],
+				storage[componentToStorageIndex[components[2]]][currentEntityIndex]
 		elseif queryLength == 3 then
-			return entityId, entityData[metatables[1]], entityData[metatables[2]], entityData[metatables[3]]
-		elseif queryLength == 4 then
 			return entityId,
-				entityData[metatables[1]],
-				entityData[metatables[2]],
-				entityData[metatables[3]],
-				entityData[metatables[4]]
-		elseif queryLength == 5 then
-			return entityId,
-				entityData[metatables[1]],
-				entityData[metatables[2]],
-				entityData[metatables[3]],
-				entityData[metatables[4]],
-				entityData[metatables[5]]
+				storage[componentToStorageIndex[components[1]]][currentEntityIndex],
+				storage[componentToStorageIndex[components[2]]][currentEntityIndex],
+				storage[componentToStorageIndex[components[3]]][currentEntityIndex]
+		else
+			error("Unimplemented Query Length")
 		end
-
-		for i, metatable in ipairs(metatables) do
-			queryOutput[i] = entityData[metatable]
-		end
-
-		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	if self._pristineStorage == self._storages[1] then
-		self:_markStorageDirty()
+	local function iter()
+		-- currentArchetype = self.archetypes[next(compatibleArchetypes)]
+		-- currentArchetypeNumEntities = #currentArchetype.ownedEntities
+		-- currentEntityIndex = 0
+
+		return nextEntity
 	end
 
-	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
+	return setmetatable({}, {
+		__iter = iter,
+		next = nextEntity,
+	})
 end
+
+-- function World:query(...)
+-- 	debug.profilebegin("World:query")
+-- 	assertValidComponent((...), 1)
+
+-- 	local metatables = { ... }
+-- 	local queryLength = select("#", ...)
+
+-- 	local archetype = archetypeOf(...)
+
+-- 	if self._queryCache[archetype] == nil then
+-- 		self:_newQueryArchetype(archetype)
+-- 	end
+
+-- 	local compatibleArchetypes = self._queryCache[archetype]
+
+-- 	debug.profileend()
+
+-- 	if next(compatibleArchetypes) == nil then
+-- 		-- If there are no compatible storages avoid creating our complicated iterator
+-- 		return noopQuery
+-- 	end
+
+-- 	local queryOutput = table.create(queryLength)
+
+-- 	local function expand(entityId, entityData)
+-- 		if not entityId then
+-- 			return
+-- 		end
+
+-- 		if queryLength == 1 then
+-- 			return entityId, entityData[metatables[1]]
+-- 		elseif queryLength == 2 then
+-- 			return entityId, entityData[metatables[1]], entityData[metatables[2]]
+-- 		elseif queryLength == 3 then
+-- 			return entityId, entityData[metatables[1]], entityData[metatables[2]], entityData[metatables[3]]
+-- 		elseif queryLength == 4 then
+-- 			return entityId,
+-- 				entityData[metatables[1]],
+-- 				entityData[metatables[2]],
+-- 				entityData[metatables[3]],
+-- 				entityData[metatables[4]]
+-- 		elseif queryLength == 5 then
+-- 			return entityId,
+-- 				entityData[metatables[1]],
+-- 				entityData[metatables[2]],
+-- 				entityData[metatables[3]],
+-- 				entityData[metatables[4]],
+-- 				entityData[metatables[5]]
+-- 		end
+
+-- 		for i, metatable in ipairs(metatables) do
+-- 			queryOutput[i] = entityData[metatable]
+-- 		end
+
+-- 		return entityId, unpack(queryOutput, 1, queryLength)
+-- 	end
+
+-- 	if self._pristineStorage == self._storages[1] then
+-- 		self:_markStorageDirty()
+-- 	end
+
+-- 	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
+-- end
 
 local function cleanupQueryChanged(hookState)
 	local world = hookState.world
@@ -1033,7 +1232,7 @@ function World:insert(id, ...)
 		entity[metatable] = newComponent
 	end
 
-	if wasNew then -- wasNew
+	if wasNew then
 		self:_transitionArchetype(id, entity)
 	end
 
@@ -1051,42 +1250,43 @@ end
 	@param ... Component -- The components to remove
 	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
 ]=]
-function World:remove(id, ...)
-	if not self:contains(id) then
+function World.remove(self: typeof(World.new()), id, ...: ComponentMetatable)
+	error("unimplemented")
+
+	local entityRecord = self.entityIndex[id]
+	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
 	end
 
-	local entity = self:_getEntity(id)
-
+	local oldArchetype = entityRecord.archetype
 	local length = select("#", ...)
-	local removed = {}
+	local removedComponentInstances = {}
+
+	-- TODO:
+	-- lookups
+	local myComponentsAfter = {}
+	for metatable, map in oldArchetype.components do
+		myComponentsAfter[metatable] = map[entityRecord.indexInArchetype]
+	end
 
 	for i = 1, length do
 		local metatable = select(i, ...)
+		if oldArchetype.components[metatable] == nil then
+			table.insert(removedComponentInstances, nil)
+		else
+			-- Cache old value
+			table.insert(removedComponentInstances, oldArchetype.components[metatable][entityRecord.indexInArchetype])
 
-		assertValidComponent(metatable, i)
+			-- Now remove
+			table.remove(oldArchetype.components[metatable], entityRecord.indexInArchetype)
 
-		local oldComponent = entity[metatable]
-
-		removed[i] = oldComponent
-
-		self:_trackChanged(metatable, id, oldComponent, nil)
-
-		entity[metatable] = nil
+			myComponentsAfter[metatable] = nil
+		end
 	end
 
-	-- Rebuild entity metatable cache
-	local metatables = {}
-
-	for metatable in pairs(entity) do
-		table.insert(metatables, metatable)
-	end
-
-	self._entityMetatablesCache[id] = metatables
-
-	self:_transitionArchetype(id, entity)
-
-	return unpack(removed, 1, length)
+	--print("Transitioning after remove", myComponentsAfter)
+	self:_transitionArchetype(id, myComponentsAfter)
+	return unpack(removedComponentInstances, 1, length)
 end
 
 --[=[

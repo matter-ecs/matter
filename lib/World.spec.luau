@@ -41,6 +41,22 @@ end
 
 return function()
 	describe("World", function()
+		itFOCUS("inspection", function()
+			local world = World.new()
+			local A, B = component(), component()
+			local entityId = world:spawnAt(3, A({ a = true }), B({ b = true }))
+			world:spawnAt(5, A({ a = true }), B({ b = true }))
+			--print("After spawn:", world:get(entityId, A, B))
+			local query = world:query(A)
+			-- print(query:next())
+			-- print(query:next())
+			for entityId, a in query do
+				print(entityId, a)
+			end
+			-- print("Removed value", world:remove(entityId, A))
+			-- print("After remove", world:get(entityId, A, B, A, B))
+			--local query = world:query(A, B)
+		end)
 		it("should be iterable", function()
 			local world = World.new()
 			local A = component()
