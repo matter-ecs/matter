@@ -368,16 +368,15 @@ function Loop:begin(events)
 
 			local profiling = self.profiling
 
-			-- TODO:
-			-- Should probably handle other worlds.
-			-- Also, TBD if this is a good way to detect this, or if it should even handle this at all.
-			local primaryWorld: World.World? = if typeof(self._state[1]) == "table"
-					and getmetatable(self._state[1]) == World
-				then self._state[1]
-				else nil
+			local worlds: { World.World } = {}
+			for _, stateArgument in self._state do
+				if typeof(stateArgument) == "table" and getmetatable(stateArgument) == World then
+					table.insert(worlds, stateArgument)
+				end
+			end
 
-			if primaryWorld then
-				primaryWorld:startDeferring()
+			for _, world in worlds do
+				world:startDeferring()
 			end
 
 			for _, system in ipairs(self._orderedSystemsByEvent[eventName]) do
@@ -406,8 +405,8 @@ function Loop:begin(events)
 					local thread = coroutine.create(function(...)
 						fn(...)
 
-						if primaryWorld then
-							local ok, err = pcall(primaryWorld.commitCommands, primaryWorld)
+						for _, world in worlds do
+							local ok, err = pcall(world.commitCommands, world)
 							if not ok then
 								commitFailed = true
 								error(err)
