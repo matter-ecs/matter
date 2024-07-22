@@ -2,7 +2,7 @@ local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
 local topoRuntime = require(script.Parent.topoRuntime)
 
-local assertValidComponentInstance = Component.assertValidComponentInstance
+local assertValidComponentInstances = Component.assertValidComponentInstances
 local assertValidComponent = Component.assertValidComponent
 local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
@@ -11,7 +11,6 @@ local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 
 -- The old solver is not great at resolving intersections, so we redefine entityId each time.
-type SpawnCommand = { type: "spawn", entityId: number }
 type DespawnCommand = { type: "despawn", entityId: number }
 type InsertCommand = {
 	type: "insert",
@@ -26,10 +25,10 @@ type RemoveCommand = {
 type ReplaceCommand = {
 	type: "replace",
 	entityId: number,
-	components: { [any]: any },
+	componentInstances: { [any]: any },
 }
 
-type Command = SpawnCommand | DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
+type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
 
 --[=[
 	@class World
@@ -113,23 +112,6 @@ function World:__iter()
 	return World._next, self
 end
 
-local function executeSpawn(world: World, spawnCommand: SpawnCommand)
-	local id = spawnCommand.entityId
-	if world:contains(id) then
-		error(
-			string.format(
-				"The world already contains an entity with ID %d. Use World:replace instead if this is intentional.",
-				id
-			),
-			2
-		)
-	end
-
-	world._size += 1
-	world._entityMetatablesCache[id] = {}
-	world:_transitionArchetype(id, {})
-end
-
 local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	local id = despawnCommand.entityId
 	local entity = world:_getEntity(id)
@@ -148,15 +130,9 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("insert")
 
 	local id = insertCommand.entityId
-	if not world:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
 	local entity = world:_getEntity(id)
 	local wasNew = false
-	for i, componentInstance in insertCommand.componentInstances do
-		assertValidComponentInstance(componentInstance, i)
-
+	for _, componentInstance in insertCommand.componentInstances do
 		local metatable = getmetatable(componentInstance)
 		local oldComponent = entity[metatable]
 
@@ -186,17 +162,11 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 	local metatables = {}
 	local entity = world:_getEntity(id)
 
-	for index, component in replaceCommand.components do
-		assertValidComponentInstance(component, index)
+	for _, componentInstance in replaceCommand.componentInstances do
+		local metatable = getmetatable(componentInstance)
+		world:_trackChanged(metatable, id, entity[metatable], componentInstance)
 
-		local metatable = getmetatable(component)
-		if components[metatable] then
-			error(("Duplicate component type at index %d"):format(index), 2)
-		end
-
-		world:_trackChanged(metatable, id, entity[metatable], component)
-
-		components[metatable] = component
+		components[metatable] = componentInstance
 		table.insert(metatables, metatable)
 	end
 
@@ -212,16 +182,10 @@ end
 
 local function executeRemove(world: World, removeCommand: RemoveCommand)
 	local id = removeCommand.entityId
-	if not world:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
-
 	local entity = world:_getEntity(id)
 
 	local removed = {}
 	for index, metatable in removeCommand.components do
-		assertValidComponent(metatable, index)
-
 		local oldComponent = entity[metatable]
 		removed[index] = oldComponent
 
@@ -240,9 +204,7 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 end
 
 local function processCommand(world: World, command: Command)
-	if command.type == "spawn" then
-		executeSpawn(world, command)
-	elseif command.type == "insert" then
+	if command.type == "insert" then
 		executeInsert(world, command)
 	elseif command.type == "despawn" then
 		executeDespawn(world, command)
@@ -319,15 +281,22 @@ end
 	@return number -- The same entity ID that was passed in
 ]=]
 function World:spawnAt(id, ...)
-	-- TODO:
-	-- Spawn should probably insert at the same time, because spawn used to check that you
-	-- didn't pass any duplicate components.
 	if id >= self._nextId then
 		self._nextId = id + 1
 	end
 
-	bufferCommand(self, { type = "spawn", entityId = id })
-	bufferCommand(self, { type = "insert", entityId = id, componentInstances = { ... } })
+	if self:contains(id) then
+		error(ERROR_NO_ENTITY)
+	end
+
+	local componentInstances = { ... }
+	assertValidComponentInstances(componentInstances)
+
+	self._size += 1
+	self._entityMetatablesCache[id] = {}
+	self:_transitionArchetype(id, {})
+
+	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 	return id
 end
 
@@ -405,7 +374,10 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
-	bufferCommand(self, { type = "replace", entityId = id, components = { ... } })
+	local componentInstances = { ... }
+	assertValidComponentInstances(componentInstances)
+
+	bufferCommand(self, { type = "replace", entityId = id, componentInstances = componentInstances })
 end
 
 --[=[
@@ -414,6 +386,10 @@ end
 	@param id number -- The entity ID
 ]=]
 function World:despawn(id)
+	if not self:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
 	bufferCommand(self, { type = "despawn", entityId = id })
 end
 
@@ -427,6 +403,8 @@ end
 function World:clear()
 	self.storage = {}
 	self.commands = {}
+	self.markedForDeletion = {}
+
 	self._entityArchetypes = {}
 	self._entityMetatablesCache = {}
 	self._size = 0
@@ -1086,7 +1064,14 @@ end
 	@param ... ComponentInstance -- The component values to insert
 ]=]
 function World:insert(id, ...)
-	bufferCommand(self, { type = "insert", entityId = id, componentInstances = { ... } })
+	if not self:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local componentInstances = { ... }
+	assertValidComponentInstances(componentInstances)
+
+	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end
 
 --[=[
@@ -1101,20 +1086,17 @@ end
 ]=]
 function World:remove(id, ...)
 	if not self:contains(id) then
-		-- TODO:
-		-- What should we do? Should we error still?
-		return
+		error(ERROR_NO_ENTITY, 2)
 	end
 
 	-- NOTE:
 	-- This functionality is deprecated and will be removed in a future release.
-	local entity = self:_getEntity(id)
 	local components = { ... }
 	local length = #components
+
+	local entity = self:_getEntity(id)
 	local removed = table.create(length, nil)
 	for index, component in components do
-		-- TODO:
-		-- Should this check also be here, or no?
 		assertValidComponent(component, index)
 
 		local oldComponent = entity[component]
