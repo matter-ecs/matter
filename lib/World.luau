@@ -271,10 +271,6 @@ end
 	If you are using a [`Loop`](/api/Loop), this is done for you.
 ]=]
 function World:startDeferring()
-	if self.deferring then
-		return
-	end
-
 	self.deferring = true
 end
 
@@ -296,10 +292,6 @@ end
 	Stops deferring entity commands and processes all commands left in the buffer.
 ]=]
 function World:stopDeferring()
-	if not self.deferring then
-		return
-	end
-
 	self:commitCommands()
 	self.deferring = false
 end
