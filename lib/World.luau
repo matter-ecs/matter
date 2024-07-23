@@ -50,6 +50,7 @@ function World.new()
 
 		deferring = false,
 		commands = {} :: { Command },
+		markedForDeletion = {},
 
 		-- Map from entity ID -> archetype string
 		_entityArchetypes = {},
@@ -80,6 +81,7 @@ export type World = typeof(World.new())
 
 function World:_getEntity(id)
 	local archetype = self._entityArchetypes[id]
+	print("Entity archetype:", archetype, self._entityArchetypes)
 	return self.storage[archetype][id]
 end
 
@@ -120,8 +122,9 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 		world:_trackChanged(metatable, id, component, nil)
 	end
 
-	world._entityMetatablesCache[id] = nil
-	world:_transitionArchetype(id, nil)
+	local shouldOnlyClear = world.deferring and world.markedForDeletion[id] ~= true
+	world._entityMetatablesCache[id] = if shouldOnlyClear then {} else nil
+	world:_transitionArchetype(id, if shouldOnlyClear then {} else nil)
 
 	world._size -= 1
 end
@@ -130,6 +133,7 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("insert")
 
 	local id = insertCommand.entityId
+	print("Execute command", id)
 	local entity = world:_getEntity(id)
 	local wasNew = false
 	for _, componentInstance in insertCommand.componentInstances do
@@ -219,8 +223,17 @@ end
 
 local function bufferCommand(world: World, command: Command)
 	if world.deferring then
-		-- Attach current debug context because we don't know when this command will be processed.
-		(command :: any).debugContext = world.debugContext
+		-- We want to ignore commands that succeed a deletion.
+		-- Spawn isn't considered a command, and so it never reaches here.
+		local markedForDeletion = world.markedForDeletion
+		if markedForDeletion[command.entityId] then
+			return
+		end
+
+		if command.type == "despawn" then
+			markedForDeletion[command.entityId] = true
+		end
+
 		table.insert(world.commands, command)
 	else
 		processCommand(world, command)
@@ -285,14 +298,19 @@ function World:spawnAt(id, ...)
 		self._nextId = id + 1
 	end
 
-	if self:contains(id) then
-		error(ERROR_NO_ENTITY)
-	end
-
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)
 
-	self._size += 1
+	local willBeDeleted = self.markedForDeletion[id] ~= nil
+	if self:contains(id) and not willBeDeleted then
+		error(ERROR_NO_ENTITY)
+	end
+
+	if not willBeDeleted then
+		self._size += 1
+	end
+
+	self.markedForDeletion[id] = nil
 	self._entityMetatablesCache[id] = {}
 	self:_transitionArchetype(id, {})
 
@@ -386,6 +404,8 @@ end
 	@param id number -- The entity ID
 ]=]
 function World:despawn(id)
+	-- TODO:
+	-- should this also check if it's marked for deletion already?
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end

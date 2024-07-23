@@ -42,6 +42,13 @@ end
 return function()
 	describe("World", function()
 		describe("buffered", function()
+			local function createDeferredWorld()
+				local world = World.new()
+				world:startDeferring()
+
+				return world
+			end
+
 			it("should spawn immediately", function()
 				local world = World.new()
 				world:startDeferring()
@@ -57,6 +64,18 @@ return function()
 				expect(world:contains(1)).to.equal(true)
 				world:commitCommands()
 				expect(world:contains(1)).to.equal(false)
+			end)
+
+			it("should allow spawnAt on an entity marked for deletion", function()
+				local world = createDeferredWorld()
+				world:spawnAt(1)
+				world:despawn(1)
+				world:spawnAt(1)
+				world:despawn(1)
+				world:spawnAt(1)
+				world:commitCommands()
+
+				expect(world:contains(1)).to.equal(true)
 			end)
 
 			it("should not invalidate iterators when deferring", function()
