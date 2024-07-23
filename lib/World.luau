@@ -903,10 +903,6 @@ function World:query(...)
 		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	-- if self._pristineStorage == self._storages[1] then
-	-- 	self:_markStorageDirty()
-	-- end
-
 	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
 end
 
