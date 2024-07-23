@@ -17,9 +17,9 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   - The command buffer is flushed between systems.
   - Iterator invalidation is now only prevented in deferred mode.
 
-### Changed
+### Deprecated
 
-- Deprecated the return type of `World:remove()`.
+- Deprecated the return type of `World:remove()` because it can now be inaccurate.
 - Deprecated `World:optimizeQueries()` because it no longer does anything.
 
 ## [0.8.3] - 2024-07-02
