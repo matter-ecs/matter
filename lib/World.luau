@@ -81,7 +81,6 @@ export type World = typeof(World.new())
 
 function World:_getEntity(id)
 	local archetype = self._entityArchetypes[id]
-	print("Entity archetype:", archetype, self._entityArchetypes)
 	return self.storage[archetype][id]
 end
 
@@ -133,7 +132,6 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("insert")
 
 	local id = insertCommand.entityId
-	print("Execute command", id)
 	local entity = world:_getEntity(id)
 	local wasNew = false
 	for _, componentInstance in insertCommand.componentInstances do
