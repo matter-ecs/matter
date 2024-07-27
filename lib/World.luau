@@ -356,6 +356,10 @@ function World:_transitionArchetype(id, components)
 		newArchetype = archetypeOf(unpack(self._entityMetatablesCache[id]))
 
 		if oldArchetype ~= newArchetype then
+			if oldArchetype then
+				storage[oldArchetype][id] = nil
+			end
+
 			if storage[newArchetype] == nil then
 				storage[newArchetype] = {}
 			end
