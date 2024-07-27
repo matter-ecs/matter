@@ -9,19 +9,24 @@ local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
+local ERROR_EXISTING_ENTITY =
+	"The world already contains an entity with ID %. Use world:replace instead if this is intentional."
 
 -- The old solver is not great at resolving intersections, so we redefine entityId each time.
 type DespawnCommand = { type: "despawn", entityId: number }
+
 type InsertCommand = {
 	type: "insert",
 	entityId: number,
 	componentInstances: { [any]: any },
 }
+
 type RemoveCommand = {
 	type: "remove",
 	entityId: number,
 	components: { [any]: any },
 }
+
 type ReplaceCommand = {
 	type: "replace",
 	entityId: number,
@@ -276,10 +281,7 @@ end
 	@return number -- The new entity ID.
 ]=]
 function World:spawn(...)
-	local entityId = self._nextId
-	self._nextId += 1
-
-	return self:spawnAt(entityId, ...)
+	return self:spawnAt(self._nextId, ...)
 end
 
 --[=[
@@ -301,7 +303,7 @@ function World:spawnAt(id, ...)
 
 	local willBeDeleted = self.markedForDeletion[id] ~= nil
 	if self:contains(id) and not willBeDeleted then
-		error(ERROR_NO_ENTITY)
+		error(string.format(ERROR_EXISTING_ENTITY, id), 2)
 	end
 
 	if not willBeDeleted then
@@ -354,12 +356,6 @@ function World:_transitionArchetype(id, components)
 		newArchetype = archetypeOf(unpack(self._entityMetatablesCache[id]))
 
 		if oldArchetype ~= newArchetype then
-			-- NOTE:
-			-- This seems... maybe wrong
-			if oldArchetype then
-				storage[oldArchetype][id] = nil
-			end
-
 			if storage[newArchetype] == nil then
 				storage[newArchetype] = {}
 			end
@@ -402,8 +398,6 @@ end
 	@param id number -- The entity ID
 ]=]
 function World:despawn(id)
-	-- TODO:
-	-- should this also check if it's marked for deletion already?
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -1103,8 +1097,6 @@ function World:remove(id, ...)
 		error(ERROR_NO_ENTITY, 2)
 	end
 
-	-- NOTE:
-	-- This functionality is deprecated and will be removed in a future release.
 	local components = { ... }
 	local length = #components
 
@@ -1142,7 +1134,7 @@ end
 	the World. Calling this function combines the separate storage back into the main storage, which speeds things up
 	again.
 
-	@deprecated v0.9.0 -- This method no longer does anything.
+	@deprecated v0.9.0 -- With the introduction of command buffering only one storage will ever exist at a time.
 ]=]
 function World:optimizeQueries() end
 
