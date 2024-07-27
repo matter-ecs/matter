@@ -100,8 +100,7 @@ return function()
 			end)
 
 			it("should handle many operations", function()
-				local world = World.new()
-				world:startDeferring()
+				local world = createDeferredWorld()
 
 				local A = component()
 				local B = component()
@@ -128,6 +127,18 @@ return function()
 				world:commitCommands()
 
 				expect(world:get(2, B)).to.equal(b)
+			end)
+
+			it("should have correct size", function()
+				local world = createDeferredWorld()
+				expect(world:size()).to.equal(0)
+
+				world:spawnAt(1)
+				expect(world:size()).to.equal(1)
+				world:despawn(1)
+				expect(world:size()).to.equal(1)
+				world:commitCommands()
+				expect(world:size()).to.equal(0)
 			end)
 		end)
 
