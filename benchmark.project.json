@@ -1,0 +1,22 @@
+{
+  "name": "Benchmarks",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "$path": "DevPackages",
+      "Matter": {
+        "$path": "lib"
+      },
+      "PinnedMatter": {
+        "$path": "pinned/Matter_0_8_3.rbxm"
+      }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "Benchmarks": {
+        "$path": "benchmarks"
+      }
+    }
+  }
+}
