@@ -134,7 +134,7 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 end
 
 local function executeInsert(world: World, insertCommand: InsertCommand)
-	debug.profilebegin("insert")
+	debug.profilebegin("World:insert")
 
 	local id = insertCommand.entityId
 	local entity = world:_getEntity(id)
@@ -341,7 +341,7 @@ function World:_updateQueryCache(entityArchetype)
 end
 
 function World:_transitionArchetype(id, components)
-	debug.profilebegin("transitionArchetype")
+	debug.profilebegin("World:transitionArchetype")
 	local storage = self.storage
 	local newArchetype = nil
 	local oldArchetype = self._entityArchetypes[id]
