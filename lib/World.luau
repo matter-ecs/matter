@@ -10,7 +10,7 @@ local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 local ERROR_EXISTING_ENTITY =
-	"The world already contains an entity with ID %. Use world:replace instead if this is intentional."
+	"The world already contains an entity with ID %s. Use world:replace instead if this is intentional."
 
 -- The old solver is not great at resolving intersections, so we redefine entityId each time.
 type DespawnCommand = { type: "despawn", entityId: number }
