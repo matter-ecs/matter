@@ -12,7 +12,7 @@ return function(plasma)
 			str ..= tostring(component) .. " "
 
 			if next(componentData) == nil then
-				str ..= "{ }"
+				str ..= "{ }\n"
 			else
 				str ..= (formatTable(componentData, FormatMode.Long, 0, 2) .. "\n")
 			end
