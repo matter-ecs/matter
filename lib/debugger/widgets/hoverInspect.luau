@@ -6,7 +6,7 @@ return function(plasma)
 	return plasma.widget(function(world, id, custom)
 		local entityData = world:_getEntity(id)
 
-		local str = "Entity " .. id .. "\n\n"
+		local str = "<b>Entity " .. id .. "</b>\n\n"
 
 		for component, componentData in pairs(entityData) do
 			str ..= tostring(component) .. " "
