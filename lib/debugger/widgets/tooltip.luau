@@ -16,7 +16,7 @@ return function(plasma)
 				Font = Enum.Font.Code,
 				TextStrokeTransparency = 0.5,
 				TextColor3 = Color3.new(1, 1, 1),
-				BackgroundTransparency = 0.5,
+				BackgroundTransparency = 0.2,
 				BackgroundColor3 = style.bg1,
 				AutomaticSize = Enum.AutomaticSize.XY,
 
