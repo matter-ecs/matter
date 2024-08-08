@@ -10,7 +10,7 @@ return function(plasma)
 				[ref] = "label",
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Top,
-				TextSize = 15,
+				TextSize = 13,
 				BorderSizePixel = 0,
 				Font = Enum.Font.Code,
 				TextStrokeTransparency = 0.5,
