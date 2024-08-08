@@ -11,6 +11,7 @@ return function(plasma)
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Top,
 				TextSize = 13,
+				RichText = true,
 				BorderSizePixel = 0,
 				Font = Enum.Font.Code,
 				TextStrokeTransparency = 0.5,
