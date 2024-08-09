@@ -1011,6 +1011,9 @@ end
 ]=]
 function World:insert(id, ...)
 	debug.profilebegin("insert")
+
+	assertComponentsProvided(...)
+
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
