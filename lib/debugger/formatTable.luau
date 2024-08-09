@@ -1,3 +1,39 @@
+local stringColor = "#dcdcaa"
+local numberColor = "#b0c4de"
+local keywordColor = "#c586c0"
+
+function colorize(value, color)
+	if type(value) == "number" then
+		value = string.format("%.1f", value)
+	end
+
+	return `<font color="${color}">{value}</font>`
+end
+
+function colorizeMany(color, ...)
+	local values = { ... }
+
+	for i, value in ipairs(values) do
+		values[i] = colorize(value, color)
+	end
+
+	return table.unpack(values)
+end
+
+function wrap(name, value)
+	return `{colorize(name, keywordColor)}({value})`
+end
+
+function commaSeparate(dots, ...)
+	local str = table.concat({ ... }, ", ")
+
+	if dots then
+		str ..= ", .."
+	end
+
+	return str
+end
+
 local FormatMode = {
 	Short = "Short",
 	Long = "Long",
@@ -39,8 +75,8 @@ local function formatTable(object, mode, _padLength, _depth)
 			part ..= ", "
 		end
 
-		if mode == FormatMode.Long then
-			part ..= "\n" .. string.rep("  ", _depth - 1)
+		if mode == FormatMode.Long and (if count == 0 then _depth > 1 else true) then
+			part ..= `\n{string.rep("  ", _depth - 1)}`
 		end
 
 		count += 1
@@ -56,23 +92,39 @@ local function formatTable(object, mode, _padLength, _depth)
 			end
 		end
 
-		if type(value) == "string" then
-			part ..= '"' .. value:sub(1, max) .. '"'
-		elseif type(value) == "table" then
+		local luaType = type(value)
+		local robloxType = typeof(value)
+
+		local valueStr = tostring(value)
+
+		if luaType == "string" then
+			part ..= colorize(`"{value:sub(1, max)}"`, stringColor)
+		elseif luaType == "number" then
+			part ..= colorize(valueStr, numberColor)
+		elseif luaType == "boolean" then
+			part ..= colorize(valueStr, keywordColor)
+		elseif luaType == "table" then
 			if mode == FormatMode.Short then
 				part ..= "{..}"
 			else
 				part ..= formatTable(value, FormatMode.Long, #str + #part + _padLength, _depth + 1)
 			end
-		elseif mode == FormatMode.Long and (type(value) == "userdata" or type(value) == "vector") then
-			if typeof(value) == "CFrame" then
+		elseif mode == FormatMode.Long and (luaType == "userdata" or luaType == "vector") then
+			if robloxType == "CFrame" then
 				local x, y, z = value:components()
-				part ..= string.format("CFrame(%.1f, %.1f, %.1f, ..)", x, y, z)
+				local separated = commaSeparate(true, colorizeMany(numberColor, x, y, z))
+				part ..= wrap("CFrame", separated)
+			elseif robloxType == "Vector3" then
+				local separated = commaSeparate(false, colorizeMany(numberColor, value.X, value.Y, value.Z))
+				part ..= wrap("Vector3", separated)
+			elseif robloxType == "Vector2" then
+				local separated = commaSeparate(false, colorizeMany(numberColor, value.X, value.Y))
+				part ..= wrap("Vector2", separated)
 			else
-				part ..= typeof(value) .. "(" .. tostring(value) .. ")"
+				part ..= wrap(robloxType, valueStr)
 			end
 		else
-			part ..= tostring(value):sub(1, max)
+			part ..= valueStr:sub(1, max)
 		end
 
 		if mode == FormatMode.Short and #str + #part + _padLength > 30 then
@@ -93,8 +145,8 @@ local function formatTable(object, mode, _padLength, _depth)
 		end
 	end
 
-	if mode == FormatMode.Long then
-		str ..= "\n" .. string.rep("  ", _depth - 2)
+	if mode == FormatMode.Long and _depth > 1 and #values > 0 then
+		str ..= `\n{string.rep("  ", _depth - 2)}`
 	end
 
 	if mode == FormatMode.Short or _depth > 1 then
