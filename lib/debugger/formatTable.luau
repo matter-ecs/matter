@@ -39,7 +39,7 @@ local function formatTable(object, mode, _padLength, _depth)
 			part ..= ", "
 		end
 
-		if mode == FormatMode.Long then
+		if mode == FormatMode.Long and (if count == 0 then _depth > 1 else true) then
 			part ..= "\n" .. string.rep("  ", _depth - 1)
 		end
 
@@ -93,7 +93,7 @@ local function formatTable(object, mode, _padLength, _depth)
 		end
 	end
 
-	if mode == FormatMode.Long then
+	if mode == FormatMode.Long and _depth > 1 and #values > 0 then
 		str ..= "\n" .. string.rep("  ", _depth - 2)
 	end
 
