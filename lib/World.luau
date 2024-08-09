@@ -4,6 +4,7 @@ local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
+local assertComponentsProvided = Component.assertComponentsProvided
 local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
@@ -259,6 +260,8 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
+	assertComponentsProvided(...)
+
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -348,6 +351,8 @@ end
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
 function World:get(id, ...)
+	assertComponentsProvided(...)
+
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -1006,6 +1011,9 @@ end
 ]=]
 function World:insert(id, ...)
 	debug.profilebegin("insert")
+
+	assertComponentsProvided(...)
+
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -1052,6 +1060,8 @@ end
 	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
 ]=]
 function World:remove(id, ...)
+	assertComponentsProvided(...)
+
 	if not self:contains(id) then
 		error(ERROR_NO_ENTITY, 2)
 	end
