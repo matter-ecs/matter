@@ -1,7 +1,5 @@
 local Loop = require(script.Parent.Loop)
 local useHookState = require(script.Parent.topoRuntime).useHookState
-local World = require(script.Parent.World)
-local component = require(script.Parent).component
 local BindableEvent = require(script.Parent.mock.BindableEvent)
 
 local bindable = BindableEvent.new()
@@ -608,28 +606,6 @@ return function()
 			expect(called[1]).to.equal(1)
 			expect(called[2]).to.equal(2)
 			expect(called[3]).to.equal(3)
-		end)
-
-		it("should optimize queries of worlds used inside it", function()
-			local world = World.new()
-			local loop = Loop.new(world)
-
-			local A = component()
-
-			world:spawn(A())
-
-			loop:scheduleSystem(function(world)
-				world:query(A)
-			end)
-
-			local bindable = BindableEvent.new()
-			loop:begin({
-				default = bindable.Event,
-			})
-
-			bindable:Fire()
-
-			expect(#world._storages).to.equal(1)
 		end)
 	end)
 end

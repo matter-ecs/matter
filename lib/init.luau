@@ -58,7 +58,7 @@ local Loop = require(script.Loop)
 local newComponent = require(script.component).newComponent
 local topoRuntime = require(script.topoRuntime)
 
-export type World = typeof(World.new())
+export type World = World.World
 export type Loop = typeof(Loop.new())
 
 return table.freeze({
