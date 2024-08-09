@@ -118,6 +118,9 @@ local function formatTable(object, mode, _padLength, _depth)
 				local separated =
 					commaSeparate(false, table.unpack(colorizeMany(numberColor, value.X, value.Y, value.Z)))
 				part ..= wrap("Vector3", separated)
+			elseif robloxType == "Vector2" then
+				local separated = commaSeparate(false, table.unpack(colorizeMany(numberColor, value.X, value.Y)))
+				part ..= wrap("Vector2", separated)
 			else
 				part ..= wrap(robloxType, valueStr)
 			end
