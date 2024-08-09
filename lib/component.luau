@@ -165,8 +165,15 @@ local function assertValidComponentInstance(value, position)
 	end
 end
 
+local function assertValidComponentInstances(componentInstances)
+	for position, componentInstance in componentInstances do
+		assertValidComponentInstance(componentInstance, position)
+	end
+end
+
 return {
 	newComponent = newComponent,
 	assertValidComponentInstance = assertValidComponentInstance,
+	assertValidComponentInstances = assertValidComponentInstances,
 	assertValidComponent = assertValidComponent,
 }
