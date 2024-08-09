@@ -17,7 +17,7 @@ function colorizeMany(color, ...)
 		values[i] = colorize(value, color)
 	end
 
-	return values
+	return table.unpack(values)
 end
 
 function wrap(name, value)
@@ -112,14 +112,13 @@ local function formatTable(object, mode, _padLength, _depth)
 		elseif mode == FormatMode.Long and (luaType == "userdata" or luaType == "vector") then
 			if robloxType == "CFrame" then
 				local x, y, z = value:components()
-				local separated = commaSeparate(true, table.unpack(colorizeMany(numberColor, x, y, z)))
+				local separated = commaSeparate(true, colorizeMany(numberColor, x, y, z))
 				part ..= wrap("CFrame", separated)
 			elseif robloxType == "Vector3" then
-				local separated =
-					commaSeparate(false, table.unpack(colorizeMany(numberColor, value.X, value.Y, value.Z)))
+				local separated = commaSeparate(false, colorizeMany(numberColor, value.X, value.Y, value.Z))
 				part ..= wrap("Vector3", separated)
 			elseif robloxType == "Vector2" then
-				local separated = commaSeparate(false, table.unpack(colorizeMany(numberColor, value.X, value.Y)))
+				local separated = commaSeparate(false, colorizeMany(numberColor, value.X, value.Y))
 				part ..= wrap("Vector2", separated)
 			else
 				part ..= wrap(robloxType, valueStr)
