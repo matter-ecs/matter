@@ -161,7 +161,7 @@ end
 
 local function assertComponentsProvided(...)
 	if not (...) then
-		error(`No components passed to world:{debug.info(2, "n")}, at least one component is required`, 2)
+		error(`No components passed to world:{debug.info(3, "n")}, at least one component is required`, 2)
 	end
 end
 
