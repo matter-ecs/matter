@@ -415,9 +415,9 @@ function Loop:begin(events)
 						)
 					end
 
-					for world in dirtyWorlds do
+					--[[for world in dirtyWorlds do
 						world:optimizeQueries()
-					end
+					end]]
 					table.clear(dirtyWorlds)
 
 					if not success then
