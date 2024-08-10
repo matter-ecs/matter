@@ -1,0 +1,36 @@
+--!optimize 2
+--!native
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Matter = require(ReplicatedStorage.Matter)
+local PinnedMatter = require(ReplicatedStorage.PinnedMatter)
+
+local A, B = Matter.component(), Matter.component()
+local pinnedA, pinnedB = PinnedMatter.component(), PinnedMatter.component()
+
+local N = 500
+
+return {
+	ParameterGenerator = function()
+		local world, pinnedWorld = Matter.World.new(), PinnedMatter.World.new()
+		for i = 1, N do
+			world:spawnAt(i)
+			pinnedWorld:spawnAt(i)
+		end
+
+		return world, pinnedWorld
+	end,
+
+	Functions = {
+		["New"] = function(_, world)
+			for i = 1, N do
+				world:insert(i, A({ i }), B({ i }))
+			end
+		end,
+		["Old"] = function(_, _, world)
+			for i = 1, N do
+				world:insert(i, A({ i }), B({ i }))
+			end
+		end,
+	},
+}

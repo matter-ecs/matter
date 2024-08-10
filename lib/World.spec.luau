@@ -143,6 +143,14 @@ return function()
 		end)
 
 		describe("immediate", function()
+			itFOCUS("should work", function()
+				local world = World.new()
+				local A, B = component(), component()
+
+				world:spawnAt(10, A({ a = true }), B({ b = true }))
+				--print(world:get(10, A))
+			end)
+
 			it("should be iterable", function()
 				local world = World.new()
 				local A = component()

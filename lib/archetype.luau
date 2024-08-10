@@ -17,6 +17,7 @@ local function getValueId(value)
 end
 
 function archetypeOf(componentIds: { number })
+	table.sort(componentIds)
 	return table.concat(componentIds, "_")
 	-- local archetype = ""
 	-- for _, component in componentIds do
