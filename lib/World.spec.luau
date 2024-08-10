@@ -580,6 +580,22 @@ return function()
 			end).to.throw()
 		end)
 
+		it("should error when entity does not exist (get, insert, replace, remove)", function()
+			expect(function()
+				local world = World.new()
+
+				world:get(2000)
+				world:insert(2000)
+				world:replace(2000)
+				world:remove(2000)
+
+				world:get()
+				world:insert()
+				world:replace()
+				world:remove()
+			end).to.throw()
+		end)
+
 		it("should allow snapshotting a query", function()
 			local world = World.new()
 
