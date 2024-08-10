@@ -9,7 +9,14 @@ local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
-local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
+local function assertEntityExists(world, id: number)
+	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
+end
+
+local function assertWorldOperationIsValid(world, id: number, ...)
+	assertEntityExists(world, id)
+	assertComponentsProvided(...)
+end
 
 --[=[
 	@class World
@@ -260,11 +267,7 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
-	assertComponentsProvided(...)
-
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local components = {}
 	local metatables = {}
@@ -351,11 +354,7 @@ end
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
 function World:get(id, ...)
-	assertComponentsProvided(...)
-
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local entity = self:_getEntity(id)
 
@@ -1012,11 +1011,7 @@ end
 function World:insert(id, ...)
 	debug.profilebegin("insert")
 
-	assertComponentsProvided(...)
-
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local entity = self:_getEntity(id)
 
@@ -1060,11 +1055,7 @@ end
 	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
 ]=]
 function World:remove(id, ...)
-	assertComponentsProvided(...)
-
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local entity = self:_getEntity(id)
 
