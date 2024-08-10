@@ -159,9 +159,9 @@ local function assertValidComponentInstance(value, position)
 	end
 end
 
-local function assertComponentsProvided(...)
+local function assertComponentArgsProvided(...)
 	if not (...) then
-		error(`No components passed to world:{debug.info(2, "n")}, at least one component is required`, 2)
+		error(`No components passed to world:{debug.info(3, "n")}, at least one component is required`, 2)
 	end
 end
 
@@ -169,5 +169,5 @@ return {
 	newComponent = newComponent,
 	assertValidComponentInstance = assertValidComponentInstance,
 	assertValidComponent = assertValidComponent,
-	assertComponentsProvided = assertComponentsProvided,
+	assertComponentArgsProvided = assertComponentArgsProvided,
 }
