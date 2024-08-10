@@ -4,7 +4,7 @@ local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstance = Component.assertValidComponentInstance
 local assertValidComponent = Component.assertValidComponent
-local assertComponentsProvided = Component.assertComponentsProvided
+local assertComponentsArgsProvided = Component.assertComponentsArgsProvided
 local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
@@ -15,7 +15,7 @@ end
 
 local function assertWorldOperationIsValid(world, id: number, ...)
 	assertEntityExists(world, id)
-	assertComponentsProvided(...)
+	assertComponentsArgsProvided(...)
 end
 
 --[=[
