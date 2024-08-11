@@ -20,43 +20,10 @@ return function(plasma)
 						continue
 					end
 
-					plasma.heading(string.format("Query %d", i))
+					local budgetUsed = math.floor((query.duration / debugger.debugSystemRuntime) * 100)
 
-					local componentNames = {}
-
-					for _, component in query.components do
-						table.insert(componentNames, tostring(component))
-					end
-
-					plasma.label(table.concat(componentNames, ", "))
-
-					local items = { { "ID", unpack(componentNames) } }
-
-					while #items <= 10 do
-						local data = { query.result:next() }
-
-						if #data == 0 then
-							break
-						end
-
-						for index, value in data do
-							if type(value) == "table" then
-								data[index] = format.formatTable(value)
-							else
-								data[index] = tostring(value)
-							end
-						end
-
-						table.insert(items, data)
-					end
-
-					plasma.table(items, {
-						headings = true,
-					})
-
-					if #items > 10 and query.result:next() then
-						plasma.label("(further results truncated)")
-					end
+					plasma.heading(`Query {i} - {budgetUsed}%`)
+					plasma.label(table.concat(query.componentNames, ", "))
 				end
 				return nil
 			end)

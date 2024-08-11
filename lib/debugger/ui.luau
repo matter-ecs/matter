@@ -144,7 +144,6 @@ local function ui(debugger, loop)
 					local samples = loop.profiling[system]
 					if samples then
 						local duration = rollingAverage.getAverage(samples)
-
 						durations[system] = duration
 						longestDuration = math.max(longestDuration, duration)
 					end
@@ -178,13 +177,18 @@ local function ui(debugger, loop)
 				end
 
 				local selected = custom.selectionList(items):selected()
-
 				if selected then
 					if selected.system == debugger.debugSystem then
 						debugger.debugSystem = nil
 					else
 						debugger.debugSystem = selected.system
 					end
+				end
+
+				if debugger.debugSystem then
+					debugger.debugSystemRuntime = durations[debugger.debugSystem]
+				else
+					debugger.debugSystemRuntime = nil
 				end
 
 				plasma.space(10)

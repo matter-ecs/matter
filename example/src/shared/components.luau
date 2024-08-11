@@ -12,6 +12,7 @@ local COMPONENTS = {
 	"Lasering",
 	"DebugLabel",
 	"Spinner",
+	"Test",
 }
 
 local components = {}

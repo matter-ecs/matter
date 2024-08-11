@@ -344,6 +344,7 @@ end
 ]=]
 function Debugger:autoInitialize(loop)
 	self.loop = loop
+	loop._debugger = self
 
 	self.loop.trackErrors = true
 
