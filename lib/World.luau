@@ -34,7 +34,7 @@ type Archetype = {
 }
 
 type EntityRecord = {
-	indexInArchetype: DenseEntityId?,
+	indexInArchetype: number,
 	archetype: Archetype,
 }
 
@@ -226,6 +226,48 @@ local function ensureRecord(world: World, entityId: number): EntityRecord
 	return entityRecord :: EntityRecord
 end
 
+local function transitionArchetype(world: World, entityId: number, entityRecord: EntityRecord, archetype: Archetype)
+	local oldArchetype = entityRecord.archetype
+	local oldEntityIndex = entityRecord.indexInArchetype
+
+	-- Add entity to archetype's ownedEntities
+	local ownedEntities = archetype.ownedEntities
+	local entityIndex = #ownedEntities + 1
+	ownedEntities[entityIndex] = entityId
+
+	-- Move old storage to new storage if needed
+	local oldNumEntities = #oldArchetype.ownedEntities
+	local wasLastEntity = oldNumEntities == oldEntityIndex
+	for index, oldComponentStorage in oldArchetype.storage do
+		local componentStorage = archetype.storage[archetype.componentToStorageIndex[oldArchetype.componentIds[index]]]
+
+		-- Does the new storage contain this component?
+		if componentStorage then
+			componentStorage[entityIndex] = oldComponentStorage[oldEntityIndex]
+		end
+
+		-- Swap entity component storage
+		if not wasLastEntity then
+			oldComponentStorage[oldEntityIndex] = oldComponentStorage[oldNumEntities]
+		end
+
+		oldComponentStorage[oldNumEntities] = nil
+	end
+
+	-- Swap entity location marker
+	if not wasLastEntity then
+		oldArchetype.ownedEntities[oldEntityIndex] = oldArchetype.ownedEntities[oldNumEntities];
+		(world.entities[oldArchetype.ownedEntities[oldEntityIndex]] :: EntityRecord).indexInArchetype = oldEntityIndex
+	end
+
+	-- Remove from old archetype
+	oldArchetype.ownedEntities[oldNumEntities] = nil
+
+	-- Mark entity as being in new archetype
+	entityRecord.indexInArchetype = entityIndex
+	entityRecord.archetype = archetype
+end
+
 local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	local id = despawnCommand.entityId
 	local entity = world:_getEntity(id)
@@ -262,30 +304,11 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			continue
 		end
 
-		local ownedEntities = finishArchetype.ownedEntities
-		local finishEntityIndex = #ownedEntities + 1
-		ownedEntities[finishEntityIndex] = entityId
-
-		-- Move entity to new archetype
-		if #startArchetype.componentIds > 0 then
-			-- Has previous components, need to move them over!
-			for index, componentStorage in startArchetype.storage do
-				local finishIndex = finishArchetype.componentToStorageIndex[startArchetype.componentIds[index]]
-				finishArchetype.storage[finishIndex][finishEntityIndex] =
-					componentStorage[entityRecord.indexInArchetype :: number]
-
-				componentStorage[entityRecord.indexInArchetype :: number] = nil
-				table.remove(startArchetype.ownedEntities, entityRecord.indexInArchetype)
-			end
-		end
-
-		finishArchetype.storage[finishArchetype.componentToStorageIndex[componentId]][finishEntityIndex] =
+		transitionArchetype(world, entityId, entityRecord, finishArchetype)
+		finishArchetype.storage[finishArchetype.componentToStorageIndex[componentId]][entityRecord.indexInArchetype] =
 			componentInstance
 
-		entityRecord.archetype = finishArchetype
-		entityRecord.indexInArchetype = finishEntityIndex
-		--print("Finish archetype", finishArchetype)
-		--print("Archetypes", world.archetypes)
+		print(finishArchetype)
 	end
 
 	-- fo
@@ -696,8 +719,8 @@ end
 	@param ... Component -- The components to fetch
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
-function World.get(self: typeof(World.new()), id, ...: Component)
-	local entityRecord = self.entities[id]
+function World.get(self: World, entityId, ...: Component)
+	local entityRecord = self.entities[entityId]
 	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
 	end
@@ -706,10 +729,6 @@ function World.get(self: typeof(World.new()), id, ...: Component)
 	local componentInstances = table.create(length, nil)
 
 	local archetype = entityRecord.archetype
-	if archetype == nil then
-		return componentInstances
-	end
-
 	local componentToStorageIndex = archetype.componentToStorageIndex
 	for i = 1, length do
 		local component = select(i, ...)
