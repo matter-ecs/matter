@@ -376,26 +376,17 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 end
 
 local function executeRemove(world: World, removeCommand: RemoveCommand)
-	local id = removeCommand.entityId
-	local entity = world:_getEntity(id)
-
-	local removed = {}
-	for index, metatable in removeCommand.components do
-		local oldComponent = entity[metatable]
-		removed[index] = oldComponent
-
-		world:_trackChanged(metatable, id, oldComponent, nil)
-		entity[metatable] = nil
+	local entityId = removeCommand.entityId
+	local entityRecord = ensureRecord(world, entityId)
+	local componentIds = table.clone(entityRecord.archetype.componentIds)
+	for _, component in removeCommand.components do
+		local index = table.find(componentIds, #component)
+		if index then
+			table.remove(componentIds, index)
+		end
 	end
 
-	-- Rebuild entity metatable cache
-	local metatables = {}
-	for metatable in pairs(entity) do
-		table.insert(metatables, metatable)
-	end
-
-	world._entityMetatablesCache[id] = metatables
-	world:_transitionArchetype(id, entity)
+	transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
 end
 
 local function processCommand(world: World, command: Command)
@@ -1415,28 +1406,14 @@ end
 	@param id number -- The entity ID
 	@param ... Component -- The components to remove
 ]=]
-function World.remove(self: typeof(World.new()), id, ...: ComponentMetatable)
-	error("unimplemented")
-
+function World.remove(self: World, id, ...: ComponentMetatable)
 	local entityRecord = self.entities[id]
 	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
 	end
 
 	local components = { ... }
-	local length = #components
-
-	local entity = self:_getEntity(id)
-	local removed = table.create(length, nil)
-	for index, component in components do
-		assertValidComponent(component, index)
-
-		local oldComponent = entity[component]
-		removed[index] = oldComponent
-	end
-
-	bufferCommand(self, { type = "remove", entityId = id, components = components })
-	return unpack(removed, 1, length)
+	bufferCommand(self :: any, { type = "remove", entityId = id, components = components })
 end
 
 --[=[

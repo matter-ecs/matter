@@ -142,16 +142,18 @@ return function()
 			end)
 		end)
 
-		describe("immediate", function()
+		describeFOCUS("immediate", function()
 			it("should work", function()
 				local world = World.new()
 				local A, B = component(), component()
 
-				world:spawnAt(10, A({ a = true }))
-				world:spawnAt(11, A({ a = true, two = true }))
-				world:spawnAt(12, A({ a = true, three = true }))
+				-- world:spawnAt(10, A({ a = true }))
+				-- world:spawnAt(11, A({ a = true, two = true }))
+				-- world:spawnAt(12, A({ a = true, three = true }))
 
-				world:insert(10, B({ b = true }))
+				-- world:insert(10, B({ b = true }))
+				world:spawnAt(10, A({ a = true }), B({ b = true }))
+				world:remove(10, B)
 				print(world)
 			end)
 
