@@ -407,7 +407,7 @@ function Loop:begin(events)
 							local totalQueryTime = 0
 
 							for _, query in debugger._queries do
-								totalQueryTime += query.duration
+								totalQueryTime += query.averageDuration
 							end
 
 							rollingAverage.addSample(

@@ -168,6 +168,7 @@ function Debugger.new(plasma)
 		componentRefreshFrequency = 3,
 		_windowCount = 0,
 		_queries = {},
+		_queryDurationSamples = {},
 		_seenEvents = {},
 		_eventOrder = {},
 		_eventBridge = EventBridge.new(function(...)

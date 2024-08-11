@@ -1,5 +1,3 @@
-local format = require(script.Parent.Parent.formatTable)
-
 return function(plasma)
 	return plasma.widget(function(debugger)
 		return plasma
@@ -20,9 +18,10 @@ return function(plasma)
 						continue
 					end
 
-					local budgetUsed = math.floor((query.duration / debugger.debugSystemRuntime) * 100)
+					local budgetUsed =
+						math.clamp(math.floor((query.averageDuration / debugger.debugSystemRuntime) * 100), 0, 100)
 
-					plasma.heading(`Query {i} - {budgetUsed}%`)
+					plasma.heading(`<b>Query {i} - {budgetUsed}%</b>`)
 					plasma.label(table.concat(query.componentNames, ", "))
 				end
 				return nil

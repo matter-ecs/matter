@@ -1,6 +1,7 @@
 --#selene:allow(empty_loop)
 local useCurrentSystem = require(script.Parent.Parent.topoRuntime).useCurrentSystem
 local World = require(script.Parent.Parent.World)
+local rollingAverage = require(script.Parent.Parent.rollingAverage)
 
 local originalQuery = World.query
 
@@ -13,6 +14,15 @@ local function hookWorld(debugger)
 			end
 
 			local duration = os.clock() - start
+			local file, line = debug.info(2, "sl")
+
+			if debugger._queryDurationSamples[file .. line] == nil then
+				debugger._queryDurationSamples[file .. line] = {}
+			end
+
+			rollingAverage.addSample(debugger._queryDurationSamples[file .. line], duration)
+
+			local averageDuration = rollingAverage.getAverage(debugger._queryDurationSamples[file .. line])
 
 			local componentNames = {}
 			for i = 1, select("#", ...) do
@@ -20,7 +30,7 @@ local function hookWorld(debugger)
 			end
 
 			table.insert(debugger._queries, {
-				duration = duration,
+				averageDuration = averageDuration,
 				componentNames = componentNames,
 			})
 		end
