@@ -1,6 +1,7 @@
 --!strict
 local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
+local component = require(script.Parent.component)
 local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
@@ -22,9 +23,12 @@ type ComponentToId = { [Component]: number }
 type ArchetypeId = string
 type Archetype = {
 	id: string,
-	--indexInArchetypes: number,
 
 	ownedEntities: { EntityId },
+
+	--- Maps a component ID to its index in the storage
+	componentIds: { ComponentId },
+
 	componentToStorageIndex: { [ComponentId]: number },
 	storage: { { [DenseEntityId]: ComponentInstance } },
 }
@@ -91,6 +95,7 @@ local function createArchetype(world: World, componentIds: { ComponentId }): Arc
 		id = archetypeId,
 		indexInArchetypes = indexInArchetypes,
 
+		componentIds = componentIds,
 		componentToStorageIndex = componentToStorageIndex,
 		storage = storage,
 
@@ -193,9 +198,11 @@ end
 
 local function ensureArchetype(world: World, componentIds: { number })
 	local archetypeId = archetypeOf(componentIds)
-	local archetype = world.archetypes[archetypeId]
-	if archetype then
-		return archetype
+	local archetypes = world.archetypes
+	for _, archetype in archetypes do
+		if archetype.id == archetypeId then
+			return archetype
+		end
 	end
 
 	return createArchetype(world, componentIds)
@@ -238,12 +245,52 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	debug.profilebegin("World:insert")
 
 	local entityId = insertCommand.entityId
-	local idToInstance = {}
-	for _, componentInstance in insertCommand.componentInstances do
-		idToInstance[#getmetatable(componentInstance)] = componentInstance
+	local entityRecord = ensureRecord(world, entityId)
+	local componentInstances = insertCommand.componentInstances
+	for _, componentInstance in componentInstances do
+		local componentId = #getmetatable(componentInstance)
+
+		local startArchetype = entityRecord.archetype
+		local startComponentIds = startArchetype.componentIds
+
+		local finishComponentIds = table.clone(startComponentIds)
+		table.insert(finishComponentIds, componentId)
+
+		local finishArchetype = ensureArchetype(world, finishComponentIds)
+		if startArchetype == finishArchetype then
+			print("Todo: existing, do not move")
+			continue
+		end
+
+		local ownedEntities = finishArchetype.ownedEntities
+		local finishEntityIndex = #ownedEntities + 1
+		ownedEntities[finishEntityIndex] = entityId
+
+		-- Move entity to new archetype
+		if #startArchetype.componentIds > 0 then
+			-- Has previous components, need to move them over!
+			for index, componentStorage in startArchetype.storage do
+				local finishIndex = finishArchetype.componentToStorageIndex[startArchetype.componentIds[index]]
+				finishArchetype.storage[finishIndex][finishEntityIndex] =
+					componentStorage[entityRecord.indexInArchetype :: number]
+
+				componentStorage[entityRecord.indexInArchetype :: number] = nil
+				table.remove(startArchetype.ownedEntities, entityRecord.indexInArchetype)
+			end
+		end
+
+		finishArchetype.storage[finishArchetype.componentToStorageIndex[componentId]][finishEntityIndex] =
+			componentInstance
+
+		entityRecord.archetype = finishArchetype
+		entityRecord.indexInArchetype = finishEntityIndex
+		--print("Finish archetype", finishArchetype)
+		--print("Archetypes", world.archetypes)
 	end
 
-	world:_transitionArchetype(entityId, idToInstance)
+	-- fo
+
+	-- world:_transitio nArchetype(entityId, componentInstances)
 	-- local componentInstances = insertCommand.componentInstances
 	-- for _, componentInstance in componentInstances do
 	-- 	local component = getmetatable(componentInstance)
