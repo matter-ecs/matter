@@ -30,7 +30,7 @@ type Archetype = {
 	componentIds: { ComponentId },
 
 	componentToStorageIndex: { [ComponentId]: number },
-	storage: { { [DenseEntityId]: ComponentInstance } },
+	storage: { { ComponentInstance } },
 }
 
 type EntityRecord = {
@@ -42,10 +42,10 @@ type EntityRecord = {
 type Entities = { [EntityId]: EntityRecord? }
 
 -- Find archetypes containing component
-type ComponentToArchetypes = { [ComponentId]: { [ArchetypeId]: number } }
+type ComponentToArchetypes = { [ComponentId]: { number } }
 
 -- Find archetype from all components
-type Archetypes = { [ArchetypeId]: Archetype }
+type Archetypes = { Archetype }
 
 local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
 local ERROR_EXISTING_ENTITY =
@@ -105,7 +105,7 @@ local function createArchetype(world: World, componentIds: { ComponentId }): Arc
 
 	for index, componentId in componentIds do
 		local associatedArchetypes = world.componentToArchetypes[componentId] or ({} :: any)
-		associatedArchetypes[archetypeId] = index
+		associatedArchetypes[indexInArchetypes] = index
 		world.componentToArchetypes[componentId] = associatedArchetypes
 
 		componentToStorageIndex[componentId] = index
@@ -124,6 +124,8 @@ function World.new()
 		entities = {} :: Entities,
 		componentToArchetypes = {} :: ComponentToArchetypes,
 		archetypes = {} :: Archetypes,
+		archetypeHashToIndex = {} :: { [string]: number },
+
 		-- Map from archetype string --> entity ID --> entity data
 		storage = {},
 
@@ -226,7 +228,12 @@ local function ensureRecord(world: World, entityId: number): EntityRecord
 	return entityRecord :: EntityRecord
 end
 
-local function transitionArchetype(world: World, entityId: number, entityRecord: EntityRecord, archetype: Archetype)
+local function transitionArchetype(
+	world: World,
+	entityId: number,
+	entityRecord: EntityRecord,
+	archetype: Archetype
+): number
 	local oldArchetype = entityRecord.archetype
 	local oldEntityIndex = entityRecord.indexInArchetype
 
@@ -266,6 +273,8 @@ local function transitionArchetype(world: World, entityId: number, entityRecord:
 	-- Mark entity as being in new archetype
 	entityRecord.indexInArchetype = entityIndex
 	entityRecord.archetype = archetype
+
+	return entityIndex
 end
 
 local function executeDespawn(world: World, despawnCommand: DespawnCommand)
@@ -289,60 +298,19 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 	local entityId = insertCommand.entityId
 	local entityRecord = ensureRecord(world, entityId)
 	local componentInstances = insertCommand.componentInstances
+
+	local oldArchetype = entityRecord.archetype
 	for _, componentInstance in componentInstances do
 		local componentId = #getmetatable(componentInstance)
+		local componentIds = table.clone(oldArchetype.componentIds)
+		table.insert(componentIds, componentId)
 
-		local startArchetype = entityRecord.archetype
-		local startComponentIds = startArchetype.componentIds
+		local archetype = ensureArchetype(world, componentIds)
+		local entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
+		archetype.storage[archetype.componentToStorageIndex[componentId]][entityIndex] = componentInstance
 
-		local finishComponentIds = table.clone(startComponentIds)
-		table.insert(finishComponentIds, componentId)
-
-		local finishArchetype = ensureArchetype(world, finishComponentIds)
-		if startArchetype == finishArchetype then
-			print("Todo: existing, do not move")
-			continue
-		end
-
-		transitionArchetype(world, entityId, entityRecord, finishArchetype)
-		finishArchetype.storage[finishArchetype.componentToStorageIndex[componentId]][entityRecord.indexInArchetype] =
-			componentInstance
-
-		print(finishArchetype)
+		oldArchetype = archetype
 	end
-
-	-- fo
-
-	-- world:_transitio nArchetype(entityId, componentInstances)
-	-- local componentInstances = insertCommand.componentInstances
-	-- for _, componentInstance in componentInstances do
-	-- 	local component = getmetatable(componentInstance)
-	-- 	local componentId = #component
-
-	-- 	-- First, get the entities current archetype
-	-- 	local record = ensureRecord(world, entityId)
-	-- 	local oldArchetype = record.archetype
-	-- 	local newComponentIds = table.clone(oldArchetype.componentToStorageIndex)
-	-- 	table.insert(newComponentIds, componentId)
-
-	-- 	--local newArchetype = ensureArchetype(world, newComponentIds)
-	-- 	-- local componentStorage = newArchetype.storage[newArchetype.componentToStorageIndex[componentId]]
-	-- 	-- if oldArchetype == newArchetype then
-	-- 	-- 	-- Set the data
-	-- 	-- 	--oldArchetype.storage[oldArchetype.componentToStorageIndex[componentId]] = componentInstance
-	-- 	-- else
-	-- 	-- 	-- Remove from old archetype
-	-- 	-- 	for _, storageIndex in oldArchetype.componentToStorageIndex do
-	-- 	-- 		-- TODO:
-	-- 	-- 		-- swap remove
-	-- 	-- 		table.remove(archetype.storage[storageIndex], entityRecord.indexInArchetype)
-	-- 	-- 	end
-
-	-- 	-- 	print("New archetype.")
-	-- 	-- end
-
-	-- 	print("oldArchetype", oldArchetype, "newArchetype", newArchetype)
-	-- end
 
 	debug.profileend()
 end
@@ -1118,7 +1086,6 @@ function World.query(self: World, ...)
 	-- TODO:
 	-- cache queries
 	local components = { ... }
-	local A, B = ...
 	local a, b = ...
 
 	local queryLength = select("#", ...)
@@ -1143,9 +1110,9 @@ function World.query(self: World, ...)
 		end
 	end
 
-	-- Narrow the archetypes so only ones that contain all components are searched.
-	for archetypeId in possibleArchetypes do
-		local archetype = self.archetypes[archetypeId]
+	-- Narrow the archetypes so only ones that contain all components are searched
+	for archetypeIndex in possibleArchetypes do
+		local archetype = self.archetypes[archetypeIndex]
 		local incompatible = false
 		for _, componentId in components do
 			-- Does this archetype have this component?
@@ -1167,7 +1134,7 @@ function World.query(self: World, ...)
 	local currentArchetype = compatibleArchetypes[currentArchetypeIndex]
 	local currentArchetypeNumEntities = #currentArchetype.ownedEntities
 	local currentEntityIndex = 0
-	local function nextEntity()
+	local function nextEntity(): any
 		currentEntityIndex += 1
 		if currentEntityIndex > currentArchetypeNumEntities then
 			currentEntityIndex = 0
@@ -1201,10 +1168,6 @@ function World.query(self: World, ...)
 	end
 
 	local function iter()
-		-- currentArchetype = self.archetypes[next(compatibleArchetypes)]
-		-- currentArchetypeNumEntities = #currentArchetype.ownedEntities
-		-- currentEntityIndex = 0
-
 		return nextEntity
 	end
 

@@ -142,19 +142,27 @@ return function()
 			end)
 		end)
 
-		describeFOCUS("immediate", function()
-			it("should work", function()
+		describe("immediate", function()
+			itFOCUS("should work", function()
 				local world = World.new()
 				local A, B = component(), component()
 
+				world:spawnAt(10)
+				world:insert(10, A({ a = true }), B({ b = true }))
+				-- world:spawnAt(11)
+				-- world:insert(11, A({ a = true, two = true }), B({ b = true, two = true }))
+				print(world.archetypes)
 				-- world:spawnAt(10, A({ a = true }))
 				-- world:spawnAt(11, A({ a = true, two = true }))
 				-- world:spawnAt(12, A({ a = true, three = true }))
 
 				-- world:insert(10, B({ b = true }))
-				world:spawnAt(10, A({ a = true }), B({ b = true }))
-				world:remove(10, B)
-				print(world)
+				--world:spawnAt(10, A({ a = true }), B({ b = true }))
+				--world:remove(10, B)
+				-- for id, a, b in world:query(A, B) do
+				-- 	print(id, a, b)
+				-- end
+				--print(world)
 			end)
 
 			it("should be iterable", function()

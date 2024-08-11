@@ -24,14 +24,12 @@ return {
 	Functions = {
 		["New"] = function(_, world)
 			for i = 1, N do
-				world:insert(i, A({ i }), B({ i }))
+				world:insert(i, A({ i }))
 			end
-
-			--print(world)
 		end,
 		["Old"] = function(_, _, world)
 			for i = 1, N do
-				world:insert(i, A({ i }), B({ i }))
+				world:insert(i, A({ i }))
 			end
 		end,
 	},
