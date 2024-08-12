@@ -142,8 +142,8 @@ return function()
 			end)
 		end)
 
-		describe("immediate", function()
-			itFOCUS("should work", function()
+		describeFOCUS("immediate", function()
+			it("should work", function()
 				local world = World.new()
 				local A, B = component(), component()
 

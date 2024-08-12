@@ -278,16 +278,13 @@ local function transitionArchetype(
 end
 
 local function executeDespawn(world: World, despawnCommand: DespawnCommand)
-	local id = despawnCommand.entityId
-	local entity = world:_getEntity(id)
+	local entityId = despawnCommand.entityId
+	local entityRecord = ensureRecord(world, entityId)
 
-	for metatable, component in pairs(entity) do
-		world:_trackChanged(metatable, id, component, nil)
-	end
-
-	local shouldOnlyClear = world.deferring and world.markedForDeletion[id] ~= true
-	world._entityMetatablesCache[id] = if shouldOnlyClear then {} else nil
-	world:_transitionArchetype(id, if shouldOnlyClear then {} else nil)
+	-- TODO:
+	-- Optimize remove so no cascades
+	transitionArchetype(world, entityId, entityRecord, world.rootArchetype)
+	table.remove(world.rootArchetype.ownedEntities, entityRecord.indexInArchetype)
 
 	world._size -= 1
 end
@@ -1148,7 +1145,6 @@ function World.query(self: World, ...)
 	local entityId: number
 	local function nextEntity(): any
 		entityId = currentArchetype.ownedEntities[currentEntityIndex]
-		--print("currentEntityIndex", currentEntityIndex, "entityId", entityId)
 		while entityId == nil do
 			currentEntityIndex = 1
 			currentArchetypeIndex += 1
