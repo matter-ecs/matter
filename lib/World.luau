@@ -702,6 +702,7 @@ function World.get(self: World, entityId, ...: Component)
 
 	return unpack(componentInstances, 1, length)
 end
+
 local function noop() end
 local noopQuery = setmetatable({
 	next = noop,
@@ -1172,8 +1173,42 @@ function World.query(self: World, ...)
 		return nextEntity
 	end
 
+	local function without(query, ...: Component)
+		local numComponents = select("#", ...)
+		local numCompatibleArchetypes = #compatibleArchetypes
+		for archetypeIndex = numCompatibleArchetypes, 1, -1 do
+			local archetype = compatibleArchetypes[archetypeIndex]
+			local shouldRemove = false
+			for componentIndex = 1, numComponents do
+				local component = select(componentIndex, ...)
+				if archetype.componentToStorageIndex[#component] then
+					shouldRemove = true
+					break
+				end
+			end
+
+			if shouldRemove then
+				-- Swap remove
+				if archetypeIndex ~= numCompatibleArchetypes then
+					compatibleArchetypes[archetypeIndex] = compatibleArchetypes[numCompatibleArchetypes]
+				end
+
+				compatibleArchetypes[numCompatibleArchetypes] = nil
+				numCompatibleArchetypes -= 1
+			end
+		end
+
+		if numCompatibleArchetypes == 0 then
+			return noopQuery
+		end
+
+		currentArchetype = compatibleArchetypes[1]
+		cacheComponentStorages()
+		return query
+	end
+
 	cacheComponentStorages()
-	return setmetatable({ next = nextEntity }, {
+	return setmetatable({ next = nextEntity, without = without }, {
 		__iter = iter,
 	})
 end
