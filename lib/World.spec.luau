@@ -142,7 +142,7 @@ return function()
 			end)
 		end)
 
-		describeFOCUS("immediate", function()
+		describe("immediate", function()
 			it("should work", function()
 				local world = World.new()
 				local A, B = component(), component()
@@ -166,7 +166,7 @@ return function()
 				--print(world)
 			end)
 
-			it("should be iterable", function()
+			itFOCUS("should be iterable", function()
 				local world = World.new()
 				local A = component()
 				local B = component()
@@ -177,6 +177,7 @@ return function()
 
 				local count = 0
 				for id, data in world do
+					print(id, data)
 					count += 1
 					if id == eA then
 						expect(data[A]).to.be.ok()
