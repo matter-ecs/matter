@@ -691,7 +691,7 @@ function World.get(self: World, entityId, ...: Component)
 		assertValidComponent(component, i)
 
 		-- Does this component belong to the archetype that this entity is in?
-		local storageIndex = componentToStorageIndex[component]
+		local storageIndex = componentToStorageIndex[#component]
 		if storageIndex == nil then
 			continue
 		end
@@ -702,9 +702,7 @@ function World.get(self: World, entityId, ...: Component)
 
 	return unpack(componentInstances, 1, length)
 end
-
 local function noop() end
-
 local noopQuery = setmetatable({
 	next = noop,
 	snapshot = function()
@@ -1100,7 +1098,7 @@ function World.query(self: World, ...)
 	for _, componentId in components do
 		local associatedArchetypes = self.componentToArchetypes[componentId]
 		if associatedArchetypes == nil then
-			error("No-op query unimplemented")
+			return noopQuery
 		end
 
 		if possibleArchetypes == nil or #possibleArchetypes > #associatedArchetypes then
@@ -1175,9 +1173,8 @@ function World.query(self: World, ...)
 	end
 
 	cacheComponentStorages()
-	return setmetatable({}, {
+	return setmetatable({ next = nextEntity }, {
 		__iter = iter,
-		next = nextEntity,
 	})
 end
 
@@ -1380,7 +1377,16 @@ function World.remove(self: World, id, ...: ComponentMetatable)
 	end
 
 	local components = { ... }
+	local componentInstances = {}
+	local archetype = entityRecord.archetype
+	for _, component in components do
+		local componentId = #component
+		local storage = archetype.storage[archetype.componentToStorageIndex[componentId]]
+		table.insert(componentInstances, if storage then storage[entityRecord.indexInArchetype] else nil)
+	end
+
 	bufferCommand(self :: any, { type = "remove", entityId = id, components = components })
+	return unpack(componentInstances)
 end
 
 --[=[
