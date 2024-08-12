@@ -149,6 +149,7 @@ return function()
 
 				world:spawnAt(10)
 				world:insert(10, A({ a = true }), B({ b = true }))
+				world:spawnAt(50, A({ a = true, two = true }), B({ b = true, two = true }))
 				-- world:spawnAt(11)
 				-- world:insert(11, A({ a = true, two = true }), B({ b = true, two = true }))
 				print(world.archetypes)
@@ -159,9 +160,9 @@ return function()
 				-- world:insert(10, B({ b = true }))
 				--world:spawnAt(10, A({ a = true }), B({ b = true }))
 				--world:remove(10, B)
-				-- for id, a, b in world:query(A, B) do
-				-- 	print(id, a, b)
-				-- end
+				for id, a, b in world:query(A, B) do
+					print(id, a, b)
+				end
 				--print(world)
 			end)
 

@@ -1086,13 +1086,14 @@ function World.query(self: World, ...)
 	-- TODO:
 	-- cache queries
 	local components = { ... }
-	local a, b = ...
+	local A, B = ...
+	local a, b = nil, nil
 
 	local queryLength = select("#", ...)
 	if queryLength == 1 then
-		components = { #a }
+		components = { #A }
 	elseif queryLength == 2 then
-		components = { #a, #b }
+		components = { #A, #B }
 	else
 		error("Unimplemented query length")
 	end
@@ -1130,38 +1131,44 @@ function World.query(self: World, ...)
 		table.insert(compatibleArchetypes, archetype)
 	end
 
+	local currentEntityIndex = 1
 	local currentArchetypeIndex = 1
-	local currentArchetype = compatibleArchetypes[currentArchetypeIndex]
-	local currentArchetypeNumEntities = #currentArchetype.ownedEntities
-	local currentEntityIndex = 0
+	local currentArchetype = compatibleArchetypes[1]
+
+	local function cacheComponentStorages()
+		local storage, componentToStorageIndex = currentArchetype.storage, currentArchetype.componentToStorageIndex
+		if queryLength == 1 then
+			a = storage[componentToStorageIndex[components[1]]]
+		elseif queryLength == 2 then
+			a = storage[componentToStorageIndex[components[1]]]
+			b = storage[componentToStorageIndex[components[2]]]
+		end
+	end
+
+	local entityId: number
 	local function nextEntity(): any
-		currentEntityIndex += 1
-		if currentEntityIndex > currentArchetypeNumEntities then
-			currentEntityIndex = 0
+		entityId = currentArchetype.ownedEntities[currentEntityIndex]
+		--print("currentEntityIndex", currentEntityIndex, "entityId", entityId)
+		while entityId == nil do
+			currentEntityIndex = 1
 			currentArchetypeIndex += 1
 			currentArchetype = compatibleArchetypes[currentArchetypeIndex]
 			if currentArchetype == nil then
-				-- Out of entities.
 				return nil
 			end
 
-			currentArchetypeNumEntities = #currentArchetype.ownedEntities
-			return nextEntity()
+			cacheComponentStorages()
+			entityId = currentArchetype.ownedEntities[currentEntityIndex]
 		end
 
-		local entityId = currentArchetype.ownedEntities[currentEntityIndex]
-		local storage, componentToStorageIndex = currentArchetype.storage, currentArchetype.componentToStorageIndex
+		local entityIndex = currentEntityIndex
+		currentEntityIndex += 1
+
+		local entityId = currentArchetype.ownedEntities[entityIndex]
 		if queryLength == 1 then
-			return entityId, storage[componentToStorageIndex[components[1]]][currentEntityIndex]
+			return entityId, a[entityIndex]
 		elseif queryLength == 2 then
-			return entityId,
-				storage[componentToStorageIndex[components[1]]][currentEntityIndex],
-				storage[componentToStorageIndex[components[2]]][currentEntityIndex]
-		elseif queryLength == 3 then
-			return entityId,
-				storage[componentToStorageIndex[components[1]]][currentEntityIndex],
-				storage[componentToStorageIndex[components[2]]][currentEntityIndex],
-				storage[componentToStorageIndex[components[3]]][currentEntityIndex]
+			return entityId, a[entityIndex], b[entityIndex]
 		else
 			error("Unimplemented Query Length")
 		end
@@ -1171,6 +1178,7 @@ function World.query(self: World, ...)
 		return nextEntity
 	end
 
+	cacheComponentStorages()
 	return setmetatable({}, {
 		__iter = iter,
 		next = nextEntity,
