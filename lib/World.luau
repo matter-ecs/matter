@@ -245,8 +245,6 @@ local function ensureRecord(world: World, entityId: number): EntityRecord
 		local rootArchetype = world.rootArchetype
 		entityRecord = {
 			archetype = rootArchetype,
-
-			-- O(N) for length
 			indexInArchetype = #rootArchetype.ownedEntities + 1,
 		}
 
@@ -310,6 +308,14 @@ end
 local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	local entityId = despawnCommand.entityId
 	local entityRecord = ensureRecord(world, entityId)
+	local archetype = entityRecord.archetype
+
+	-- Track changes
+	for _, componentStorage in archetype.storage do
+		local componentInstance = componentStorage[entityRecord.indexInArchetype]
+		local component = getmetatable(componentInstance :: any)
+		world:_trackChanged(component, entityId, componentInstance, nil)
+	end
 
 	-- TODO:
 	-- Optimize remove so no cascades
@@ -335,10 +341,12 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 
 		local archetype = ensureArchetype(world, componentIds)
 		local entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
+		local oldComponentInstance = archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityIndex]
 		archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityIndex] = componentInstance
+		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
 
 		-- FIXME:
-		-- This is slow
+		-- This shouldn't be in a hotpath, probably better in createArchetype
 		world.componentIdToComponent[componentId] = component
 
 		oldArchetype = archetype
@@ -348,38 +356,56 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 end
 
 local function executeReplace(world: World, replaceCommand: ReplaceCommand)
-	local id = replaceCommand.entityId
-	if not world:contains(id) then
+	local entityId = replaceCommand.entityId
+	if not world:contains(entityId) then
 		error(ERROR_NO_ENTITY, 2)
 	end
 
-	local components = {}
-	local metatables = {}
-	local entity = world:_getEntity(id)
+	local entityRecord = ensureRecord(world, entityId)
+	local oldArchetype = entityRecord.archetype
+	local componentIds = {}
+	local componentIdMap = {}
 
+	-- Track new
 	for _, componentInstance in replaceCommand.componentInstances do
-		local metatable = getmetatable(componentInstance)
-		world:_trackChanged(metatable, id, entity[metatable], componentInstance)
+		local component = getmetatable(componentInstance)
+		local componentId = #component
+		table.insert(componentIds, componentId)
 
-		components[metatable] = componentInstance
-		table.insert(metatables, metatable)
+		local storageIndex = oldArchetype.componentIdToStorageIndex[componentId]
+		world:_trackChanged(
+			component,
+			id,
+			if storageIndex then oldArchetype.storage[storageIndex][entityRecord.indexInArchetype] else nil,
+			componentInstance
+		)
+
+		componentIdMap[componentId] = true
 	end
 
-	for metatable, component in pairs(entity) do
-		if not components[metatable] then
-			world:_trackChanged(metatable, id, component, nil)
+	-- Track removed
+	for index, componentStorage in oldArchetype.storage do
+		local componentId = oldArchetype.storageIndexToComponentId[index]
+		if componentIdMap[componentId] == nil then
+			local component = world.componentIdToComponent[componentId]
+			world:_trackChanged(component, entityId, componentStorage[oldArchetypeIndex], nil)
 		end
 	end
 
-	world._entityMetatablesCache[id] = metatables
-	world:_transitionArchetype(id, components)
+	transitionArchetype(world, entityId, entityRecord, world.rootArchetype)
+	transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
 end
 
 local function executeRemove(world: World, removeCommand: RemoveCommand)
 	local entityId = removeCommand.entityId
 	local entityRecord = ensureRecord(world, entityId)
+	local archetype = entityRecord.archetype
 	local componentIds = table.clone(entityRecord.archetype.componentIds)
 	for _, component in removeCommand.components do
+		local componentInstance =
+			archetype.storage[archetype.componentIdToStorageIndex[#component]][entityRecord.indexInArchetype]
+		world:_trackChanged(component, entityId, componentInstance, nil)
+
 		local index = table.find(componentIds, #component)
 		if index then
 			table.remove(componentIds, index)
@@ -1371,7 +1397,7 @@ function World:queryChanged(componentToTrack, ...: nil)
 	end
 end
 
-function World:_trackChanged(metatable, id, old, new)
+function World._trackChanged(self: World, metatable, id, old, new)
 	if not self._changedStorage[metatable] then
 		return
 	end

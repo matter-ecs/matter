@@ -166,7 +166,7 @@ return function()
 				--print(world)
 			end)
 
-			itFOCUS("should be iterable", function()
+			it("should be iterable", function()
 				local world = World.new()
 				local A = component()
 				local B = component()
@@ -483,7 +483,7 @@ return function()
 				expect(withoutCount).to.equal(0)
 			end)
 
-			it("should track changes", function()
+			itFOCUS("should track changes", function()
 				local world = World.new()
 
 				local loop = Loop.new(world)
