@@ -1026,8 +1026,8 @@ function World.query(self: World, ...)
 	-- TODO:
 	-- cache queries
 	local components = { ... }
-	local A, B, C, D = ...
-	local a, b, c, d = nil, nil, nil, nil
+	local A, B, C, D, E, F = ...
+	local a, b, c, d, e, f = nil, nil, nil, nil, nil, nil
 
 	local queryLength = select("#", ...)
 	if queryLength == 1 then
@@ -1038,6 +1038,10 @@ function World.query(self: World, ...)
 		components = { #A, #B, #C }
 	elseif queryLength == 4 then
 		components = { #A, #B, #C, #D }
+	elseif queryLength == 5 then
+		components = { #A, #B, #C, #D, #E }
+	elseif queryLength == 6 then
+		components = { #A, #B, #C, #D, #E, #F }
 	else
 		error("Unimplemented query length " .. queryLength)
 	end
@@ -1103,6 +1107,19 @@ function World.query(self: World, ...)
 			b = storage[componentIdToStorageIndex[components[2]]]
 			c = storage[componentIdToStorageIndex[components[3]]]
 			d = storage[componentIdToStorageIndex[components[4]]]
+		elseif queryLength == 5 then
+			a = storage[componentIdToStorageIndex[components[1]]]
+			b = storage[componentIdToStorageIndex[components[2]]]
+			c = storage[componentIdToStorageIndex[components[3]]]
+			d = storage[componentIdToStorageIndex[components[4]]]
+			e = storage[componentIdToStorageIndex[components[5]]]
+		elseif queryLength == 6 then
+			a = storage[componentIdToStorageIndex[components[1]]]
+			b = storage[componentIdToStorageIndex[components[2]]]
+			c = storage[componentIdToStorageIndex[components[3]]]
+			d = storage[componentIdToStorageIndex[components[4]]]
+			e = storage[componentIdToStorageIndex[components[5]]]
+			f = storage[componentIdToStorageIndex[components[6]]]
 		end
 	end
 
@@ -1133,6 +1150,16 @@ function World.query(self: World, ...)
 			return entityId, a[entityIndex], b[entityIndex], c[entityIndex]
 		elseif queryLength == 4 then
 			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex]
+		elseif queryLength == 5 then
+			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex], e[entityIndex]
+		elseif queryLength == 6 then
+			return entityId,
+				a[entityIndex],
+				b[entityIndex],
+				c[entityIndex],
+				d[entityIndex],
+				e[entityIndex],
+				f[entityIndex]
 		else
 			error("Unimplemented Query Length")
 		end
