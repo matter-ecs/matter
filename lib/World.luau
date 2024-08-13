@@ -369,6 +369,7 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 
 	local entityRecord = ensureRecord(world, entityId)
 	local oldArchetype = entityRecord.archetype
+
 	local componentIds = {}
 	local componentIdMap = {}
 
@@ -381,7 +382,7 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 		local storageIndex = oldArchetype.componentIdToStorageIndex[componentId]
 		world:_trackChanged(
 			component,
-			id,
+			entityId,
 			if storageIndex then oldArchetype.storage[storageIndex][entityRecord.indexInArchetype] else nil,
 			componentInstance
 		)
@@ -394,12 +395,16 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 		local componentId = oldArchetype.storageIndexToComponentId[index]
 		if componentIdMap[componentId] == nil then
 			local component = world.componentIdToComponent[componentId]
-			world:_trackChanged(component, entityId, componentStorage[oldArchetypeIndex], nil)
+			world:_trackChanged(component, entityId, componentStorage[entityRecord.indexInArchetype], nil)
 		end
 	end
 
 	transitionArchetype(world, entityId, entityRecord, world.rootArchetype)
 	transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
+	executeInsert(
+		world,
+		{ type = "insert", componentInstances = replaceCommand.componentInstances, entityId = entityId }
+	)
 end
 
 local function executeRemove(world: World, removeCommand: RemoveCommand)
@@ -694,58 +699,166 @@ local noopQuery = setmetatable({
 local QueryResult = {}
 QueryResult.__index = QueryResult
 
-function QueryResult.new(world, expand, queryArchetype, compatibleArchetypes, metatables)
-	return setmetatable({
-		world = world,
-		currentCompatibleArchetype = next(compatibleArchetypes),
-		compatibleArchetypes = compatibleArchetypes,
-		storageIndex = 1,
-		metatables = metatables,
-		_expand = expand,
-		_queryArchetype = queryArchetype,
-	}, QueryResult)
-end
+function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds: { number })
+	local a, b, c, d, e, f = nil, nil, nil, nil, nil, nil
+	local currentEntityIndex = 1
+	local currentArchetypeIndex = 1
+	local currentArchetype = compatibleArchetypes[1]
 
-local function nextItem(query)
-	local world = query.world
-	local currentCompatibleArchetype = query.currentCompatibleArchetype
-	local compatibleArchetypes = query.compatibleArchetypes
-
-	local entityId, entityData
-
-	local storage = world.storage
-	local currently = storage[currentCompatibleArchetype]
-	if currently then
-		entityId, entityData = next(currently, query.lastEntityId)
-	end
-
-	while entityId == nil do
-		currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
-
-		if currentCompatibleArchetype == nil then
-			return nil
-		elseif storage[currentCompatibleArchetype] == nil then
-			continue
+	local function cacheComponentStorages()
+		if currentArchetype == nil then
+			return
 		end
 
-		entityId, entityData = next(storage[currentCompatibleArchetype])
+		local storage, componentIdToStorageIndex = currentArchetype.storage, currentArchetype.componentIdToStorageIndex
+		if queryLength == 1 then
+			a = storage[componentIdToStorageIndex[componentIds[1]]]
+		elseif queryLength == 2 then
+			a = storage[componentIdToStorageIndex[componentIds[1]]]
+			b = storage[componentIdToStorageIndex[componentIds[2]]]
+		elseif queryLength == 3 then
+			a = storage[componentIdToStorageIndex[componentIds[1]]]
+			b = storage[componentIdToStorageIndex[componentIds[2]]]
+			c = storage[componentIdToStorageIndex[componentIds[3]]]
+		elseif queryLength == 4 then
+			a = storage[componentIdToStorageIndex[componentIds[1]]]
+			b = storage[componentIdToStorageIndex[componentIds[2]]]
+			c = storage[componentIdToStorageIndex[componentIds[3]]]
+			d = storage[componentIdToStorageIndex[componentIds[4]]]
+		elseif queryLength == 5 then
+			a = storage[componentIdToStorageIndex[componentIds[1]]]
+			b = storage[componentIdToStorageIndex[componentIds[2]]]
+			c = storage[componentIdToStorageIndex[componentIds[3]]]
+			d = storage[componentIdToStorageIndex[componentIds[4]]]
+			e = storage[componentIdToStorageIndex[componentIds[5]]]
+		elseif queryLength == 6 then
+			a = storage[componentIdToStorageIndex[componentIds[1]]]
+			b = storage[componentIdToStorageIndex[componentIds[2]]]
+			c = storage[componentIdToStorageIndex[componentIds[3]]]
+			d = storage[componentIdToStorageIndex[componentIds[4]]]
+			e = storage[componentIdToStorageIndex[componentIds[5]]]
+			f = storage[componentIdToStorageIndex[componentIds[6]]]
+		end
 	end
 
-	query.lastEntityId = entityId
+	local entityId: number
+	local function nextEntity(): any
+		entityId = currentArchetype.ownedEntities[currentEntityIndex]
+		while entityId == nil do
+			currentEntityIndex = 1
+			currentArchetypeIndex += 1
+			currentArchetype = compatibleArchetypes[currentArchetypeIndex]
+			if currentArchetype == nil then
+				return nil
+			end
 
-	query.currentCompatibleArchetype = currentCompatibleArchetype
+			cacheComponentStorages()
+			entityId = currentArchetype.ownedEntities[currentEntityIndex]
+		end
 
-	return entityId, entityData
-end
+		local entityIndex = currentEntityIndex
+		currentEntityIndex += 1
 
-function QueryResult:__iter()
-	return function()
-		return self._expand(nextItem(self))
+		local entityId = currentArchetype.ownedEntities[entityIndex]
+		if queryLength == 1 then
+			return entityId, a[entityIndex]
+		elseif queryLength == 2 then
+			return entityId, a[entityIndex], b[entityIndex]
+		elseif queryLength == 3 then
+			return entityId, a[entityIndex], b[entityIndex], c[entityIndex]
+		elseif queryLength == 4 then
+			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex]
+		elseif queryLength == 5 then
+			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex], e[entityIndex]
+		elseif queryLength == 6 then
+			return entityId,
+				a[entityIndex],
+				b[entityIndex],
+				c[entityIndex],
+				d[entityIndex],
+				e[entityIndex],
+				f[entityIndex]
+		else
+			error("Unimplemented Query Length")
+		end
 	end
-end
 
-function QueryResult:__call()
-	return self._expand(nextItem(self))
+	local function iter()
+		return nextEntity
+	end
+
+	local function without(query, ...: Component)
+		local numComponents = select("#", ...)
+		local numCompatibleArchetypes = #compatibleArchetypes
+		for archetypeIndex = numCompatibleArchetypes, 1, -1 do
+			local archetype = compatibleArchetypes[archetypeIndex]
+			local shouldRemove = false
+			for componentIndex = 1, numComponents do
+				local component = select(componentIndex, ...)
+				if archetype.componentIdToStorageIndex[#component] then
+					shouldRemove = true
+					break
+				end
+			end
+
+			if shouldRemove then
+				if archetypeIndex ~= numCompatibleArchetypes then
+					compatibleArchetypes[archetypeIndex] = compatibleArchetypes[numCompatibleArchetypes]
+				end
+
+				compatibleArchetypes[numCompatibleArchetypes] = nil
+				numCompatibleArchetypes -= 1
+			end
+		end
+
+		if numCompatibleArchetypes == 0 then
+			return noopQuery
+		end
+
+		currentArchetype = compatibleArchetypes[1]
+		cacheComponentStorages()
+		return query
+	end
+
+	local Snapshot = {
+		__iter = function(self)
+			local i = 0
+			return function()
+				i += 1
+
+				local entry = self[i] :: any
+				if entry then
+					return unpack(entry, 1, entry.n)
+				end
+
+				return
+			end
+		end,
+	}
+
+	local function snapshot()
+		local entities: { any } = setmetatable({}, Snapshot) :: any
+		while true do
+			local entry = table.pack(nextEntity())
+			if entry.n == 1 then
+				break
+			end
+
+			table.insert(entities, entry)
+		end
+
+		return entities
+	end
+
+	cacheComponentStorages()
+	return setmetatable({
+		next = nextEntity,
+		without = without,
+		snapshot = snapshot,
+	}, {
+		__iter = iter,
+		__call = nextEntity,
+	})
 end
 
 --[=[
@@ -1023,32 +1136,32 @@ end
 ]=]
 
 function World.query(self: World, ...)
-	-- TODO:
-	-- cache queries
-	local components = { ... }
 	local A, B, C, D, E, F = ...
-	local a, b, c, d, e, f = nil, nil, nil, nil, nil, nil
+	local componentIds: { number }
 
 	local queryLength = select("#", ...)
 	if queryLength == 1 then
-		components = { #A }
+		componentIds = { #A }
 	elseif queryLength == 2 then
-		components = { #A, #B }
+		componentIds = { #A, #B }
 	elseif queryLength == 3 then
-		components = { #A, #B, #C }
+		componentIds = { #A, #B, #C }
 	elseif queryLength == 4 then
-		components = { #A, #B, #C, #D }
+		componentIds = { #A, #B, #C, #D }
 	elseif queryLength == 5 then
-		components = { #A, #B, #C, #D, #E }
+		componentIds = { #A, #B, #C, #D, #E }
 	elseif queryLength == 6 then
-		components = { #A, #B, #C, #D, #E, #F }
+		componentIds = { #A, #B, #C, #D, #E, #F }
 	else
-		error("Unimplemented query length " .. queryLength)
+		componentIds = table.create(queryLength)
+		for i = 1, queryLength do
+			componentIds[i] = select(i, ...)
+		end
 	end
 
 	local possibleArchetypes
 	local compatibleArchetypes = {}
-	for _, componentId in components do
+	for _, componentId in componentIds do
 		local associatedArchetypes = self.componentToArchetypes[componentId]
 		if associatedArchetypes == nil then
 			return noopQuery
@@ -1063,7 +1176,7 @@ function World.query(self: World, ...)
 	for archetypeIndex in possibleArchetypes do
 		local archetype = self.archetypes[archetypeIndex]
 		local incompatible = false
-		for _, componentId in components do
+		for _, componentId in componentIds do
 			-- Does this archetype have this component?
 			if archetype.componentIdToStorageIndex[componentId] == nil then
 				-- Nope, so we can't use this one.
@@ -1083,129 +1196,7 @@ function World.query(self: World, ...)
 		return noopQuery
 	end
 
-	local currentEntityIndex = 1
-	local currentArchetypeIndex = 1
-	local currentArchetype = compatibleArchetypes[1]
-
-	local function cacheComponentStorages()
-		if currentArchetype == nil then
-			return
-		end
-
-		local storage, componentIdToStorageIndex = currentArchetype.storage, currentArchetype.componentIdToStorageIndex
-		if queryLength == 1 then
-			a = storage[componentIdToStorageIndex[components[1]]]
-		elseif queryLength == 2 then
-			a = storage[componentIdToStorageIndex[components[1]]]
-			b = storage[componentIdToStorageIndex[components[2]]]
-		elseif queryLength == 3 then
-			a = storage[componentIdToStorageIndex[components[1]]]
-			b = storage[componentIdToStorageIndex[components[2]]]
-			c = storage[componentIdToStorageIndex[components[3]]]
-		elseif queryLength == 4 then
-			a = storage[componentIdToStorageIndex[components[1]]]
-			b = storage[componentIdToStorageIndex[components[2]]]
-			c = storage[componentIdToStorageIndex[components[3]]]
-			d = storage[componentIdToStorageIndex[components[4]]]
-		elseif queryLength == 5 then
-			a = storage[componentIdToStorageIndex[components[1]]]
-			b = storage[componentIdToStorageIndex[components[2]]]
-			c = storage[componentIdToStorageIndex[components[3]]]
-			d = storage[componentIdToStorageIndex[components[4]]]
-			e = storage[componentIdToStorageIndex[components[5]]]
-		elseif queryLength == 6 then
-			a = storage[componentIdToStorageIndex[components[1]]]
-			b = storage[componentIdToStorageIndex[components[2]]]
-			c = storage[componentIdToStorageIndex[components[3]]]
-			d = storage[componentIdToStorageIndex[components[4]]]
-			e = storage[componentIdToStorageIndex[components[5]]]
-			f = storage[componentIdToStorageIndex[components[6]]]
-		end
-	end
-
-	local entityId: number
-	local function nextEntity(): any
-		entityId = currentArchetype.ownedEntities[currentEntityIndex]
-		while entityId == nil do
-			currentEntityIndex = 1
-			currentArchetypeIndex += 1
-			currentArchetype = compatibleArchetypes[currentArchetypeIndex]
-			if currentArchetype == nil then
-				return nil
-			end
-
-			cacheComponentStorages()
-			entityId = currentArchetype.ownedEntities[currentEntityIndex]
-		end
-
-		local entityIndex = currentEntityIndex
-		currentEntityIndex += 1
-
-		local entityId = currentArchetype.ownedEntities[entityIndex]
-		if queryLength == 1 then
-			return entityId, a[entityIndex]
-		elseif queryLength == 2 then
-			return entityId, a[entityIndex], b[entityIndex]
-		elseif queryLength == 3 then
-			return entityId, a[entityIndex], b[entityIndex], c[entityIndex]
-		elseif queryLength == 4 then
-			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex]
-		elseif queryLength == 5 then
-			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex], e[entityIndex]
-		elseif queryLength == 6 then
-			return entityId,
-				a[entityIndex],
-				b[entityIndex],
-				c[entityIndex],
-				d[entityIndex],
-				e[entityIndex],
-				f[entityIndex]
-		else
-			error("Unimplemented Query Length")
-		end
-	end
-
-	local function iter()
-		return nextEntity
-	end
-
-	local function without(query, ...: Component)
-		local numComponents = select("#", ...)
-		local numCompatibleArchetypes = #compatibleArchetypes
-		for archetypeIndex = numCompatibleArchetypes, 1, -1 do
-			local archetype = compatibleArchetypes[archetypeIndex]
-			local shouldRemove = false
-			for componentIndex = 1, numComponents do
-				local component = select(componentIndex, ...)
-				if archetype.componentIdToStorageIndex[#component] then
-					shouldRemove = true
-					break
-				end
-			end
-
-			if shouldRemove then
-				if archetypeIndex ~= numCompatibleArchetypes then
-					compatibleArchetypes[archetypeIndex] = compatibleArchetypes[numCompatibleArchetypes]
-				end
-
-				compatibleArchetypes[numCompatibleArchetypes] = nil
-				numCompatibleArchetypes -= 1
-			end
-		end
-
-		if numCompatibleArchetypes == 0 then
-			return noopQuery
-		end
-
-		currentArchetype = compatibleArchetypes[1]
-		cacheComponentStorages()
-		return query
-	end
-
-	cacheComponentStorages()
-	return setmetatable({ next = nextEntity, without = without }, {
-		__iter = iter,
-	})
+	return QueryResult.new(compatibleArchetypes, queryLength, componentIds) :: any
 end
 
 local function cleanupQueryChanged(hookState)

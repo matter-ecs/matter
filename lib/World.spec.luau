@@ -147,16 +147,20 @@ return function()
 				local world = World.new()
 				local A, B = component(), component()
 
-				world:spawnAt(10)
-				world:insert(10, A({ a = true }), B({ b = true }))
-				world:remove(10, A, B)
-				world:insert(10, A({ a = true, second = true }))
-				world:insert(10, B({ b = true, second = true }))
+				local id = world:spawn(A({ a = true }))
+				world:replace(id, B({ b = true }))
+
+				print(world.archetypes)
+				-- world:spawnAt(10)
+				-- world:insert(10, A({ a = true }), B({ b = true }))
+				-- world:remove(10, A, B)
+				-- world:insert(10, A({ a = true, second = true }))
+				-- world:insert(10, B({ b = true, second = true }))
 
 				--world:spawnAt(50, A({ a = true, two = true }), B({ b = true, two = true }))
 				-- world:spawnAt(11)
 				-- world:insert(11, A({ a = true, two = true }), B({ b = true, two = true }))
-				print(world.archetypes)
+				--print(world.archetypes)
 				-- world:spawnAt(10, A({ a = true }))
 				-- world:spawnAt(11, A({ a = true, two = true }))
 				-- world:spawnAt(12, A({ a = true, three = true }))
@@ -164,9 +168,9 @@ return function()
 				-- world:insert(10, B({ b = true }))
 				--world:spawnAt(10, A({ a = true }), B({ b = true }))
 				--world:remove(10, B)
-				for id, a in world:query(A) do
-					print(id, a)
-				end
+				-- for id, a in world:query(A) do
+				-- 	print(id, a)
+				-- end
 				--print(world)
 			end)
 
@@ -495,7 +499,7 @@ return function()
 				expect(withoutCount).to.equal(0)
 			end)
 
-			itFOCUS("should track changes", function()
+			it("should track changes", function()
 				local world = World.new()
 
 				local loop = Loop.new(world)
@@ -559,6 +563,7 @@ return function()
 					local ran = false
 
 					for entityId, record in w:queryChanged(A) do
+						print(entityId, record, tostring(record.new))
 						if additionalQuery then
 							if w:get(entityId, additionalQuery) == nil then
 								continue
