@@ -142,14 +142,18 @@ return function()
 			end)
 		end)
 
-		describe("immediate", function()
+		describeFOCUS("immediate", function()
 			it("should work", function()
 				local world = World.new()
 				local A, B = component(), component()
 
 				world:spawnAt(10)
 				world:insert(10, A({ a = true }), B({ b = true }))
-				world:spawnAt(50, A({ a = true, two = true }), B({ b = true, two = true }))
+				world:remove(10, A, B)
+				world:insert(10, A({ a = true, second = true }))
+				world:insert(10, B({ b = true, second = true }))
+
+				--world:spawnAt(50, A({ a = true, two = true }), B({ b = true, two = true }))
 				-- world:spawnAt(11)
 				-- world:insert(11, A({ a = true, two = true }), B({ b = true, two = true }))
 				print(world.archetypes)
@@ -160,8 +164,8 @@ return function()
 				-- world:insert(10, B({ b = true }))
 				--world:spawnAt(10, A({ a = true }), B({ b = true }))
 				--world:remove(10, B)
-				for id, a, b in world:query(A, B) do
-					print(id, a, b)
+				for id, a in world:query(A) do
+					print(id, a)
 				end
 				--print(world)
 			end)
@@ -262,6 +266,14 @@ return function()
 				expect(world:query(Player):next()).to.never.be.ok()
 				expect(world:query(Health):next()).to.be.ok()
 				expect(world:size()).to.equal(1)
+			end)
+
+			it("should allow removing missing components", function()
+				local world = World.new()
+				local A = component()
+
+				local entityId = world:spawn()
+				expect(world:remove(entityId, A)).to.equal(nil)
 			end)
 
 			it("should not find any entities", function()

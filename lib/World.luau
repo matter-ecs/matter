@@ -315,6 +315,7 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	-- Optimize remove so no cascades
 	transitionArchetype(world, entityId, entityRecord, world.rootArchetype)
 	table.remove(world.rootArchetype.ownedEntities, entityRecord.indexInArchetype)
+	world.entities[entityId] = nil
 
 	world._size -= 1
 end
@@ -406,18 +407,24 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 	local entityRecord = ensureRecord(world, entityId)
 	local archetype = entityRecord.archetype
 	local componentIds = table.clone(entityRecord.archetype.componentIds)
-	for _, component in removeCommand.components do
-		local componentInstance =
-			archetype.storage[archetype.componentIdToStorageIndex[#component]][entityRecord.indexInArchetype]
-		world:_trackChanged(component, entityId, componentInstance, nil)
 
-		local index = table.find(componentIds, #component)
+	local didRemove = false
+	for _, component in removeCommand.components do
+		local componentId = #component
+		local index = table.find(componentIds, componentId)
 		if index then
+			local componentInstance =
+				archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityRecord.indexInArchetype]
+			world:_trackChanged(component, entityId, componentInstance, nil)
+
 			table.remove(componentIds, index)
+			didRemove = true
 		end
 	end
 
-	transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
+	if didRemove then
+		transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
+	end
 end
 
 local function processCommand(world: World, command: Command)
