@@ -18,7 +18,6 @@ local function hookWorld(debugger)
 			for _ in originalQuery(world, ...) do
 			end
 
-			local duration = os.clock() - start
 			local file, line = debug.info(2, "sl")
 
 			local key = file .. line
@@ -29,14 +28,15 @@ local function hookWorld(debugger)
 				samples[key] = sample
 			end
 
-			rollingAverage.addSample(sample, duration)
-
-			local averageDuration = rollingAverage.getAverage(debugger._queryDurationSamples[file .. line])
-
 			local componentNames = {}
 			for i = 1, select("#", ...) do
 				table.insert(componentNames, tostring((select(i, ...))))
 			end
+
+			local duration = os.clock() - start
+			rollingAverage.addSample(sample, duration)
+
+			local averageDuration = rollingAverage.getAverage(debugger._queryDurationSamples[file .. line])
 
 			table.insert(debugger._queries, {
 				averageDuration = averageDuration,
