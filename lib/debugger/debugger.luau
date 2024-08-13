@@ -168,6 +168,7 @@ function Debugger.new(plasma)
 		componentRefreshFrequency = 3,
 		_windowCount = 0,
 		_queries = {},
+		_queryDurationSamples = {},
 		_seenEvents = {},
 		_eventOrder = {},
 		_eventBridge = EventBridge.new(function(...)
@@ -344,6 +345,7 @@ end
 ]=]
 function Debugger:autoInitialize(loop)
 	self.loop = loop
+	loop._debugger = self
 
 	self.loop.trackErrors = true
 
