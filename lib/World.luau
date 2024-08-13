@@ -123,6 +123,7 @@ local function createArchetype(world: World, componentIds: { ComponentId }): Arc
 	end
 
 	table.insert(world.archetypes, archetype)
+	world.archetypeIdToArchetype[archetypeId] = archetype
 	return archetype
 end
 
@@ -135,7 +136,7 @@ function World.new()
 		componentIdToComponent = {},
 		componentToArchetypes = {} :: ComponentToArchetypes,
 		archetypes = {} :: Archetypes,
-		archetypeHashToIndex = {} :: { [string]: number },
+		archetypeIdToArchetype = {} :: { [string]: Archetype? },
 
 		-- Map from archetype string --> entity ID --> entity data
 		storage = {},
@@ -229,14 +230,7 @@ end
 
 local function ensureArchetype(world: World, componentIds: { number })
 	local archetypeId = archetypeOf(componentIds)
-	local archetypes = world.archetypes
-	for _, archetype in archetypes do
-		if archetype.id == archetypeId then
-			return archetype
-		end
-	end
-
-	return createArchetype(world, componentIds)
+	return world.archetypeIdToArchetype[archetypeId] or createArchetype(world, componentIds)
 end
 
 local function ensureRecord(world: World, entityId: number): EntityRecord

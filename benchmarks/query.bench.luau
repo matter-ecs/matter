@@ -11,7 +11,7 @@ local pinnedWorld = PinnedMatter.World.new()
 local A, B = Matter.component(), Matter.component()
 local pinnedA, pinnedB = PinnedMatter.component(), PinnedMatter.component()
 
-for i = 1, 100_000 do
+for i = 1, 10_000 do
 	world:spawnAt(i, A({}), B({}))
 	pinnedWorld:spawnAt(i, pinnedA({}), pinnedB({}))
 end
@@ -23,15 +23,15 @@ return {
 
 	Functions = {
 		["New Matter"] = function()
-			--local count = 0
+			local count = 0
 			for _ in world:query(A, B) do
-				--count += 1
+				count += 1
 			end
 		end,
 		["Old Matter"] = function()
-			--local count = 0
+			local count = 0
 			for _ in pinnedWorld:query(pinnedA, pinnedB) do
-				--count += 1
+				count += 1
 			end
 		end,
 	},
