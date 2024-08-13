@@ -9,10 +9,12 @@ return function(plasma)
 					return plasma.label("No queries.")
 				end
 
+				plasma.heading("Query Resource Usage (%)")
+				plasma.space(2)
+
 				for i, query in debugger._queries do
 					if query.changedComponent then
 						plasma.heading(string.format("Query Changed %d", i))
-
 						plasma.label(tostring(query.changedComponent))
 
 						continue
