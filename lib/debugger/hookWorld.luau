@@ -21,11 +21,15 @@ local function hookWorld(debugger)
 			local duration = os.clock() - start
 			local file, line = debug.info(2, "sl")
 
-			if debugger._queryDurationSamples[file .. line] == nil then
-				debugger._queryDurationSamples[file .. line] = {}
+			local key = file .. line
+			local samples = debugger._queryDurationSamples
+			local sample = samples[key]
+			if not sample then
+				sample = {}
+				samples[key] = sample
 			end
 
-			rollingAverage.addSample(debugger._queryDurationSamples[file .. line], duration)
+			rollingAverage.addSample(sample, duration)
 
 			local averageDuration = rollingAverage.getAverage(debugger._queryDurationSamples[file .. line])
 
