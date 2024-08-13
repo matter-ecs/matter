@@ -1,3 +1,11 @@
+local function getColorForBudget(color: Color3): string
+	local r = math.floor(color.R * 255)
+	local g = math.floor(color.G * 255)
+	local b = math.floor(color.B * 255)
+
+	return `{r},{g},{b}`
+end
+
 return function(Plasma)
 	return Plasma.widget(function(debugger)
 		local queryWindow = Plasma.window({
@@ -32,9 +40,7 @@ return function(Plasma)
 					color = Color3.fromRGB(230, 195, 24)
 				end
 
-				Plasma.label(
-					`<font color="rgb({math.floor(color.R * 255)},{math.floor(color.G * 255)},{math.floor(color.B * 255)})"><b>Query {i} - {budgetUsed}%</b></font>`
-				)
+				Plasma.label(`<font color="rgb({getColorForBudget(color)})"><b>Query {i} - {budgetUsed}%</b></font>`)
 				Plasma.heading(table.concat(query.componentNames, ", "))
 			end
 			return nil
