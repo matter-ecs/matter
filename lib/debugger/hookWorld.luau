@@ -10,6 +10,11 @@ local function hookWorld(debugger)
 		if useCurrentSystem() == debugger.debugSystem then
 			local start = os.clock()
 
+			-- while this seems like a mistake, it is necessary!
+			-- we duplicate the query to avoid draining the original one.
+			-- we iterate through so we can calculate the query's budget
+			-- see https://github.com/matter-ecs/matter/issues/106
+			-- and https://github.com/matter-ecs/matter/pull/107
 			for _ in originalQuery(world, ...) do
 			end
 
