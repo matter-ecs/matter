@@ -92,6 +92,14 @@ local function start(containers)
 		end)
 	end
 
+	if RunService:IsServer() then
+		task.spawn(function()
+			while task.wait(1) do
+				print(world.archetypes)
+			end
+		end)
+	end
+
 	return world, state
 end
 

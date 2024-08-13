@@ -337,17 +337,28 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 		local component = getmetatable(componentInstance)
 		local componentId = #component
 		local componentIds = table.clone(oldArchetype.componentIds)
-		table.insert(componentIds, componentId)
 
-		local archetype = ensureArchetype(world, componentIds)
-		local entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
-		local oldComponentInstance = archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityIndex]
+		local archetype: Archetype
+		local entityIndex: number
+		local oldComponentInstance: ComponentInstance?
+		if oldArchetype.componentIdToStorageIndex[componentId] == nil then
+			table.insert(componentIds, componentId)
+			archetype = ensureArchetype(world, componentIds)
+			entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
+			oldComponentInstance = archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityIndex]
+
+			-- FIXME:
+			-- This shouldn't be in a hotpath, probably better in createArchetype
+			world.componentIdToComponent[componentId] = component
+		else
+			archetype = oldArchetype
+			entityIndex = entityRecord.indexInArchetype
+			oldComponentInstance =
+				oldArchetype.storage[oldArchetype.componentIdToStorageIndex[componentId]][entityIndex]
+		end
+
 		archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityIndex] = componentInstance
 		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
-
-		-- FIXME:
-		-- This shouldn't be in a hotpath, probably better in createArchetype
-		world.componentIdToComponent[componentId] = component
 
 		oldArchetype = archetype
 	end
