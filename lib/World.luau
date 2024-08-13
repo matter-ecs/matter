@@ -1142,16 +1142,20 @@ function World.query(self: World, ...)
 	-- TODO:
 	-- cache queries
 	local components = { ... }
-	local A, B = ...
-	local a, b = nil, nil
+	local A, B, C, D = ...
+	local a, b, c, d = nil, nil, nil, nil
 
 	local queryLength = select("#", ...)
 	if queryLength == 1 then
 		components = { #A }
 	elseif queryLength == 2 then
 		components = { #A, #B }
+	elseif queryLength == 3 then
+		components = { #A, #B, #C }
+	elseif queryLength == 4 then
+		components = { #A, #B, #C, #D }
 	else
-		error("Unimplemented query length")
+		error("Unimplemented query length " .. queryLength)
 	end
 
 	local possibleArchetypes
@@ -1187,17 +1191,34 @@ function World.query(self: World, ...)
 		table.insert(compatibleArchetypes, archetype)
 	end
 
+	if #compatibleArchetypes == 0 then
+		return noopQuery
+	end
+
 	local currentEntityIndex = 1
 	local currentArchetypeIndex = 1
 	local currentArchetype = compatibleArchetypes[1]
 
 	local function cacheComponentStorages()
+		if currentArchetype == nil then
+			return
+		end
+
 		local storage, componentIdToStorageIndex = currentArchetype.storage, currentArchetype.componentIdToStorageIndex
 		if queryLength == 1 then
 			a = storage[componentIdToStorageIndex[components[1]]]
 		elseif queryLength == 2 then
 			a = storage[componentIdToStorageIndex[components[1]]]
 			b = storage[componentIdToStorageIndex[components[2]]]
+		elseif queryLength == 3 then
+			a = storage[componentIdToStorageIndex[components[1]]]
+			b = storage[componentIdToStorageIndex[components[2]]]
+			c = storage[componentIdToStorageIndex[components[3]]]
+		elseif queryLength == 4 then
+			a = storage[componentIdToStorageIndex[components[1]]]
+			b = storage[componentIdToStorageIndex[components[2]]]
+			c = storage[componentIdToStorageIndex[components[3]]]
+			d = storage[componentIdToStorageIndex[components[4]]]
 		end
 	end
 
@@ -1224,6 +1245,10 @@ function World.query(self: World, ...)
 			return entityId, a[entityIndex]
 		elseif queryLength == 2 then
 			return entityId, a[entityIndex], b[entityIndex]
+		elseif queryLength == 3 then
+			return entityId, a[entityIndex], b[entityIndex], c[entityIndex]
+		elseif queryLength == 4 then
+			return entityId, a[entityIndex], b[entityIndex], c[entityIndex], d[entityIndex]
 		else
 			error("Unimplemented Query Length")
 		end
