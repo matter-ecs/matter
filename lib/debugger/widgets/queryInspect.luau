@@ -1,20 +1,21 @@
-return function(plasma)
-	return plasma.widget(function(debugger)
-		local queryWindow = plasma.window({
+return function(Plasma)
+	return Plasma.widget(function(debugger)
+		local queryWindow = Plasma.window({
 			title = "Query Resource Usage (%)",
 			closable = true,
 		}, function()
 			if #debugger._queries == 0 then
-				return plasma.label("No queries.")
+				return Plasma.label("No queries.")
 			end
 
-			--
-			plasma.heading("---------------------------------------------------")
+			-- Plasma windows do not respect the title, so we need to
+			-- fill the content frame to extend the width of the widget
+			Plasma.heading("---------------------------------------------          ")
 
 			for i, query in debugger._queries do
 				if query.changedComponent then
-					plasma.heading(string.format("Query Changed %d", i))
-					plasma.label(tostring(query.changedComponent))
+					Plasma.label(string.format("Query Changed %d", i))
+					Plasma.heading(tostring(query.changedComponent))
 
 					continue
 				end
@@ -22,8 +23,19 @@ return function(plasma)
 				local budgetUsed =
 					math.clamp(math.floor((query.averageDuration / debugger.debugSystemRuntime) * 100), 0, 100)
 
-				plasma.heading(`<b>Query {i} - {budgetUsed}%</b>`)
-				plasma.label(table.concat(query.componentNames, ", "))
+				local color = Color3.fromRGB(135, 255, 111)
+				if budgetUsed >= 75 then
+					color = Color3.fromRGB(244, 73, 73)
+				elseif budgetUsed >= 50 then
+					color = Color3.fromRGB(255, 157, 0)
+				elseif budgetUsed >= 25 then
+					color = Color3.fromRGB(230, 195, 24)
+				end
+
+				Plasma.label(
+					`<font color="rgb({math.floor(color.R * 255)},{math.floor(color.G * 255)},{math.floor(color.B * 255)})"><b>Query {i} - {budgetUsed}%</b></font>`
+				)
+				Plasma.heading(table.concat(query.componentNames, ", "))
 			end
 			return nil
 		end)
