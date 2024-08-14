@@ -34,6 +34,7 @@ local LONG_SYSTEM_NAME = 24
 local function ui(debugger, loop)
 	local plasma = debugger.plasma
 	local custom = debugger._customWidgets
+	local skipSystems = loop._skipSystems
 
 	plasma.setStyle({
 		primaryColor = Color3.fromHex("bd515c"),
@@ -178,7 +179,7 @@ local function ui(debugger, loop)
 						barWidth = duration / longestDuration
 					end
 
-					local systemIsDisabled = loop._skipSystems[system]
+					local systemIsDisabled = skipSystems[system]
 					local systemName = systemName(system)
 					local length = string.len(systemName)
 
@@ -203,18 +204,16 @@ local function ui(debugger, loop)
 				hoveredSystem = systemList:hovered()
 
 				if selected then
-					if selected.system == debugger.debugSystem then
+					local selectedSystem = selected.system
+					if selectedSystem == debugger.debugSystem then
 						debugger.debugSystem = nil
 					else
-						debugger.debugSystem = selected.system
+						debugger.debugSystem = selectedSystem
 					end
-				elseif rightClicked and rightClicked.system then
-					local current = loop._skipSystems[rightClicked.system]
-
-					if current == nil then
-						loop._skipSystems[rightClicked.system] = true
-					else
-						loop._skipSystems[rightClicked.system] = not current
+				elseif rightClicked then
+					local rightClickedSystem = rightClicked.system
+					if rightClickedSystem then
+						skipSystems[rightClickedSystem] = not skipSystems[rightClickedSystem]
 					end
 				end
 
@@ -276,7 +275,7 @@ local function ui(debugger, loop)
 							end
 						end)
 
-						local currentlyDisabled = loop._skipSystems[debugger.debugSystem]
+						local currentlyDisabled = skipSystems[debugger.debugSystem]
 
 						if
 							plasma
@@ -285,7 +284,7 @@ local function ui(debugger, loop)
 								})
 								:clicked()
 						then
-							loop._skipSystems[debugger.debugSystem] = not currentlyDisabled
+							skipSystems[debugger.debugSystem] = not currentlyDisabled
 						end
 					end)
 					:closed()
@@ -345,7 +344,7 @@ local function ui(debugger, loop)
 	if hoveredSystem and hoveredSystem.system then
 		local hoveredSystemName = systemName(hoveredSystem.system)
 		local length = string.len(hoveredSystemName)
-		local systemDisabled = loop._skipSystems[hoveredSystem.system]
+		local systemDisabled = skipSystems[hoveredSystem.system]
 
 		if systemDisabled then
 			length += 2
