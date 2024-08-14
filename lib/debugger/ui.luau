@@ -29,6 +29,7 @@ end
 
 local IS_SERVER = RunService:IsServer()
 local IS_CLIENT = RunService:IsClient()
+local LONG_SYSTEM_NAME = 24
 
 local function ui(debugger, loop)
 	local plasma = debugger.plasma
@@ -47,6 +48,8 @@ local function ui(debugger, loop)
 			custom.hoverInspect(debugger.debugWorld, debugger.hoverEntity, custom)
 		end
 	end
+
+	local hoveredSystem
 
 	custom.container(function()
 		if debugger:_isServerView() then
@@ -141,7 +144,7 @@ local function ui(debugger, loop)
 				})
 				plasma.space(5)
 
-				local items = {}
+				local listOfSystems = {}
 
 				for _, system in systems do
 					local samples = loop.profiling[system]
@@ -168,23 +171,50 @@ local function ui(debugger, loop)
 						icon = "\xf0\x9f\x92\xa5"
 					end
 
-					table.insert(items, {
-						text = systemName(system),
-						sideText = averageFrameTime,
+					local barWidth
+					if longestDuration == 0 then
+						barWidth = 0
+					else
+						barWidth = duration / longestDuration
+					end
+
+					local systemIsDisabled = loop._skipSystems[system]
+					local systemName = systemName(system)
+					local length = string.len(systemName)
+
+					if systemIsDisabled then
+						length += 4
+					end
+
+					table.insert(listOfSystems, {
+						text = if systemIsDisabled then `<i><s>{systemName}</s></i>` else systemName,
+						sideText = if systemIsDisabled then `<b>{"(disabled)"}</b>` else averageFrameTime,
 						selected = debugger.debugSystem == system,
 						system = system,
 						icon = icon,
-						barWidth = duration / longestDuration,
+						barWidth = barWidth,
 						index = index,
 					})
 				end
 
-				local selected = custom.selectionList(items):selected()
+				local systemList = custom.selectionList(listOfSystems, custom)
+				local selected = systemList:selected()
+				local rightClicked = systemList:rightClicked()
+				hoveredSystem = systemList:hovered()
+
 				if selected then
 					if selected.system == debugger.debugSystem then
 						debugger.debugSystem = nil
 					else
 						debugger.debugSystem = selected.system
+					end
+				elseif rightClicked and rightClicked.system then
+					local current = loop._skipSystems[rightClicked.system]
+
+					if current == nil then
+						loop._skipSystems[rightClicked.system] = true
+					else
+						loop._skipSystems[rightClicked.system] = not current
 					end
 				end
 
@@ -311,6 +341,23 @@ local function ui(debugger, loop)
 		direction = Enum.FillDirection.Horizontal,
 		padding = 0,
 	})
+
+	if hoveredSystem and hoveredSystem.system then
+		local hoveredSystemName = systemName(hoveredSystem.system)
+		local length = string.len(hoveredSystemName)
+		local systemDisabled = loop._skipSystems[hoveredSystem.system]
+
+		if systemDisabled then
+			length += 2
+		end
+
+		if length >= LONG_SYSTEM_NAME then
+			custom.tooltip(`<b>{hoveredSystemName}{if systemDisabled then " (disabled)" else ""}</b>`, {
+				tag = "MatterDebuggerTooltip_System",
+				backgroundTransparency = 0,
+			})
+		end
+	end
 end
 
 return ui
