@@ -37,6 +37,7 @@ return function(Plasma)
 					}),
 
 					create("TextLabel", {
+						[ref] = "index",
 						Name = "index",
 						AutomaticSize = Enum.AutomaticSize.X,
 						Size = UDim2.new(0, 0, 1, 0),
@@ -61,6 +62,7 @@ return function(Plasma)
 					}),
 
 					create("TextLabel", {
+						[ref] = "mainText",
 						AutomaticSize = Enum.AutomaticSize.X,
 						BackgroundTransparency = 1,
 						Size = UDim2.new(0, 0, 1, 0),
@@ -103,8 +105,12 @@ return function(Plasma)
 					ZIndex = 2,
 				}),
 
-				Activated = function()
-					setClicked(true)
+				InputBegan = function(input: InputObject)
+					if input.UserInputType == Enum.UserInputType.MouseButton1 then
+						setClicked(true)
+					elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+						setRightClicked(true)
+					end
 				end,
 
 				MouseEnter = function()
@@ -114,19 +120,13 @@ return function(Plasma)
 				MouseLeave = function()
 					setHovered(false)
 				end,
-
-				InputBegan = function(input: InputObject)
-					if input.UserInputType == Enum.UserInputType.MouseButton2 then
-						setRightClicked(true)
-					end
-				end,
 			})
 
 			return button
 		end)
 
 		Plasma.useEffect(function()
-			refs.button.container.TextLabel.Text = text
+			refs.mainText.Text = text
 			refs.button.container.Icon.Text = icon or ""
 			refs.button.container.Icon.Visible = icon ~= nil
 		end, text, icon)
@@ -134,7 +134,7 @@ return function(Plasma)
 		refs.button.container.sideText.Visible = sideText ~= nil
 		refs.button.container.sideText.Text = if sideText ~= nil then sideText else ""
 		refs.button.container.sideText.TextColor3 = if selected then style.textColor else style.mutedTextColor
-		refs.button.container.TextLabel.TextTruncate = sideText and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
+		refs.mainText.TextTruncate = sideText and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
 
 		refs.button.bar.Size = UDim2.new(barWidth or 0, 0, 0, 1)
 
@@ -143,6 +143,8 @@ return function(Plasma)
 				then style.primaryColor
 				elseif hovered then style.bg1
 				else style.bg2
+
+			refs.index.TextColor3 = if selected or hovered then style.textColor else style.mutedTextColor
 		end, selected, hovered)
 
 		return {
