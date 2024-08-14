@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Ability to sort the world inspect table by clicking the table headers (entity
   count and component name)
 - Ability to disable systems in the debugger list by right clicking them.
+- Ability to search through systems in the debugger system list.
 
 ### Changed
 
