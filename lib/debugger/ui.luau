@@ -2,6 +2,8 @@ local RunService = game:GetService("RunService")
 local World = require(script.Parent.Parent.World)
 local rollingAverage = require(script.Parent.Parent.rollingAverage)
 
+local match, lower = string.match, string.lower
+
 local function systemName(system)
 	local systemFn = if type(system) == "table" then system.system else system
 	local name = debug.info(systemFn, "n")
@@ -127,10 +129,19 @@ local function ui(debugger, loop)
 
 			plasma.space(15)
 			plasma.heading("SYSTEMS")
+
+			local searchFilter = ""
+			if IS_CLIENT then
+				plasma.space(5)
+				local textField = custom.textField("Search...")
+				searchFilter = textField:text()
+				searchFilter = string.gsub(searchFilter, "%s+", "")
+			end
+
 			plasma.space(10)
 
-			local durations = {}
-			local longestDuration = 0
+			local searchResults = {}
+			local noResults = true
 
 			for _, eventName in debugger._eventOrder do
 				local systems = loop._orderedSystemsByEvent[eventName]
@@ -139,92 +150,113 @@ local function ui(debugger, loop)
 					continue
 				end
 
-				plasma.heading(eventName, {
-					font = Enum.Font.Gotham,
-				})
-				plasma.space(5)
-
-				local listOfSystems = {}
-
 				for _, system in systems do
-					local samples = loop.profiling[system]
-					if samples then
-						local duration = rollingAverage.getAverage(samples)
-						durations[system] = duration
-						longestDuration = math.max(longestDuration, duration)
+					local nameOfSystem = systemName(system)
+					local noMatch = searchFilter ~= "" and not match(lower(nameOfSystem), lower(searchFilter))
+
+					if noMatch then
+						continue
 					end
+
+					if searchResults[eventName] == nil then
+						searchResults[eventName] = {}
+					end
+
+					searchResults[eventName][nameOfSystem] = true
+					noResults = false
 				end
+			end
 
-				for index, system in systems do
-					local averageFrameTime = ""
-					local icon
+			if noResults then
+				plasma.label("No search results")
+			else
+				local durations = {}
+				local longestDuration = 0
 
-					local duration = durations[system] or 0
-					local humanDuration, unit = formatDuration(duration)
-					averageFrameTime = string.format("%.0f%s", humanDuration, unit)
+				for _, eventName in debugger._eventOrder do
+					local systems = loop._orderedSystemsByEvent[eventName]
 
-					if duration > 0.004 then -- 4ms
-						icon = "\xe2\x9a\xa0\xef\xb8\x8f"
+					if not systems or searchResults[eventName] == nil then
+						continue
 					end
 
-					if loop._systemErrors[system] then
-						icon = "\xf0\x9f\x92\xa5"
-					end
-
-					local barWidth
-					if longestDuration == 0 then
-						barWidth = 0
-					else
-						barWidth = duration / longestDuration
-					end
-
-					local systemIsDisabled = loop._skipSystems[system]
-					local systemName = systemName(system)
-					local length = string.len(systemName)
-
-					if systemIsDisabled then
-						length += 4
-					end
-
-					table.insert(listOfSystems, {
-						text = if systemIsDisabled then `<i><s>{systemName}</s></i>` else systemName,
-						sideText = if systemIsDisabled then `<b>{"(disabled)"}</b>` else averageFrameTime,
-						selected = debugger.debugSystem == system,
-						system = system,
-						icon = icon,
-						barWidth = barWidth,
-						index = index,
+					plasma.heading(eventName, {
+						font = Enum.Font.Gotham,
 					})
-				end
+					plasma.space(5)
 
-				local systemList = custom.selectionList(listOfSystems, custom)
-				local selected = systemList:selected()
-				local rightClicked = systemList:rightClicked()
-				hoveredSystem = systemList:hovered()
+					local listOfSystems = {}
 
-				if selected then
-					if selected.system == debugger.debugSystem then
-						debugger.debugSystem = nil
-					else
-						debugger.debugSystem = selected.system
+					for _, system in systems do
+						local samples = loop.profiling[system]
+						if samples then
+							local duration = rollingAverage.getAverage(samples)
+							durations[system] = duration
+							longestDuration = math.max(longestDuration, duration)
+						end
 					end
-				elseif rightClicked and rightClicked.system then
-					local current = loop._skipSystems[rightClicked.system]
 
-					if current == nil then
-						loop._skipSystems[rightClicked.system] = true
-					else
-						loop._skipSystems[rightClicked.system] = not current
+					for index, system in systems do
+						local nameOfSystem = systemName(system)
+
+						if searchResults[eventName][nameOfSystem] == nil then
+							continue
+						end
+
+						local averageFrameTime = ""
+						local icon
+
+						local duration = durations[system] or 0
+						local humanDuration, unit = formatDuration(duration)
+						averageFrameTime = string.format("%.0f%s", humanDuration, unit)
+
+						if duration > 0.004 then -- 4ms
+							icon = "\xe2\x9a\xa0\xef\xb8\x8f"
+						end
+
+						if loop._systemErrors[system] then
+							icon = "\xf0\x9f\x92\xa5"
+						end
+
+						table.insert(listOfSystems, {
+							text = nameOfSystem,
+							sideText = averageFrameTime,
+							selected = debugger.debugSystem == system,
+							system = system,
+							icon = icon,
+							barWidth = duration / longestDuration,
+							index = index,
+						})
 					end
-				end
 
-				if debugger.debugSystem then
-					debugger.debugSystemRuntime = durations[debugger.debugSystem]
-				else
-					debugger.debugSystemRuntime = nil
-				end
+					local systemList = custom.selectionList(listOfSystems, custom)
+					local selected = systemList:selected()
+					local rightClicked = systemList:rightClicked()
+					hoveredSystem = systemList:hovered()
+					if selected then
+						if selected.system == debugger.debugSystem then
+							debugger.debugSystem = nil
+						else
+							debugger.debugSystem = selected.system
+						end
+					elseif rightClicked and rightClicked.system then
+						local current = loop._skipSystems[rightClicked.system]
 
-				plasma.space(10)
+						if current == nil then
+							loop._skipSystems[rightClicked.system] = true
+						else
+							loop._skipSystems[rightClicked.system] = not current
+						end
+					end
+
+					if debugger.debugSystem then
+						debugger.debugSystemRuntime = durations[debugger.debugSystem]
+					else
+						debugger.debugSystemRuntime = nil
+					end
+
+					plasma.space(10)
+				end
 			end
 		end)
 
