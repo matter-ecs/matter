@@ -18,7 +18,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Ability to sort the world inspect table by clicking the table headers (entity
   count and component name)
 - Ability to disable systems in the debugger list by right clicking them.
-- Ability to search through systems in the debugger system list.
+- Ability to search through systems in the **client debugger** system list.
+  - This is not yet possible in the **server debugger**.
 
 ### Changed
 
@@ -28,6 +29,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   **alt-hover tooltip** and the **entity inspector panel** in the debugger.
 
 ### Fixed
+
 - The alt-hover tooltip now displays component data properly, with each
   component being displayed on a new line.
 - Removed extra new-lines in component data strings within the debugger entity
