@@ -25,6 +25,7 @@ local customWidgetConstructors: { [string]: any } = {
 	queryInspect = require(script.Parent.widgets.queryInspect),
 	codeText = require(script.Parent.widgets.codeText),
 	errorInspect = require(script.Parent.widgets.errorInspect),
+	textField = require(script.Parent.widgets.textField),
 }
 
 local IS_SERVER = RunService:IsServer()
