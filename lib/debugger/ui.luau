@@ -218,13 +218,28 @@ local function ui(debugger, loop)
 							icon = "\xf0\x9f\x92\xa5"
 						end
 
+						local barWidth
+						if longestDuration == 0 then
+							barWidth = 0
+						else
+							barWidth = duration / longestDuration
+						end
+
+						local systemIsDisabled = loop._skipSystems[system]
+						local systemName = systemName(system)
+						local length = string.len(systemName)
+
+						if systemIsDisabled then
+							length += 4
+						end
+
 						table.insert(listOfSystems, {
-							text = nameOfSystem,
-							sideText = averageFrameTime,
+							text = if systemIsDisabled then `<i><s>{systemName}</s></i>` else systemName,
+							sideText = if systemIsDisabled then `<b>{"(disabled)"}</b>` else averageFrameTime,
 							selected = debugger.debugSystem == system,
 							system = system,
 							icon = icon,
-							barWidth = duration / longestDuration,
+							barWidth = barWidth,
 							index = index,
 						})
 					end
