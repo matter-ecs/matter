@@ -1,13 +1,16 @@
 return function(Plasma)
 	local create = Plasma.create
 
-	local Item = Plasma.widget(function(text, selected, icon, sideText, _, barWidth, index)
+	local Item = Plasma.widget(function(text, selected, icon, sideText, barWidth, index)
 		local clicked, setClicked = Plasma.useState(false)
+		local rightClicked, setRightClicked = Plasma.useState(false)
+		local hovered, setHovered = Plasma.useState(false)
 		local style = Plasma.useStyle()
 
 		local refs = Plasma.useInstance(function(ref)
 			local button = create("TextButton", {
 				[ref] = "button",
+				AutoButtonColor = false,
 				Size = UDim2.new(1, 0, 0, 25),
 				Text = "",
 
@@ -62,6 +65,7 @@ return function(Plasma)
 						BackgroundTransparency = 1,
 						Size = UDim2.new(0, 0, 1, 0),
 						Text = text,
+						RichText = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextSize = 13,
 						TextColor3 = style.textColor,
@@ -81,6 +85,7 @@ return function(Plasma)
 						Text = "",
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextSize = 11,
+						RichText = true,
 						TextColor3 = style.mutedTextColor,
 						Font = Enum.Font.Gotham,
 					}),
@@ -101,6 +106,20 @@ return function(Plasma)
 				Activated = function()
 					setClicked(true)
 				end,
+
+				MouseEnter = function()
+					setHovered(true)
+				end,
+
+				MouseLeave = function()
+					setHovered(false)
+				end,
+
+				InputBegan = function(input: InputObject)
+					if input.UserInputType == Enum.UserInputType.MouseButton2 then
+						setRightClicked(true)
+					end
+				end,
 			})
 
 			return button
@@ -120,8 +139,11 @@ return function(Plasma)
 		refs.button.bar.Size = UDim2.new(barWidth or 0, 0, 0, 1)
 
 		Plasma.useEffect(function()
-			refs.button.BackgroundColor3 = if selected then style.primaryColor else style.bg2
-		end, selected)
+			refs.button.BackgroundColor3 = if selected
+				then style.primaryColor
+				elseif hovered then style.bg1
+				else style.bg2
+		end, selected, hovered)
 
 		return {
 			clicked = function()
@@ -132,19 +154,29 @@ return function(Plasma)
 
 				return false
 			end,
+			rightClicked = function()
+				if rightClicked then
+					setRightClicked(false)
+					return true
+				end
+
+				return false
+			end,
+			hovered = function()
+				return hovered
+			end,
 		}
 	end)
 
-	return Plasma.widget(function(items, options)
-		options = options or {}
-
+	return Plasma.widget(function(items)
 		Plasma.useInstance(function()
 			local frame = create("Frame", {
 				BackgroundTransparency = 1,
-				Size = options.width and UDim2.new(0, options.width, 0, 0) or UDim2.new(1, 0, 0, 0),
+				Size = UDim2.new(1, 0, 0, 0),
 
 				create("UIListLayout", {
 					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 2),
 				}),
 			})
 
@@ -156,18 +188,34 @@ return function(Plasma)
 		end)
 
 		local selected
+		local rightClicked
+		local hovered
 
 		for _, item in items do
-			if
-				Item(item.text, item.selected, item.icon, item.sideText, options.width, item.barWidth, item.index):clicked()
-			then
+			local buttonInList = Item(item.text, item.selected, item.icon, item.sideText, item.barWidth, item.index)
+
+			if buttonInList:clicked() then
 				selected = item
+			end
+
+			if buttonInList:rightClicked() then
+				rightClicked = item
+			end
+
+			if buttonInList:hovered() then
+				hovered = item
 			end
 		end
 
 		return {
 			selected = function()
 				return selected
+			end,
+			rightClicked = function()
+				return rightClicked
+			end,
+			hovered = function()
+				return hovered
 			end,
 		}
 	end)
