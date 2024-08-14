@@ -6,16 +6,14 @@ local tags = {
 	altHover = "MatterDebuggerTooltip_AltHover",
 }
 
-local fromOffset = UDim2.fromOffset
-
 local function getOffset(mousePos: Vector2, tag: string): UDim2
 	if tag == tags.altHover then
-		return fromOffset(mousePos.X + 20, mousePos.Y)
+		return UDim2.fromOffset(mousePos.X + 20, mousePos.Y)
 	elseif tag == tags.system then
-		return fromOffset(mousePos.X + 20, mousePos.Y + 10)
+		return UDim2.fromOffset(mousePos.X + 20, mousePos.Y + 10)
 	end
 
-	return fromOffset(mousePos.X, mousePos.Y + 10)
+	return UDim2.fromOffset(mousePos.X, mousePos.Y + 10)
 end
 
 local function clientBindings(debugger)
