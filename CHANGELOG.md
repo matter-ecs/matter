@@ -17,9 +17,6 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   assertions have been added to `get` `insert` `replace` `remove`
 - Ability to sort the world inspect table by clicking the table headers (entity
   count and component name)
-- Ability to disable systems in the debugger list by right clicking them.
-- Ability to search through systems in the **client debugger** system list.
-  - This is not yet possible in the **server debugger**.
 
 ### Changed
 
