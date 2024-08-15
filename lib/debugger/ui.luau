@@ -263,23 +263,21 @@ local function ui(debugger, loop)
 					}, function()
 						plasma.useKey(name)
 
-						plasma.row(function()
-							if plasma.button(string.format("View queries (%d)", #debugger._queries)):clicked() then
-								setQueriesOpen(true)
-							end
+						if plasma.button(string.format("View queries (%d)", #debugger._queries)):clicked() then
+							setQueriesOpen(true)
+						end
 
-							if numLogs > 0 then
-								if plasma.button(string.format("View logs (%d)", numLogs)):clicked() then
-									setLogsOpen(true)
-								end
+						if numLogs > 0 then
+							if plasma.button(string.format("View logs (%d)", numLogs)):clicked() then
+								setLogsOpen(true)
 							end
-						end)
+						end
 
 						local currentlyDisabled = skipSystems[debugger.debugSystem]
 
 						if
 							plasma
-								.checkbox("Disable system", {
+								.checkbox("<font size='13'>Disable System</font>", {
 									checked = currentlyDisabled,
 								})
 								:clicked()
