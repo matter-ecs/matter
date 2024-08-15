@@ -267,7 +267,7 @@ local function ui(debugger, loop)
 							setQueriesOpen(true)
 						end
 
-						if numLogs == 0 then
+						if numLogs > 0 then
 							if plasma.button(string.format("View logs (%d)", numLogs)):clicked() then
 								setLogsOpen(true)
 							end
