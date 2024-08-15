@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.4] - 2024-08-15
+
 ### Added
 
 - Better assertions / error messages added to `World` methods that accept
@@ -22,7 +24,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 ### Changed
 
 - The alt-hover tooltip's text is smaller and the background is slightly darker
-  for improved legibility. 
+  for improved legibility.
 - Component data now has syntax highlighting applied. This is present in the
   **alt-hover tooltip** and the **entity inspector panel** in the debugger.
 
@@ -314,7 +316,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 - Initial release
 
-[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.3...HEAD
+[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.4...HEAD
+[0.8.4]: https://github.com/matter-ecs/matter/releases/tag/v0.8.4
 [0.8.3]: https://github.com/matter-ecs/matter/releases/tag/v0.8.3
 [0.8.2]: https://github.com/matter-ecs/matter/releases/tag/v0.8.2
 [0.8.1]: https://github.com/matter-ecs/matter/releases/tag/v0.8.1
