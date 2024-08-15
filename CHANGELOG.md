@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Removed extra new-lines in component data strings within the debugger entity
   inspect tables.
 - Fixed alt-hover erroring when hovered entity is despawned.
+- Fixed flashing buttons ("View queries" and "View logs") in system inspect panel
 
 ## [0.8.3] - 2024-07-02
 
