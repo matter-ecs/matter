@@ -1,7 +1,6 @@
 --!strict
 local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
-local component = require(script.Parent.component)
 local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
@@ -16,14 +15,9 @@ type ComponentId = number
 
 type Component = { [any]: any }
 type ComponentInstance = { [any]: any }
-type ComponentMetatable = { [any]: any }
-type ComponentMetatables = { ComponentMetatable }
-type ComponentToId = { [Component]: number }
 
 type ArchetypeId = string
 type Archetype = {
-	id: string,
-
 	ownedEntities: { EntityId },
 
 	--- The component IDs that are part of this archetype, in no particular order
@@ -97,18 +91,13 @@ local function createArchetype(world: World, componentIds: { ComponentId }): Arc
 
 	local indexInArchetypes = #world.archetypes + 1
 	local archetype: Archetype = {
-		id = archetypeId,
-		indexInArchetypes = indexInArchetypes,
+		ownedEntities = {},
 
 		componentIds = componentIds,
 
 		componentIdToStorageIndex = componentIdToStorageIndex,
 		storageIndexToComponentId = storageIndexToComponentId,
-
 		storage = storage,
-
-		-- Keep track of all entity ids for fast iteration in queries
-		ownedEntities = {},
 	}
 
 	for index, componentId in componentIds do
@@ -1391,7 +1380,7 @@ end
 	@param id number -- The entity ID
 	@param ... Component -- The components to remove
 ]=]
-function World.remove(self: World, id, ...: ComponentMetatable)
+function World.remove(self: World, id, ...: Component)
 	local entityRecord = self.entities[id]
 	if entityRecord == nil then
 		error(ERROR_NO_ENTITY, 2)
