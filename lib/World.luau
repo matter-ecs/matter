@@ -4,6 +4,7 @@ local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
 local assertValidComponent = Component.assertValidComponent
+local assertComponentArgsProvided = Component.assertComponentArgsProvided
 local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
@@ -34,6 +35,15 @@ type ReplaceCommand = {
 }
 
 type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
+
+local function assertEntityExists(world, id: number)
+	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
+end
+
+local function assertWorldOperationIsValid(world, id: number, ...)
+	assertEntityExists(world, id)
+	assertComponentArgsProvided(...)
+end
 
 --[=[
 	@class World
@@ -445,9 +455,7 @@ end
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
 function World:get(id, ...)
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local entity = self:_getEntity(id)
 
@@ -1076,9 +1084,9 @@ end
 	@param ... ComponentInstance -- The component values to insert
 ]=]
 function World:insert(id, ...)
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	debug.profilebegin("insert")
+
+	assertWorldOperationIsValid(self, id, ...)
 
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)
@@ -1097,9 +1105,7 @@ end
 	@param ... Component -- The components to remove
 ]=]
 function World:remove(id, ...)
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local components = { ... }
 	local length = #components
