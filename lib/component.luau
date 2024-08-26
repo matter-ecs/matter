@@ -159,6 +159,12 @@ local function assertValidComponentInstance(value, position)
 	end
 end
 
+local function assertValidComponentInstances(componentInstances)
+	for position, componentInstance in componentInstances do
+		assertValidComponentInstance(componentInstance, position)
+	end
+end
+
 local function assertComponentArgsProvided(...)
 	if not (...) then
 		error(`No components passed to world:{debug.info(3, "n")}, at least one component is required`, 2)
@@ -168,6 +174,7 @@ end
 return {
 	newComponent = newComponent,
 	assertValidComponentInstance = assertValidComponentInstance,
+	assertValidComponentInstances = assertValidComponentInstances,
 	assertValidComponent = assertValidComponent,
 	assertComponentArgsProvided = assertComponentArgsProvided,
 }

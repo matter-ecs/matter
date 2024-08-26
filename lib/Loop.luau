@@ -1,4 +1,6 @@
 local RunService = game:GetService("RunService")
+
+local World = require(script.Parent.World)
 local rollingAverage = require(script.Parent.rollingAverage)
 local topoRuntime = require(script.Parent.topoRuntime)
 
@@ -365,8 +367,18 @@ function Loop:begin(events)
 
 			generation = not generation
 
-			local dirtyWorlds: { [any]: true } = {}
 			local profiling = self.profiling
+
+			local worlds: { World.World } = {}
+			for _, stateArgument in self._state do
+				if typeof(stateArgument) == "table" and getmetatable(stateArgument) == World then
+					table.insert(worlds, stateArgument)
+				end
+			end
+
+			for _, world in worlds do
+				world:startDeferring()
+			end
 
 			for _, system in ipairs(self._orderedSystemsByEvent[eventName]) do
 				topoRuntime.start({
@@ -374,7 +386,6 @@ function Loop:begin(events)
 					frame = {
 						generation = generation,
 						deltaTime = deltaTime,
-						dirtyWorlds = dirtyWorlds,
 						logs = self._systemLogs[system],
 					},
 					currentSystem = system,
@@ -383,13 +394,26 @@ function Loop:begin(events)
 						if profiling then
 							profiling[system] = nil
 						end
+
 						return
 					end
 
 					local fn = systemFn(system)
-					debug.profilebegin("system: " .. systemName(system))
+					local name = systemName(system)
 
-					local thread = coroutine.create(fn)
+					debug.profilebegin("system: " .. name)
+					local commitFailed = false
+					local thread = coroutine.create(function(...)
+						fn(...)
+
+						for _, world in worlds do
+							local ok, err = pcall(world.commitCommands, world)
+							if not ok then
+								commitFailed = true
+								error(err)
+							end
+						end
+					end)
 
 					local startTime = os.clock()
 					local success, errorValue = coroutine.resume(thread, unpack(self._state, 1, self._stateLength))
@@ -431,20 +455,20 @@ function Loop:begin(events)
 						)
 					end
 
-					for world in dirtyWorlds do
-						world:optimizeQueries()
-					end
-					table.clear(dirtyWorlds)
-
 					if not success then
 						if os.clock() - recentErrorLastTime > 10 then
 							recentErrorLastTime = os.clock()
 							recentErrors = {}
 						end
 
-						local errorString = systemName(system)
+						local errorString = name
 							.. ": "
-							.. tostring(errorValue)
+							.. (
+								if commitFailed
+									-- Strip irrelevant line numbers that point to Loop / World
+									then string.gsub(errorValue, "%[.+%]:%d+: ", "Failed to apply commands: ")
+									else errorValue
+							)
 							.. "\n"
 							.. debug.traceback(thread)
 

@@ -10,6 +10,18 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Implemented a deferred command mode for the registry.
+  - The Loop turns deferring on for all worlds given to it.
+  - The command buffer is flushed between systems.
+  - Iterator invalidation is now only prevented in deferred mode.
+
+### Deprecated
+
+- Deprecated the return type of `World:remove()` because it can now be inaccurate.
+- Deprecated `World:optimizeQueries()` because it no longer does anything.
+
 ## [0.8.4] - 2024-08-15
 
 ### Added

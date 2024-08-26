@@ -2,12 +2,39 @@ local Component = require(script.Parent.component)
 local archetypeModule = require(script.Parent.archetype)
 local topoRuntime = require(script.Parent.topoRuntime)
 
-local assertValidComponentInstance = Component.assertValidComponentInstance
+local assertValidComponentInstances = Component.assertValidComponentInstances
 local assertValidComponent = Component.assertValidComponent
 local assertComponentArgsProvided = Component.assertComponentArgsProvided
 local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
+
+local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
+local ERROR_EXISTING_ENTITY =
+	"The world already contains an entity with ID %s. Use world:replace instead if this is intentional."
+
+-- The old solver is not great at resolving intersections, so we redefine entityId each time.
+type DespawnCommand = { type: "despawn", entityId: number }
+
+type InsertCommand = {
+	type: "insert",
+	entityId: number,
+	componentInstances: { [any]: any },
+}
+
+type RemoveCommand = {
+	type: "remove",
+	entityId: number,
+	components: { [any]: any },
+}
+
+type ReplaceCommand = {
+	type: "replace",
+	entityId: number,
+	componentInstances: { [any]: any },
+}
+
+type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
 
 local function assertEntityExists(world, id: number)
 	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
@@ -32,13 +59,13 @@ World.__index = World
 	Creates a new World.
 ]=]
 function World.new()
-	local firstStorage = {}
-
 	return setmetatable({
-		-- List of maps from archetype string --> entity ID --> entity data
-		_storages = { firstStorage },
-		-- The most recent storage that has not been dirtied by an iterator
-		_pristineStorage = firstStorage,
+		-- Map from archetype string --> entity ID --> entity data
+		storage = {},
+
+		deferring = false,
+		commands = {} :: { Command },
+		markedForDeletion = {},
 
 		-- Map from entity ID -> archetype string
 		_entityArchetypes = {},
@@ -65,37 +92,11 @@ function World.new()
 	}, World)
 end
 
--- Searches all archetype storages for the entity with the given archetype
--- Returns the storage that the entity is in if it exists, otherwise nil
-function World:_getStorageWithEntity(archetype, id)
-	for _, storage in self._storages do
-		local archetypeStorage = storage[archetype]
-		if archetypeStorage then
-			if archetypeStorage[id] then
-				return storage
-			end
-		end
-	end
-	return nil
-end
-
-function World:_markStorageDirty()
-	local newStorage = {}
-	table.insert(self._storages, newStorage)
-	self._pristineStorage = newStorage
-
-	if topoRuntime.withinTopoContext() then
-		local frameState = topoRuntime.useFrameState()
-
-		frameState.dirtyWorlds[self] = true
-	end
-end
+export type World = typeof(World.new())
 
 function World:_getEntity(id)
 	local archetype = self._entityArchetypes[id]
-	local storage = self:_getStorageWithEntity(archetype, id)
-
-	return storage[archetype][id]
+	return self.storage[archetype][id]
 end
 
 function World:_next(last)
@@ -105,9 +106,7 @@ function World:_next(last)
 		return nil
 	end
 
-	local storage = self:_getStorageWithEntity(archetype, entityId)
-
-	return entityId, storage[archetype][entityId]
+	return entityId, self.storage[archetype][entityId]
 end
 
 --[=[
@@ -127,6 +126,162 @@ end
 ]=]
 function World:__iter()
 	return World._next, self
+end
+
+local function executeDespawn(world: World, despawnCommand: DespawnCommand)
+	local id = despawnCommand.entityId
+	local entity = world:_getEntity(id)
+
+	for metatable, component in pairs(entity) do
+		world:_trackChanged(metatable, id, component, nil)
+	end
+
+	local shouldOnlyClear = world.deferring and world.markedForDeletion[id] ~= true
+	world._entityMetatablesCache[id] = if shouldOnlyClear then {} else nil
+	world:_transitionArchetype(id, if shouldOnlyClear then {} else nil)
+
+	world._size -= 1
+end
+
+local function executeInsert(world: World, insertCommand: InsertCommand)
+	debug.profilebegin("World:insert")
+
+	local id = insertCommand.entityId
+	local entity = world:_getEntity(id)
+	local wasNew = false
+	for _, componentInstance in insertCommand.componentInstances do
+		local metatable = getmetatable(componentInstance)
+		local oldComponent = entity[metatable]
+
+		if not oldComponent then
+			wasNew = true
+			table.insert(world._entityMetatablesCache[id], metatable)
+		end
+
+		world:_trackChanged(metatable, id, oldComponent, componentInstance)
+		entity[metatable] = componentInstance
+	end
+
+	if wasNew then
+		world:_transitionArchetype(id, entity)
+	end
+
+	debug.profileend()
+end
+
+local function executeReplace(world: World, replaceCommand: ReplaceCommand)
+	local id = replaceCommand.entityId
+	if not world:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
+	end
+
+	local components = {}
+	local metatables = {}
+	local entity = world:_getEntity(id)
+
+	for _, componentInstance in replaceCommand.componentInstances do
+		local metatable = getmetatable(componentInstance)
+		world:_trackChanged(metatable, id, entity[metatable], componentInstance)
+
+		components[metatable] = componentInstance
+		table.insert(metatables, metatable)
+	end
+
+	for metatable, component in pairs(entity) do
+		if not components[metatable] then
+			world:_trackChanged(metatable, id, component, nil)
+		end
+	end
+
+	world._entityMetatablesCache[id] = metatables
+	world:_transitionArchetype(id, components)
+end
+
+local function executeRemove(world: World, removeCommand: RemoveCommand)
+	local id = removeCommand.entityId
+	local entity = world:_getEntity(id)
+
+	local removed = {}
+	for index, metatable in removeCommand.components do
+		local oldComponent = entity[metatable]
+		removed[index] = oldComponent
+
+		world:_trackChanged(metatable, id, oldComponent, nil)
+		entity[metatable] = nil
+	end
+
+	-- Rebuild entity metatable cache
+	local metatables = {}
+	for metatable in pairs(entity) do
+		table.insert(metatables, metatable)
+	end
+
+	world._entityMetatablesCache[id] = metatables
+	world:_transitionArchetype(id, entity)
+end
+
+local function processCommand(world: World, command: Command)
+	if command.type == "insert" then
+		executeInsert(world, command)
+	elseif command.type == "despawn" then
+		executeDespawn(world, command)
+	elseif command.type == "remove" then
+		executeRemove(world, command)
+	elseif command.type == "replace" then
+		executeReplace(world, command)
+	else
+		error(`Unknown command type: {command.type}`)
+	end
+end
+
+local function bufferCommand(world: World, command: Command)
+	if world.deferring then
+		-- We want to ignore commands that succeed a deletion.
+		-- Spawn isn't considered a command, and so it never reaches here.
+		local markedForDeletion = world.markedForDeletion
+		if markedForDeletion[command.entityId] then
+			return
+		end
+
+		if command.type == "despawn" then
+			markedForDeletion[command.entityId] = true
+		end
+
+		table.insert(world.commands, command)
+	else
+		processCommand(world, command)
+	end
+end
+
+--[=[
+	Starts deferring entity commands.
+
+	If you are using a [`Loop`](/api/Loop), this is done for you.
+]=]
+function World:startDeferring()
+	self.deferring = true
+end
+
+--[=[
+	Sequentially processes all of the commands in the buffer.
+
+	If you are using a [`Loop`](/api/Loop), this is called after every system.
+	However, you can call it more often if you want.
+]=]
+function World:commitCommands()
+	for _, command in self.commands do
+		processCommand(self, command)
+	end
+
+	table.clear(self.commands)
+end
+
+--[=[
+	Stops deferring entity commands and processes all commands left in the buffer.
+]=]
+function World:stopDeferring()
+	self:commitCommands()
+	self.deferring = false
 end
 
 --[=[
@@ -149,46 +304,27 @@ end
 	@return number -- The same entity ID that was passed in
 ]=]
 function World:spawnAt(id, ...)
-	if self:contains(id) then
-		error(
-			string.format(
-				"The world already contains an entity with ID %d. Use World:replace instead if this is intentional.",
-				id
-			),
-			2
-		)
-	end
-
-	self._size += 1
-
 	if id >= self._nextId then
 		self._nextId = id + 1
 	end
 
-	local components = {}
-	local metatables = {}
+	local componentInstances = { ... }
+	assertValidComponentInstances(componentInstances)
 
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-
-		if components[metatable] then
-			error(("Duplicate component type at index %d"):format(i), 2)
-		end
-
-		self:_trackChanged(metatable, id, nil, newComponent)
-
-		components[metatable] = newComponent
-		table.insert(metatables, metatable)
+	local willBeDeleted = self.markedForDeletion[id] ~= nil
+	if self:contains(id) and not willBeDeleted then
+		error(string.format(ERROR_EXISTING_ENTITY, id), 2)
 	end
 
-	self._entityMetatablesCache[id] = metatables
+	if not willBeDeleted then
+		self._size += 1
+	end
 
-	self:_transitionArchetype(id, components)
+	self.markedForDeletion[id] = nil
+	self._entityMetatablesCache[id] = {}
+	self:_transitionArchetype(id, {})
 
+	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 	return id
 end
 
@@ -199,11 +335,9 @@ function World:_newQueryArchetype(queryArchetype)
 		return -- Archetype isn't actually new
 	end
 
-	for _, storage in self._storages do
-		for entityArchetype in storage do
-			if areArchetypesCompatible(queryArchetype, entityArchetype) then
-				self._queryCache[queryArchetype][entityArchetype] = true
-			end
+	for entityArchetype in self.storage do
+		if areArchetypesCompatible(queryArchetype, entityArchetype) then
+			self._queryCache[queryArchetype][entityArchetype] = true
 		end
 	end
 end
@@ -217,16 +351,14 @@ function World:_updateQueryCache(entityArchetype)
 end
 
 function World:_transitionArchetype(id, components)
-	debug.profilebegin("transitionArchetype")
+	debug.profilebegin("World:transitionArchetype")
+	local storage = self.storage
 	local newArchetype = nil
 	local oldArchetype = self._entityArchetypes[id]
-	local oldStorage
 
 	if oldArchetype then
-		oldStorage = self:_getStorageWithEntity(oldArchetype, id)
-
 		if not components then
-			oldStorage[oldArchetype][id] = nil
+			storage[oldArchetype][id] = nil
 		end
 	end
 
@@ -234,12 +366,12 @@ function World:_transitionArchetype(id, components)
 		newArchetype = archetypeOf(unpack(self._entityMetatablesCache[id]))
 
 		if oldArchetype ~= newArchetype then
-			if oldStorage then
-				oldStorage[oldArchetype][id] = nil
+			if oldArchetype then
+				storage[oldArchetype][id] = nil
 			end
 
-			if self._pristineStorage[newArchetype] == nil then
-				self._pristineStorage[newArchetype] = {}
+			if storage[newArchetype] == nil then
+				storage[newArchetype] = {}
 			end
 
 			if self._entityArchetypeCache[newArchetype] == nil then
@@ -248,9 +380,10 @@ function World:_transitionArchetype(id, components)
 				self:_updateQueryCache(newArchetype)
 				debug.profileend()
 			end
-			self._pristineStorage[newArchetype][id] = components
+
+			storage[newArchetype][id] = components
 		else
-			oldStorage[newArchetype][id] = components
+			storage[newArchetype][id] = components
 		end
 	end
 
@@ -267,38 +400,10 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
-	assertWorldOperationIsValid(self, id, ...)
+	local componentInstances = { ... }
+	assertValidComponentInstances(componentInstances)
 
-	local components = {}
-	local metatables = {}
-	local entity = self:_getEntity(id)
-
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-
-		if components[metatable] then
-			error(("Duplicate component type at index %d"):format(i), 2)
-		end
-
-		self:_trackChanged(metatable, id, entity[metatable], newComponent)
-
-		components[metatable] = newComponent
-		table.insert(metatables, metatable)
-	end
-
-	for metatable, component in pairs(entity) do
-		if not components[metatable] then
-			self:_trackChanged(metatable, id, component, nil)
-		end
-	end
-
-	self._entityMetatablesCache[id] = metatables
-
-	self:_transitionArchetype(id, components)
+	bufferCommand(self, { type = "replace", entityId = id, componentInstances = componentInstances })
 end
 
 --[=[
@@ -307,16 +412,11 @@ end
 	@param id number -- The entity ID
 ]=]
 function World:despawn(id)
-	local entity = self:_getEntity(id)
-
-	for metatable, component in pairs(entity) do
-		self:_trackChanged(metatable, id, component, nil)
+	if not self:contains(id) then
+		error(ERROR_NO_ENTITY, 2)
 	end
 
-	self._entityMetatablesCache[id] = nil
-	self:_transitionArchetype(id, nil)
-
-	self._size -= 1
+	bufferCommand(self, { type = "despawn", entityId = id })
 end
 
 --[=[
@@ -327,9 +427,10 @@ end
 	:::
 ]=]
 function World:clear()
-	local firstStorage = {}
-	self._storages = { firstStorage }
-	self._pristineStorage = firstStorage
+	self.storage = {}
+	self.commands = {}
+	self.markedForDeletion = {}
+
 	self._entityArchetypes = {}
 	self._entityMetatablesCache = {}
 	self._size = 0
@@ -426,7 +527,6 @@ QueryResult.__index = QueryResult
 function QueryResult.new(world, expand, queryArchetype, compatibleArchetypes, metatables)
 	return setmetatable({
 		world = world,
-		seenEntities = {},
 		currentCompatibleArchetype = next(compatibleArchetypes),
 		compatibleArchetypes = compatibleArchetypes,
 		storageIndex = 1,
@@ -439,52 +539,31 @@ end
 local function nextItem(query)
 	local world = query.world
 	local currentCompatibleArchetype = query.currentCompatibleArchetype
-	local seenEntities = query.seenEntities
 	local compatibleArchetypes = query.compatibleArchetypes
 
 	local entityId, entityData
 
-	local storages = world._storages
-	repeat
-		local nextStorage = storages[query.storageIndex]
-		local currently = nextStorage[currentCompatibleArchetype]
-		if currently then
-			entityId, entityData = next(currently, query.lastEntityId)
+	local storage = world.storage
+	local currently = storage[currentCompatibleArchetype]
+	if currently then
+		entityId, entityData = next(currently, query.lastEntityId)
+	end
+
+	while entityId == nil do
+		currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
+
+		if currentCompatibleArchetype == nil then
+			return nil
+		elseif storage[currentCompatibleArchetype] == nil then
+			continue
 		end
 
-		while entityId == nil do
-			currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
+		entityId, entityData = next(storage[currentCompatibleArchetype])
+	end
 
-			if currentCompatibleArchetype == nil then
-				query.storageIndex += 1
-
-				nextStorage = storages[query.storageIndex]
-
-				if nextStorage == nil or next(nextStorage) == nil then
-					return
-				end
-
-				currentCompatibleArchetype = nil
-
-				if world._pristineStorage == nextStorage then
-					world:_markStorageDirty()
-				end
-
-				continue
-			elseif nextStorage[currentCompatibleArchetype] == nil then
-				continue
-			end
-
-			entityId, entityData = next(nextStorage[currentCompatibleArchetype])
-		end
-
-		query.lastEntityId = entityId
-
-	until seenEntities[entityId] == nil
+	query.lastEntityId = entityId
 
 	query.currentCompatibleArchetype = currentCompatibleArchetype
-
-	seenEntities[entityId] = true
 
 	return entityId, entityData
 end
@@ -830,10 +909,6 @@ function World:query(...)
 		return entityId, unpack(queryOutput, 1, queryLength)
 	end
 
-	if self._pristineStorage == self._storages[1] then
-		self:_markStorageDirty()
-	end
-
 	return QueryResult.new(self, expand, archetype, compatibleArchetypes, metatables)
 end
 
@@ -1013,34 +1088,10 @@ function World:insert(id, ...)
 
 	assertWorldOperationIsValid(self, id, ...)
 
-	local entity = self:_getEntity(id)
+	local componentInstances = { ... }
+	assertValidComponentInstances(componentInstances)
 
-	local wasNew = false
-	for i = 1, select("#", ...) do
-		local newComponent = select(i, ...)
-
-		assertValidComponentInstance(newComponent, i)
-
-		local metatable = getmetatable(newComponent)
-
-		local oldComponent = entity[metatable]
-
-		if not oldComponent then
-			wasNew = true
-
-			table.insert(self._entityMetatablesCache[id], metatable)
-		end
-
-		self:_trackChanged(metatable, id, oldComponent, newComponent)
-
-		entity[metatable] = newComponent
-	end
-
-	if wasNew then -- wasNew
-		self:_transitionArchetype(id, entity)
-	end
-
-	debug.profileend()
+	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end
 
 --[=[
@@ -1052,41 +1103,23 @@ end
 
 	@param id number -- The entity ID
 	@param ... Component -- The components to remove
-	@return ...ComponentInstance -- Returns the component instance values that were removed in the order they were passed.
 ]=]
 function World:remove(id, ...)
 	assertWorldOperationIsValid(self, id, ...)
 
+	local components = { ... }
+	local length = #components
+
 	local entity = self:_getEntity(id)
+	local removed = table.create(length, nil)
+	for index, component in components do
+		assertValidComponent(component, index)
 
-	local length = select("#", ...)
-	local removed = {}
-
-	for i = 1, length do
-		local metatable = select(i, ...)
-
-		assertValidComponent(metatable, i)
-
-		local oldComponent = entity[metatable]
-
-		removed[i] = oldComponent
-
-		self:_trackChanged(metatable, id, oldComponent, nil)
-
-		entity[metatable] = nil
+		local oldComponent = entity[component]
+		removed[index] = oldComponent
 	end
 
-	-- Rebuild entity metatable cache
-	local metatables = {}
-
-	for metatable in pairs(entity) do
-		table.insert(metatables, metatable)
-	end
-
-	self._entityMetatablesCache[id] = metatables
-
-	self:_transitionArchetype(id, entity)
-
+	bufferCommand(self, { type = "remove", entityId = id, components = components })
 	return unpack(removed, 1, length)
 end
 
@@ -1110,35 +1143,9 @@ end
 	[World:query]. While inside a query, any changes to the World are stored in a separate location from the rest of
 	the World. Calling this function combines the separate storage back into the main storage, which speeds things up
 	again.
+
+	@deprecated v0.9.0 -- With the introduction of command buffering only one storage will ever exist at a time.
 ]=]
-function World:optimizeQueries()
-	if #self._storages == 1 then
-		return
-	end
-
-	local firstStorage = self._storages[1]
-
-	for i = 2, #self._storages do
-		local storage = self._storages[i]
-
-		for archetype, entities in storage do
-			if firstStorage[archetype] == nil then
-				firstStorage[archetype] = entities
-			else
-				for entityId, entityData in entities do
-					if firstStorage[archetype][entityId] then
-						error("Entity ID already exists in first storage...")
-					end
-					firstStorage[archetype][entityId] = entityData
-				end
-			end
-		end
-	end
-
-	table.clear(self._storages)
-
-	self._storages[1] = firstStorage
-	self._pristineStorage = firstStorage
-end
+function World:optimizeQueries() end
 
 return World
