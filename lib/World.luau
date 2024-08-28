@@ -9,6 +9,37 @@ local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
+local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
+local ERROR_EXISTING_ENTITY =
+	"The world already contains an entity with ID %s. Use world:replace instead if this is intentional."
+
+-- The old solver is not great at resolving intersections, so we redefine entityId each time.
+type DespawnCommand = { type: "despawn", entityId: number }
+
+type InsertCommand = {
+	type: "insert",
+	entityId: number,
+	componentInstances: { [any]: any },
+}
+
+type RemoveCommand = {
+	type: "remove",
+	entityId: number,
+	components: { [any]: any },
+}
+
+type ReplaceCommand = {
+	type: "replace",
+	entityId: number,
+	componentInstances: { [any]: any },
+}
+
+type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
+
+local function assertEntityExists(world, id: number)
+	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
+end
+
 type EntityId = number
 type DenseEntityId = number
 type ComponentId = number
@@ -132,7 +163,6 @@ function World.new()
 
 		deferring = false,
 		commands = {} :: { Command },
-
 		markedForDeletion = {},
 
 		-- Map from entity ID -> archetype string
@@ -162,7 +192,6 @@ function World.new()
 	self.rootArchetype = createArchetype(self, {})
 	return self
 end
-
 export type World = typeof(World.new())
 
 function World:_getEntity(id)
@@ -446,12 +475,10 @@ local function bufferCommand(world: World, command: Command)
 
 		if command.type == "despawn" then
 			markedForDeletion[command.entityId] = true
-		end
-
-		table.insert(world.commands, command)
-	else
-		processCommand(world, command)
-	end
+		  table.insert(world.commands, command)
+    else
+      processCommand(world, command)
+    end
 end
 
 --[=[
@@ -491,6 +518,7 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 	@return number -- The new entity ID.
 ]=]
+
 function World:spawn(...)
 	return self:spawnAt(self._nextId, ...)
 end
@@ -561,7 +589,6 @@ end
 function World:replace(id, ...)
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)
-
 	bufferCommand(self, { type = "replace", entityId = id, componentInstances = componentInstances })
 end
 
@@ -1366,7 +1393,7 @@ function World:insert(id, ...)
 
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)
-
+                                                
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end
 

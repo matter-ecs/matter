@@ -503,7 +503,7 @@ return function()
 				local world = World.new()
 
 				local loop = Loop.new(world)
-
+              
 				local A = component()
 				local B = component()
 				local C = component()
