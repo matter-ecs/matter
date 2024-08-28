@@ -9,33 +9,6 @@ local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
-local ERROR_NO_ENTITY = "Entity doesn't exist, use world:contains to check if needed"
-local ERROR_EXISTING_ENTITY =
-	"The world already contains an entity with ID %s. Use world:replace instead if this is intentional."
-
--- The old solver is not great at resolving intersections, so we redefine entityId each time.
-type DespawnCommand = { type: "despawn", entityId: number }
-
-type InsertCommand = {
-	type: "insert",
-	entityId: number,
-	componentInstances: { [any]: any },
-}
-
-type RemoveCommand = {
-	type: "remove",
-	entityId: number,
-	components: { [any]: any },
-}
-
-type ReplaceCommand = {
-	type: "replace",
-	entityId: number,
-	componentInstances: { [any]: any },
-}
-
-type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
-
 local function assertEntityExists(world, id: number)
 	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
 end
@@ -475,10 +448,12 @@ local function bufferCommand(world: World, command: Command)
 
 		if command.type == "despawn" then
 			markedForDeletion[command.entityId] = true
-		  table.insert(world.commands, command)
-    else
-      processCommand(world, command)
-    end
+		end
+
+		table.insert(world.commands, command)
+	else
+		processCommand(world, command)
+	end
 end
 
 --[=[
@@ -1393,7 +1368,7 @@ function World:insert(id, ...)
 
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)
-                                                
+
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end
 
