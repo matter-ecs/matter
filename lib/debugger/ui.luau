@@ -29,10 +29,12 @@ end
 
 local IS_SERVER = RunService:IsServer()
 local IS_CLIENT = RunService:IsClient()
+local LONG_SYSTEM_NAME = 24
 
 local function ui(debugger, loop)
 	local plasma = debugger.plasma
 	local custom = debugger._customWidgets
+	local skipSystems = loop._skipSystems
 
 	plasma.setStyle({
 		primaryColor = Color3.fromHex("bd515c"),
@@ -40,10 +42,15 @@ local function ui(debugger, loop)
 
 	local objectStack = plasma.useState({})
 	local worldViewOpen, setWorldViewOpen = plasma.useState(false)
+	local worldExists = debugger.debugWorld ~= nil
 
-	if debugger.hoverEntity then
-		custom.hoverInspect(debugger.debugWorld, debugger.hoverEntity, custom)
+	if debugger.hoverEntity and worldExists then
+		if debugger.debugWorld:contains(debugger.hoverEntity) then
+			custom.hoverInspect(debugger.debugWorld, debugger.hoverEntity, custom)
+		end
 	end
+
+	local hoveredSystem
 
 	custom.container(function()
 		if debugger:_isServerView() then
@@ -138,13 +145,12 @@ local function ui(debugger, loop)
 				})
 				plasma.space(5)
 
-				local items = {}
+				local listOfSystems = {}
 
 				for _, system in systems do
 					local samples = loop.profiling[system]
 					if samples then
 						local duration = rollingAverage.getAverage(samples)
-
 						durations[system] = duration
 						longestDuration = math.max(longestDuration, duration)
 					end
@@ -166,25 +172,55 @@ local function ui(debugger, loop)
 						icon = "\xf0\x9f\x92\xa5"
 					end
 
-					table.insert(items, {
-						text = systemName(system),
-						sideText = averageFrameTime,
+					local barWidth
+					if longestDuration == 0 then
+						barWidth = 0
+					else
+						barWidth = duration / longestDuration
+					end
+
+					local systemIsDisabled = skipSystems[system]
+					local systemName = systemName(system)
+					local length = string.len(systemName)
+
+					if systemIsDisabled then
+						length += 4
+					end
+
+					table.insert(listOfSystems, {
+						text = if systemIsDisabled then `<i><s>{systemName}</s></i>` else systemName,
+						sideText = if systemIsDisabled then `<b>{"(disabled)"}</b>` else averageFrameTime,
 						selected = debugger.debugSystem == system,
 						system = system,
 						icon = icon,
-						barWidth = duration / longestDuration,
+						barWidth = barWidth,
 						index = index,
 					})
 				end
 
-				local selected = custom.selectionList(items):selected()
+				local systemList = custom.selectionList(listOfSystems, custom)
+				local selected = systemList:selected()
+				local rightClicked = systemList:rightClicked()
+				hoveredSystem = systemList:hovered()
 
 				if selected then
-					if selected.system == debugger.debugSystem then
+					local selectedSystem = selected.system
+					if selectedSystem == debugger.debugSystem then
 						debugger.debugSystem = nil
 					else
-						debugger.debugSystem = selected.system
+						debugger.debugSystem = selectedSystem
 					end
+				elseif rightClicked then
+					local rightClickedSystem = rightClicked.system
+					if rightClickedSystem then
+						skipSystems[rightClickedSystem] = not skipSystems[rightClickedSystem]
+					end
+				end
+
+				if debugger.debugSystem then
+					debugger.debugSystemRuntime = durations[debugger.debugSystem]
+				else
+					debugger.debugSystemRuntime = nil
 				end
 
 				plasma.space(10)
@@ -227,28 +263,26 @@ local function ui(debugger, loop)
 					}, function()
 						plasma.useKey(name)
 
-						plasma.row(function()
-							if plasma.button(string.format("View queries (%d)", #debugger._queries)):clicked() then
-								setQueriesOpen(true)
-							end
+						if plasma.button(string.format("View queries (%d)", #debugger._queries)):clicked() then
+							setQueriesOpen(true)
+						end
 
-							if numLogs > 0 then
-								if plasma.button(string.format("View logs (%d)", numLogs)):clicked() then
-									setLogsOpen(true)
-								end
+						if numLogs > 0 then
+							if plasma.button(string.format("View logs (%d)", numLogs)):clicked() then
+								setLogsOpen(true)
 							end
-						end)
+						end
 
-						local currentlyDisabled = loop._skipSystems[debugger.debugSystem]
+						local currentlyDisabled = skipSystems[debugger.debugSystem]
 
 						if
 							plasma
-								.checkbox("Disable system", {
+								.checkbox("<font size='13'>Disable System</font>", {
 									checked = currentlyDisabled,
 								})
 								:clicked()
 						then
-							loop._skipSystems[debugger.debugSystem] = not currentlyDisabled
+							skipSystems[debugger.debugSystem] = not currentlyDisabled
 						end
 					end)
 					:closed()
@@ -304,6 +338,23 @@ local function ui(debugger, loop)
 		direction = Enum.FillDirection.Horizontal,
 		padding = 0,
 	})
+
+	if hoveredSystem and hoveredSystem.system then
+		local hoveredSystemName = systemName(hoveredSystem.system)
+		local length = string.len(hoveredSystemName)
+		local systemDisabled = skipSystems[hoveredSystem.system]
+
+		if systemDisabled then
+			length += 2
+		end
+
+		if length >= LONG_SYSTEM_NAME then
+			custom.tooltip(`<b>{hoveredSystemName}{if systemDisabled then " (disabled)" else ""}</b>`, {
+				tag = "MatterDebuggerTooltip_System",
+				backgroundTransparency = 0,
+			})
+		end
+	end
 end
 
 return ui

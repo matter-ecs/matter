@@ -40,7 +40,7 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describe("World", function()
+	describeFOCUS("World", function()
 		describe("buffered", function()
 			local function createDeferredWorld()
 				local world = World.new()
@@ -142,7 +142,7 @@ return function()
 			end)
 		end)
 
-		describeFOCUS("immediate", function()
+		describe("immediate", function()
 			it("should work", function()
 				local world = World.new()
 				local A, B = component(), component()
@@ -503,7 +503,7 @@ return function()
 				local world = World.new()
 
 				local loop = Loop.new(world)
-              
+
 				local A = component()
 				local B = component()
 				local C = component()

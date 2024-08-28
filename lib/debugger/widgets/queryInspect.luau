@@ -1,65 +1,51 @@
-local format = require(script.Parent.Parent.formatTable)
+local function getColorForBudget(color: Color3): string
+	local r = math.floor(color.R * 255)
+	local g = math.floor(color.G * 255)
+	local b = math.floor(color.B * 255)
 
-return function(plasma)
-	return plasma.widget(function(debugger)
-		return plasma
-			.window({
-				title = "Queries",
-				closable = true,
-			}, function()
-				if #debugger._queries == 0 then
-					return plasma.label("No queries.")
+	return `{r},{g},{b}`
+end
+
+return function(Plasma)
+	return Plasma.widget(function(debugger)
+		local queryWindow = Plasma.window({
+			title = "Query Resource Usage (%)",
+			closable = true,
+		}, function()
+			if #debugger._queries == 0 then
+				return Plasma.label("No queries.")
+			end
+
+			-- Plasma windows do not respect the title, so we need to
+			-- fill the content frame to extend the width of the widget
+			Plasma.heading("---------------------------------------------          ")
+
+			for i, query in debugger._queries do
+				if query.changedComponent then
+					Plasma.label(string.format("Query Changed %d", i))
+					Plasma.heading(tostring(query.changedComponent))
+
+					continue
 				end
 
-				for i, query in debugger._queries do
-					if query.changedComponent then
-						plasma.heading(string.format("Query Changed %d", i))
+				local budgetUsed =
+					math.clamp(math.floor((query.averageDuration / debugger.debugSystemRuntime) * 100), 0, 100)
 
-						plasma.label(tostring(query.changedComponent))
-
-						continue
-					end
-
-					plasma.heading(string.format("Query %d", i))
-
-					local componentNames = {}
-
-					for _, component in query.components do
-						table.insert(componentNames, tostring(component))
-					end
-
-					plasma.label(table.concat(componentNames, ", "))
-
-					local items = { { "ID", unpack(componentNames) } }
-
-					while #items <= 10 do
-						local data = { query.result:next() }
-
-						if #data == 0 then
-							break
-						end
-
-						for index, value in data do
-							if type(value) == "table" then
-								data[index] = format.formatTable(value)
-							else
-								data[index] = tostring(value)
-							end
-						end
-
-						table.insert(items, data)
-					end
-
-					plasma.table(items, {
-						headings = true,
-					})
-
-					if #items > 10 and query.result:next() then
-						plasma.label("(further results truncated)")
-					end
+				local color = Color3.fromRGB(135, 255, 111)
+				if budgetUsed >= 75 then
+					color = Color3.fromRGB(244, 73, 73)
+				elseif budgetUsed >= 50 then
+					color = Color3.fromRGB(255, 157, 0)
+				elseif budgetUsed >= 25 then
+					color = Color3.fromRGB(230, 195, 24)
 				end
-				return nil
-			end)
-			:closed()
+
+				Plasma.label(`<font color="rgb({getColorForBudget(color)})"><b>Query {i} - {budgetUsed}%</b></font>`)
+				Plasma.heading(table.concat(query.componentNames, ", "))
+			end
+			return nil
+		end)
+
+		return queryWindow:closed()
 	end)
 end

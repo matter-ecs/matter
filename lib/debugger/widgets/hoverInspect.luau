@@ -18,6 +18,9 @@ return function(plasma)
 			end
 		end
 
-		custom.tooltip(str)
+		custom.tooltip(str, {
+			tag = "MatterDebuggerTooltip_AltHover",
+			backgroundTransparency = 0.15,
+		})
 	end)
 end

@@ -9,10 +9,6 @@ local archetypeOf = archetypeModule.archetypeOf
 local negateArchetypeOf = archetypeModule.negateArchetypeOf
 local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
-local function assertEntityExists(world, id: number)
-	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
-end
-
 type EntityId = number
 type DenseEntityId = number
 type ComponentId = number
