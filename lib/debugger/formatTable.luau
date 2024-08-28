@@ -7,7 +7,7 @@ function colorize(value, color)
 		value = string.format("%.1f", value)
 	end
 
-	return `<font color="{color}">{value}</font>`
+	return `<font color="${color}">{value}</font>`
 end
 
 function colorizeMany(color, ...)

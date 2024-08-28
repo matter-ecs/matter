@@ -1,9 +1,6 @@
 local formatTableModule = require(script.Parent.Parent.formatTable)
 local formatTable = formatTableModule.formatTable
 
-local BY_COMPONENT_NAME = "ComponentName"
-local BY_ENTITY_COUNT = "EntityCount"
-
 return function(plasma)
 	return plasma.widget(function(debugger, objectStack)
 		local style = plasma.useStyle()
@@ -11,10 +8,8 @@ return function(plasma)
 		local world = debugger.debugWorld
 
 		local cache, setCache = plasma.useState()
-
-		local sortType, setSortType = plasma.useState(BY_COMPONENT_NAME)
-		local isAscendingOrder, setIsAscendingOrder = plasma.useState(true)
-
+		-- TODO #97 Implement sorting by descending as well.
+		local ascendingOrder, _ = plasma.useState(false)
 		local skipIntersections, setSkipIntersections = plasma.useState(true)
 		local debugComponent, setDebugComponent = plasma.useState()
 
@@ -76,47 +71,26 @@ return function(plasma)
 					})
 				end
 
-				local indexForSort = if sortType == BY_ENTITY_COUNT then 1 else 2
-
 				table.sort(items, function(a, b)
-					if isAscendingOrder then
-						return a[indexForSort] < b[indexForSort]
+					if ascendingOrder then
+						return a[1] < b[1]
 					end
 
-					return a[indexForSort] > b[indexForSort]
+					-- Default to alphabetical
+					return a[2] < b[2]
 				end)
 
-				local arrow = if isAscendingOrder then "▲" else "▼"
-				local countHeading = `{if sortType == BY_ENTITY_COUNT then arrow else ""} Count `
-				local componentHeading = `{if sortType == BY_COMPONENT_NAME then arrow else ""} Component`
-				local headings = { countHeading, componentHeading }
-				table.insert(items, 1, headings)
+				table.insert(items, 1, { "Count", "Component" })
 
 				plasma.row({ padding = 30 }, function()
-					local worldInspectTable = plasma.table(items, {
-						width = 200,
-						headings = true,
-						selectable = true,
-						font = Enum.Font.Code,
-					})
-
-					local selectedHeading = worldInspectTable:selectedHeading()
-
-					if headings[selectedHeading] == headings[1] then
-						if sortType == BY_ENTITY_COUNT then
-							setIsAscendingOrder(not isAscendingOrder)
-						else
-							setSortType(BY_ENTITY_COUNT)
-						end
-					elseif headings[selectedHeading] == headings[2] then
-						if sortType == BY_COMPONENT_NAME then
-							setIsAscendingOrder(not isAscendingOrder)
-						else
-							setSortType(BY_COMPONENT_NAME)
-						end
-					end
-
-					local selectedRow = worldInspectTable:selected()
+					local selectedRow = plasma
+						.table(items, {
+							width = 200,
+							headings = true,
+							selectable = true,
+							font = Enum.Font.Code,
+						})
+						:selected()
 
 					if selectedRow then
 						setDebugComponent(selectedRow.component)

@@ -59,7 +59,6 @@ function Loop.new(...)
 		_middlewares = {},
 		_systemErrors = {},
 		_systemLogs = {},
-		_debugger = nil,
 		profiling = nil,
 		trackErrors = false,
 	}, Loop)
@@ -425,22 +424,7 @@ function Loop:begin(events)
 							profiling[system] = {}
 						end
 
-						local debugger = self._debugger
-
-						if debugger and debugger.debugSystem == system and debugger._queries then
-							local totalQueryTime = 0
-
-							for _, query in debugger._queries do
-								totalQueryTime += query.averageDuration
-							end
-
-							rollingAverage.addSample(
-								profiling[system],
-								if debugger.debugSystem then duration - totalQueryTime else duration
-							)
-						else
-							rollingAverage.addSample(profiling[system], duration)
-						end
+						rollingAverage.addSample(profiling[system], duration)
 					end
 
 					if coroutine.status(thread) ~= "dead" then

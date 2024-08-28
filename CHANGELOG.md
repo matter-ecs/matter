@@ -22,33 +22,6 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Deprecated the return type of `World:remove()` because it can now be inaccurate.
 - Deprecated `World:optimizeQueries()` because it no longer does anything.
 
-## [0.8.4] - 2024-08-15
-
-### Added
-
-- Better assertions / error messages added to `World` methods that accept
-  variadic component arguments. At least 1 component must be provided. These
-  assertions have been added to `get` `insert` `replace` `remove`
-- Ability to sort the world inspect table by clicking the table headers (entity
-  count and component name)
-- Ability to disable systems in the debugger list by right clicking them.
-
-### Changed
-
-- The alt-hover tooltip's text is smaller and the background is slightly darker
-  for improved legibility.
-- Component data now has syntax highlighting applied. This is present in the
-  **alt-hover tooltip** and the **entity inspector panel** in the debugger.
-
-### Fixed
-
-- The alt-hover tooltip now displays component data properly, with each
-  component being displayed on a new line.
-- Removed extra new-lines in component data strings within the debugger entity
-  inspect tables.
-- Fixed alt-hover erroring when hovered entity is despawned.
-- Fixed flashing buttons ("View queries" and "View logs") in system inspect panel
-
 ## [0.8.3] - 2024-07-02
 
 ### Fixed
@@ -328,8 +301,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 - Initial release
 
-[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.4...HEAD
-[0.8.4]: https://github.com/matter-ecs/matter/releases/tag/v0.8.4
+[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.3...HEAD
 [0.8.3]: https://github.com/matter-ecs/matter/releases/tag/v0.8.3
 [0.8.2]: https://github.com/matter-ecs/matter/releases/tag/v0.8.2
 [0.8.1]: https://github.com/matter-ecs/matter/releases/tag/v0.8.1

@@ -1,16 +1,13 @@
 return function(Plasma)
 	local create = Plasma.create
 
-	local Item = Plasma.widget(function(text, selected, icon, sideText, barWidth, index)
+	local Item = Plasma.widget(function(text, selected, icon, sideText, _, barWidth, index)
 		local clicked, setClicked = Plasma.useState(false)
-		local rightClicked, setRightClicked = Plasma.useState(false)
-		local hovered, setHovered = Plasma.useState(false)
 		local style = Plasma.useStyle()
 
 		local refs = Plasma.useInstance(function(ref)
 			local button = create("TextButton", {
 				[ref] = "button",
-				AutoButtonColor = false,
 				Size = UDim2.new(1, 0, 0, 25),
 				Text = "",
 
@@ -37,7 +34,6 @@ return function(Plasma)
 					}),
 
 					create("TextLabel", {
-						[ref] = "index",
 						Name = "index",
 						AutomaticSize = Enum.AutomaticSize.X,
 						Size = UDim2.new(0, 0, 1, 0),
@@ -62,12 +58,10 @@ return function(Plasma)
 					}),
 
 					create("TextLabel", {
-						[ref] = "mainText",
 						AutomaticSize = Enum.AutomaticSize.X,
 						BackgroundTransparency = 1,
 						Size = UDim2.new(0, 0, 1, 0),
 						Text = text,
-						RichText = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextSize = 13,
 						TextColor3 = style.textColor,
@@ -87,7 +81,6 @@ return function(Plasma)
 						Text = "",
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextSize = 11,
-						RichText = true,
 						TextColor3 = style.mutedTextColor,
 						Font = Enum.Font.Gotham,
 					}),
@@ -105,20 +98,8 @@ return function(Plasma)
 					ZIndex = 2,
 				}),
 
-				InputBegan = function(input: InputObject)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						setClicked(true)
-					elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-						setRightClicked(true)
-					end
-				end,
-
-				MouseEnter = function()
-					setHovered(true)
-				end,
-
-				MouseLeave = function()
-					setHovered(false)
+				Activated = function()
+					setClicked(true)
 				end,
 			})
 
@@ -126,7 +107,7 @@ return function(Plasma)
 		end)
 
 		Plasma.useEffect(function()
-			refs.mainText.Text = text
+			refs.button.container.TextLabel.Text = text
 			refs.button.container.Icon.Text = icon or ""
 			refs.button.container.Icon.Visible = icon ~= nil
 		end, text, icon)
@@ -134,18 +115,13 @@ return function(Plasma)
 		refs.button.container.sideText.Visible = sideText ~= nil
 		refs.button.container.sideText.Text = if sideText ~= nil then sideText else ""
 		refs.button.container.sideText.TextColor3 = if selected then style.textColor else style.mutedTextColor
-		refs.mainText.TextTruncate = sideText and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
+		refs.button.container.TextLabel.TextTruncate = sideText and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None
 
 		refs.button.bar.Size = UDim2.new(barWidth or 0, 0, 0, 1)
 
 		Plasma.useEffect(function()
-			refs.button.BackgroundColor3 = if selected
-				then style.primaryColor
-				elseif hovered then style.bg1
-				else style.bg2
-
-			refs.index.TextColor3 = if selected or hovered then style.textColor else style.mutedTextColor
-		end, selected, hovered)
+			refs.button.BackgroundColor3 = if selected then style.primaryColor else style.bg2
+		end, selected)
 
 		return {
 			clicked = function()
@@ -156,29 +132,19 @@ return function(Plasma)
 
 				return false
 			end,
-			rightClicked = function()
-				if rightClicked then
-					setRightClicked(false)
-					return true
-				end
-
-				return false
-			end,
-			hovered = function()
-				return hovered
-			end,
 		}
 	end)
 
-	return Plasma.widget(function(items)
+	return Plasma.widget(function(items, options)
+		options = options or {}
+
 		Plasma.useInstance(function()
 			local frame = create("Frame", {
 				BackgroundTransparency = 1,
-				Size = UDim2.new(1, 0, 0, 0),
+				Size = options.width and UDim2.new(0, options.width, 0, 0) or UDim2.new(1, 0, 0, 0),
 
 				create("UIListLayout", {
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 2),
 				}),
 			})
 
@@ -190,34 +156,18 @@ return function(Plasma)
 		end)
 
 		local selected
-		local rightClicked
-		local hovered
 
 		for _, item in items do
-			local buttonInList = Item(item.text, item.selected, item.icon, item.sideText, item.barWidth, item.index)
-
-			if buttonInList:clicked() then
+			if
+				Item(item.text, item.selected, item.icon, item.sideText, options.width, item.barWidth, item.index):clicked()
+			then
 				selected = item
-			end
-
-			if buttonInList:rightClicked() then
-				rightClicked = item
-			end
-
-			if buttonInList:hovered() then
-				hovered = item
 			end
 		end
 
 		return {
 			selected = function()
 				return selected
-			end,
-			rightClicked = function()
-				return rightClicked
-			end,
-			hovered = function()
-				return hovered
 			end,
 		}
 	end)
