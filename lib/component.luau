@@ -171,9 +171,16 @@ local function assertValidComponentInstances(componentInstances)
 	end
 end
 
+local function assertComponentArgsProvided(...)
+	if not (...) then
+		error(`No components passed to world:{debug.info(3, "n")}, at least one component is required`, 2)
+	end
+end
+
 return {
 	newComponent = newComponent,
 	assertValidComponentInstance = assertValidComponentInstance,
 	assertValidComponentInstances = assertValidComponentInstances,
 	assertValidComponent = assertValidComponent,
+	assertComponentArgsProvided = assertComponentArgsProvided,
 }
