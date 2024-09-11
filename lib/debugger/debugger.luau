@@ -271,16 +271,6 @@ function Debugger:_enable()
 		return
 	end
 
-	-- TODO: Find a better way for the user to specify the world.
-	if not self.debugWorld then
-		for _, object in self.loop._state do
-			if getmetatable(object) == World then
-				self.debugWorld = object
-				break
-			end
-		end
-	end
-
 	self.enabled = true
 	self.loop.profiling = self.loop.profiling or {}
 

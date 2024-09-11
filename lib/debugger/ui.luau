@@ -41,12 +41,13 @@ local function ui(debugger, loop)
 	})
 
 	local objectStack = plasma.useState({})
-	local worldViewOpen, setWorldViewOpen = plasma.useState(false)
-	local worldExists = debugger.debugWorld ~= nil
+	local worldViewOpen, setWorldViewOpen = plasma.useState()
 
-	if debugger.hoverEntity and worldExists then
-		if debugger.debugWorld:contains(debugger.hoverEntity) then
-			custom.hoverInspect(debugger.debugWorld, debugger.hoverEntity, custom)
+	if debugger.hoverEntity then
+		for _, world in loop._worlds do
+			if world:contains(debugger.hoverEntity) then
+				custom.hoverInspect(world, debugger.hoverEntity, custom)
+			end
 		end
 	end
 
@@ -79,25 +80,33 @@ local function ui(debugger, loop)
 
 			local items = {}
 
-			for index, object in loop._state do
-				if type(object) ~= "table" then
+			for index, world in loop._worlds do
+				local selected = worldViewOpen == index
+
+				table.insert(items, {
+					index = index,
+					text = "World " .. index,
+					icon = "🌐",
+					object = world,
+					selected = selected,
+					isWorld = true,
+				})
+			end
+
+			for index, value in loop._state do
+				if type(value) ~= "table" then
 					continue
 				end
 
-				local isWorld = getmetatable(object) == World
-
-				local selected = (#objectStack > 0 and object == objectStack[#objectStack].value)
-					or (debugger.debugWorld == object and worldViewOpen)
-
-				local name = debugger.loopParameterNames[index]
-				local defaultName = (if isWorld then "World" else "table") .. " " .. index
+				local selected = (#objectStack > 0 and value == objectStack[#objectStack].value)
 
 				table.insert(items, {
-					text = if name then name else defaultName,
-					icon = if isWorld then "🌐" else "{}",
-					object = object,
+					index = index,
+					text = "table " .. index,
+					icon = "{}",
+					object = value,
 					selected = selected,
-					isWorld = isWorld,
+					isWorld = false,
 				})
 			end
 
@@ -105,12 +114,10 @@ local function ui(debugger, loop)
 
 			if selectedState then
 				if selectedState.isWorld then
-					if worldViewOpen and debugger.debugWorld == selectedState.object then
-						debugger.debugWorld = nil
-						setWorldViewOpen(false)
+					if worldViewOpen == selectedState.index then
+						setWorldViewOpen(nil)
 					else
-						debugger.debugWorld = selectedState.object
-						setWorldViewOpen(true)
+						setWorldViewOpen(selectedState.index)
 					end
 				else
 					local previousFirstValue = if objectStack[1] then objectStack[1].value else nil
@@ -228,16 +235,16 @@ local function ui(debugger, loop)
 		end)
 
 		debugger.parent = custom.container(function()
-			if debugger.debugWorld and worldViewOpen then
-				local closed = custom.worldInspect(debugger, objectStack)
+			if worldViewOpen then
+				local closed = custom.worldInspect(debugger, loop._worlds[worldViewOpen], objectStack)
 
 				if closed then
-					setWorldViewOpen(false)
+					setWorldViewOpen(nil)
 				end
 			end
 
-			if debugger.debugWorld and debugger.debugEntity then
-				custom.entityInspect(debugger)
+			if worldViewOpen and debugger.debugEntity then
+				custom.entityInspect(debugger, loop._worlds[worldViewOpen])
 			end
 
 			if #objectStack > 0 then

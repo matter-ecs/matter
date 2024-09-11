@@ -26,6 +26,7 @@ local function start(containers)
 	local cx = { world = world, state = state, widgets = debugger:getWidgets() }
 
 	local loop = Matter.Loop.new(cx)
+	loop:setWorlds({ world })
 
 	-- Set up hot reloading
 
