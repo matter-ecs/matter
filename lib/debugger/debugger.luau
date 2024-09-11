@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local hookWidgets = require(script.Parent.hookWidgets)
-local World = require(script.Parent.Parent.World)
 local EventBridge = require(script.Parent.EventBridge)
 local ui = require(script.Parent.ui)
 local mouseHighlight = require(script.Parent.mouseHighlight)
