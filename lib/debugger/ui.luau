@@ -42,23 +42,15 @@ local function ui(debugger, loop)
 	local objectStack = plasma.useState({})
 	local openWorld, setOpenWorld = plasma.useState()
 
-	if debugger.hoverEntity then
-		for _, world in loop._worlds do
-			if world:contains(debugger.hoverEntity) then
-				custom.hoverInspect(world, debugger.hoverEntity, custom)
-				break
-			end
-		end
-	end
-
 	local debugEntityWorld
 
-	if debugger.debugEntity then
-		for _, world in loop._worlds do
-			if world:contains(debugger.debugEntity) then
-				debugEntityWorld = world
-				break
-			end
+	for _, world in loop._worlds do
+		if debugger.hoverEntity and world:contains(debugger.hoverEntity) then
+			custom.hoverInspect(world, debugger.hoverEntity, custom)
+		end
+
+		if debugger.debugEntity and world:contains(debugger.debugEntity) then
+			debugEntityWorld = world
 		end
 	end
 
