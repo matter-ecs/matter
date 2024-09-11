@@ -1,5 +1,4 @@
 local RunService = game:GetService("RunService")
-local World = require(script.Parent.Parent.World)
 local rollingAverage = require(script.Parent.Parent.rollingAverage)
 
 local function systemName(system)
@@ -41,12 +40,24 @@ local function ui(debugger, loop)
 	})
 
 	local objectStack = plasma.useState({})
-	local worldViewOpen, setWorldViewOpen = plasma.useState()
+	local openWorld, setOpenWorld = plasma.useState()
 
 	if debugger.hoverEntity then
 		for _, world in loop._worlds do
 			if world:contains(debugger.hoverEntity) then
 				custom.hoverInspect(world, debugger.hoverEntity, custom)
+				break
+			end
+		end
+	end
+
+	local debugEntityWorld
+
+	if debugger.debugEntity then
+		for _, world in loop._worlds do
+			if world:contains(debugger.debugEntity) then
+				debugEntityWorld = world
+				break
 			end
 		end
 	end
@@ -81,11 +92,12 @@ local function ui(debugger, loop)
 			local items = {}
 
 			for index, world in loop._worlds do
-				local selected = worldViewOpen == index
+				local selected = openWorld == world
+
+				local name = if type(index) == "number" then `World {index}` else index
 
 				table.insert(items, {
-					index = index,
-					text = "World " .. index,
+					text = name,
 					icon = "🌐",
 					object = world,
 					selected = selected,
@@ -98,11 +110,13 @@ local function ui(debugger, loop)
 					continue
 				end
 
+				local name = debugger.loopParameterNames[index]
+				local defaultName = if name then name else `table {index}`
+
 				local selected = (#objectStack > 0 and value == objectStack[#objectStack].value)
 
 				table.insert(items, {
-					index = index,
-					text = "table " .. index,
+					text = defaultName,
 					icon = "{}",
 					object = value,
 					selected = selected,
@@ -114,10 +128,10 @@ local function ui(debugger, loop)
 
 			if selectedState then
 				if selectedState.isWorld then
-					if worldViewOpen == selectedState.index then
-						setWorldViewOpen(nil)
+					if openWorld == selectedState.object then
+						setOpenWorld(nil)
 					else
-						setWorldViewOpen(selectedState.index)
+						setOpenWorld(selectedState.object)
 					end
 				else
 					local previousFirstValue = if objectStack[1] then objectStack[1].value else nil
@@ -235,16 +249,16 @@ local function ui(debugger, loop)
 		end)
 
 		debugger.parent = custom.container(function()
-			if worldViewOpen then
-				local closed = custom.worldInspect(debugger, loop._worlds[worldViewOpen], objectStack)
+			if openWorld then
+				local closed = custom.worldInspect(debugger, openWorld, objectStack)
 
 				if closed then
-					setWorldViewOpen(nil)
+					setOpenWorld(nil)
 				end
 			end
 
-			if worldViewOpen and debugger.debugEntity then
-				custom.entityInspect(debugger, loop._worlds[worldViewOpen])
+			if debugEntityWorld and debugger.debugEntity then
+				custom.entityInspect(debugger, debugEntityWorld)
 			end
 
 			if #objectStack > 0 then
