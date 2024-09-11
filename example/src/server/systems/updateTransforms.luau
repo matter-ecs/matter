@@ -2,14 +2,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Components = require(ReplicatedStorage.Shared.components)
 local removeMissingModels = require(script.Parent.removeMissingModels)
 
-local function updateTransforms(world)
+local function updateTransforms(cx)
 	-- Handle Transform added/changed to existing entity with Model
-	for id, transformRecord in world:queryChanged(Components.Transform) do
-		if not world:contains(id) then
+	for id, transformRecord in cx.world:queryChanged(Components.Transform) do
+		if not cx.world:contains(id) then
 			continue
 		end
 
-		local model = world:get(id, Components.Model)
+		local model = cx.world:get(id, Components.Model)
 
 		if not model then
 			continue
@@ -21,12 +21,12 @@ local function updateTransforms(world)
 	end
 
 	-- Handle Model added/changed on existing entity with Transform
-	for id, modelRecord in world:queryChanged(Components.Model) do
-		if not world:contains(id) then
+	for id, modelRecord in cx.world:queryChanged(Components.Model) do
+		if not cx.world:contains(id) then
 			continue
 		end
 
-		local transform = world:get(id, Components.Transform)
+		local transform = cx.world:get(id, Components.Transform)
 
 		if not transform then
 			continue
@@ -38,7 +38,7 @@ local function updateTransforms(world)
 	end
 
 	-- Update Transform on unanchored Models
-	for id, model, transform in world:query(Components.Model, Components.Transform) do
+	for id, model, transform in cx.world:query(Components.Model, Components.Transform) do
 		if model.model.PrimaryPart.Anchored then
 			continue
 		end
@@ -48,12 +48,12 @@ local function updateTransforms(world)
 
 		-- Despawn models that fall into the void
 		if currentCFrame.Y < -400 then
-			world:despawn(id)
+			cx.world:despawn(id)
 			continue
 		end
 
 		if currentCFrame ~= existingCFrame then
-			world:insert(
+			cx.world:insert(
 				id,
 				Components.Transform({
 					cframe = currentCFrame,

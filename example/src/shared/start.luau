@@ -23,7 +23,9 @@ local function start(containers)
 		return model and model.model or nil
 	end
 
-	local loop = Matter.Loop.new(world, state, debugger:getWidgets())
+	local cx = { world = world, state = state, widgets = debugger:getWidgets() }
+
+	local loop = Matter.Loop.new(cx)
 
 	-- Set up hot reloading
 
@@ -92,7 +94,7 @@ local function start(containers)
 		end)
 	end
 
-	return world, state
+	return cx
 end
 
 return start

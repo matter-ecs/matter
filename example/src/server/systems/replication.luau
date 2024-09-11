@@ -22,11 +22,11 @@ for _, name in REPLICATED_COMPONENTS do
 	replicatedComponents[Components[name]] = true
 end
 
-local function replication(world)
+local function replication(cx)
 	for _, player in useEvent(Players, "PlayerAdded") do
 		local payload = {}
 
-		for entityId, entityData in world do
+		for entityId, entityData in cx.world do
 			local entityPayload = {}
 			payload[tostring(entityId)] = entityPayload
 
@@ -44,7 +44,7 @@ local function replication(world)
 	local changes = {}
 
 	for component in replicatedComponents do
-		for entityId, record in world:queryChanged(component) do
+		for entityId, record in cx.world:queryChanged(component) do
 			local key = tostring(entityId)
 			local name = tostring(component)
 
@@ -52,7 +52,7 @@ local function replication(world)
 				changes[key] = {}
 			end
 
-			if world:contains(entityId) then
+			if cx.world:contains(entityId) then
 				changes[key][name] = { data = record.new }
 			end
 		end

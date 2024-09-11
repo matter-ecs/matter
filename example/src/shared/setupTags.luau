@@ -6,9 +6,9 @@ local boundTags = {
 	Spinner = Components.Spinner,
 }
 
-local function setupTags(world)
+local function setupTags(cx)
 	local function spawnBound(instance, component)
-		local id = world:spawn(
+		local id = cx.world:spawn(
 			component(),
 			Components.Model({
 				model = instance,
@@ -33,7 +33,7 @@ local function setupTags(world)
 		CollectionService:GetInstanceRemovedSignal(tagName):Connect(function(instance)
 			local id = instance:GetAttribute("serverEntityId")
 			if id then
-				world:despawn(id)
+				cx.world:despawn(id)
 			end
 		end)
 	end

@@ -2,9 +2,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Components = require(ReplicatedStorage.Shared.components)
 local RemoteEvent = ReplicatedStorage:WaitForChild("MatterRemote")
 
-local function setupReplication(world, state)
+local function setupReplication(cx)
 	local function debugPrint(...)
-		if state.debugEnabled then
+		if cx.state.debugEnabled then
 			print("Replication>", ...)
 		end
 	end
@@ -16,7 +16,7 @@ local function setupReplication(world, state)
 			local clientEntityId = entityIdMap[serverEntityId]
 
 			if clientEntityId and next(componentMap) == nil then
-				world:despawn(clientEntityId)
+				cx.world:despawn(clientEntityId)
 				entityIdMap[serverEntityId] = nil
 				debugPrint(string.format("Despawn %ds%d", clientEntityId, serverEntityId))
 				continue
@@ -39,7 +39,7 @@ local function setupReplication(world, state)
 			end
 
 			if clientEntityId == nil then
-				clientEntityId = world:spawn(unpack(componentsToInsert))
+				clientEntityId = cx.world:spawn(unpack(componentsToInsert))
 
 				entityIdMap[serverEntityId] = clientEntityId
 
@@ -48,11 +48,11 @@ local function setupReplication(world, state)
 				)
 			else
 				if #componentsToInsert > 0 then
-					world:insert(clientEntityId, unpack(componentsToInsert))
+					cx.world:insert(clientEntityId, unpack(componentsToInsert))
 				end
 
 				if #componentsToRemove > 0 then
-					world:remove(clientEntityId, unpack(componentsToRemove))
+					cx.world:remove(clientEntityId, unpack(componentsToRemove))
 				end
 
 				debugPrint(
