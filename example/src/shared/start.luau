@@ -12,6 +12,7 @@ local function start(containers)
 	local state = {}
 
 	local debugger = Matter.Debugger.new(Plasma)
+	debugger.loopParameterNames = { "Context" }
 
 	debugger.findInstanceFromEntity = function(id)
 		if not world:contains(id) then
@@ -26,7 +27,7 @@ local function start(containers)
 	local cx = { world = world, state = state, widgets = debugger:getWidgets() }
 
 	local loop = Matter.Loop.new(cx)
-	loop:setWorlds({ world })
+	loop:setWorlds({ World = world })
 
 	-- Set up hot reloading
 
