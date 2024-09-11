@@ -74,8 +74,8 @@ function World.new()
 		-- Map of entity ID -> array
 		_entityMetatablesCache = {},
 
-		-- Cache of what query archetypes are compatible with what component archetypes
-		_queryCache = {},
+		-- Cached ordered list of what query archetypes are compatible with what component archetypes
+		_orderedQueryCache = {},
 
 		-- Cache of what entity archetypes have ever existed in the game. This is used for knowing
 		-- when to update the queryCache.
@@ -329,23 +329,23 @@ function World:spawnAt(id, ...)
 end
 
 function World:_newQueryArchetype(queryArchetype)
-	if self._queryCache[queryArchetype] == nil then
-		self._queryCache[queryArchetype] = {}
+	if self._orderedQueryCache[queryArchetype] == nil then
+		self._orderedQueryCache[queryArchetype] = {}
 	else
 		return -- Archetype isn't actually new
 	end
 
 	for entityArchetype in self.storage do
 		if areArchetypesCompatible(queryArchetype, entityArchetype) then
-			self._queryCache[queryArchetype][entityArchetype] = true
+			table.insert(self._orderedQueryCache[queryArchetype], entityArchetype)
 		end
 	end
 end
 
 function World:_updateQueryCache(entityArchetype)
-	for queryArchetype, compatibleArchetypes in pairs(self._queryCache) do
+	for queryArchetype, compatibleArchetypes in pairs(self._orderedQueryCache) do
 		if areArchetypesCompatible(queryArchetype, entityArchetype) then
-			compatibleArchetypes[entityArchetype] = true
+			table.insert(compatibleArchetypes, entityArchetype)
 		end
 	end
 end
@@ -527,7 +527,7 @@ QueryResult.__index = QueryResult
 function QueryResult.new(world, expand, queryArchetype, compatibleArchetypes, metatables)
 	return setmetatable({
 		world = world,
-		currentCompatibleArchetype = next(compatibleArchetypes),
+		currentCompatibleArchetypeIndex = next(compatibleArchetypes),
 		compatibleArchetypes = compatibleArchetypes,
 		storageIndex = 1,
 		metatables = metatables,
@@ -538,8 +538,9 @@ end
 
 local function nextItem(query)
 	local world = query.world
-	local currentCompatibleArchetype = query.currentCompatibleArchetype
 	local compatibleArchetypes = query.compatibleArchetypes
+	local currentCompatibleArchetypeIndex = query.currentCompatibleArchetypeIndex
+	local currentCompatibleArchetype = compatibleArchetypes[currentCompatibleArchetypeIndex]
 
 	local entityId, entityData
 
@@ -550,7 +551,7 @@ local function nextItem(query)
 	end
 
 	while entityId == nil do
-		currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetype)
+		currentCompatibleArchetypeIndex, currentCompatibleArchetype = next(compatibleArchetypes, currentCompatibleArchetypeIndex)
 
 		if currentCompatibleArchetype == nil then
 			return nil
@@ -563,7 +564,7 @@ local function nextItem(query)
 
 	query.lastEntityId = entityId
 
-	query.currentCompatibleArchetype = currentCompatibleArchetype
+	query.currentCompatibleArchetypeIndex = currentCompatibleArchetypeIndex
 
 	return entityId, entityData
 end
@@ -693,11 +694,11 @@ function QueryResult:without(...)
 
 	local negativeArchetype = `{self._queryArchetype}x{filter}`
 
-	if world._queryCache[negativeArchetype] == nil then
+	if world._orderedQueryCache[negativeArchetype] == nil then
 		world:_newQueryArchetype(negativeArchetype)
 	end
 
-	local compatibleArchetypes = world._queryCache[negativeArchetype]
+	local compatibleArchetypes = world._orderedQueryCache[negativeArchetype]
 
 	self.compatibleArchetypes = compatibleArchetypes
 	self.currentCompatibleArchetype = next(compatibleArchetypes)
@@ -861,11 +862,11 @@ function World:query(...)
 
 	local archetype = archetypeOf(...)
 
-	if self._queryCache[archetype] == nil then
+	if self._orderedQueryCache[archetype] == nil then
 		self:_newQueryArchetype(archetype)
 	end
 
-	local compatibleArchetypes = self._queryCache[archetype]
+	local compatibleArchetypes = self._orderedQueryCache[archetype]
 
 	debug.profileend()
 
