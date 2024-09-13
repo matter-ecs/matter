@@ -1,5 +1,6 @@
 local RunService = game:GetService("RunService")
 local rollingAverage = require(script.Parent.Parent.rollingAverage)
+local World = require(script.Parent.Parent.World)
 
 local function systemName(system)
 	local systemFn = if type(system) == "table" then system.system else system
@@ -98,7 +99,7 @@ local function ui(debugger, loop)
 			end
 
 			for index, value in loop._state do
-				if type(value) ~= "table" then
+				if type(value) ~= "table" or getmetatable(value) == World then
 					continue
 				end
 
