@@ -2,9 +2,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Components = require(ReplicatedStorage.Shared.components)
 local Matter = require(ReplicatedStorage.Lib.Matter)
 
-local function mothershipsSpawnRoombas(cx)
+local function mothershipsSpawnRoombas(world)
 	for id, model, lasering, transform in
-		cx.world:query(Components.Model, Components.Lasering, Components.Transform, Components.Mothership)
+		world:query(Components.Model, Components.Lasering, Components.Transform, Components.Mothership)
 	do
 		model.model.Beam.Transparency = 1 - lasering.remainingTime
 
@@ -15,7 +15,7 @@ local function mothershipsSpawnRoombas(cx)
 		if not lasering.spawned then
 			local spawnPosition = Vector3.new(transform.cframe.p.X, 11, transform.cframe.p.Z)
 
-			cx.world:spawn(
+			world:spawn(
 				Components.Roomba(),
 				Components.Charge({
 					charge = 100,
@@ -29,9 +29,9 @@ local function mothershipsSpawnRoombas(cx)
 		end
 
 		if lasering.remainingTime <= 0 then
-			cx.world:remove(id, Components.Lasering)
+			world:remove(id, Components.Lasering)
 		else
-			cx.world:insert(id, lasering)
+			world:insert(id, lasering)
 		end
 	end
 end

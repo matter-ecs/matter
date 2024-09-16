@@ -3,10 +3,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Components = require(ReplicatedStorage.Shared.components)
 local Matter = require(ReplicatedStorage.Lib.Matter)
 
-local function playersAreTargets(cx)
+local function playersAreTargets(world)
 	for _, player in ipairs(Players:GetPlayers()) do
 		for _, character in Matter.useEvent(player, "CharacterAdded") do
-			cx.world:spawn(
+			world:spawn(
 				Components.Target(),
 				Components.Model({
 					model = character,
@@ -16,8 +16,8 @@ local function playersAreTargets(cx)
 	end
 
 	-- players can die
-	for id in cx.world:query(Components.Target):without(Components.Model) do
-		cx.world:despawn(id)
+	for id in world:query(Components.Target):without(Components.Model) do
+		world:despawn(id)
 	end
 end
 
