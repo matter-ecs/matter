@@ -12,7 +12,6 @@ local function start(containers)
 	local state = {}
 
 	local debugger = Matter.Debugger.new(Plasma)
-	debugger.loopParameterNames = { "Context" }
 
 	debugger.findInstanceFromEntity = function(id)
 		if not world:contains(id) then
