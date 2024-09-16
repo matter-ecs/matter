@@ -328,7 +328,7 @@ end
 --[=[
 	Sets the Worlds to be used by the Loop for deferring commands, and the Debugger for profiling.
 
-	@param worlds: {World} | {[string]: World} -- An array or dictionary of Worlds to be used by the Loop. If a dictionary is passed, the keys are used as the names of the Worlds for the Debugger.
+	@param worlds {World} | {[string]: World} -- An array or dictionary of Worlds to be used by the Loop. If a dictionary is passed, the keys are used as the names of the Worlds for the Debugger.
 ]=]
 function Loop:setWorlds(worlds: { World.World } | { [string]: World.World })
 	self._worlds = worlds
