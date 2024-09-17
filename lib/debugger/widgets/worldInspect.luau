@@ -5,10 +5,8 @@ local BY_COMPONENT_NAME = "ComponentName"
 local BY_ENTITY_COUNT = "EntityCount"
 
 return function(plasma)
-	return plasma.widget(function(debugger, objectStack)
+	return plasma.widget(function(debugger, world, objectStack)
 		local style = plasma.useStyle()
-
-		local world = debugger.debugWorld
 
 		local cache, setCache = plasma.useState()
 

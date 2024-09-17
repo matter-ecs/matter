@@ -54,6 +54,7 @@ function Loop.new(...)
 		_skipSystems = {},
 		_orderedSystemsByEvent = {},
 		_state = { ... },
+		_worlds = {},
 		_stateLength = select("#", ...),
 		_systemState = {},
 		_middlewares = {},
@@ -325,6 +326,15 @@ function Loop:_sortSystems()
 end
 
 --[=[
+	Sets the Worlds to be used by the Loop for deferring commands, and the Debugger for profiling.
+
+	@param worlds {World} | {[string]: World} -- An array or dictionary of Worlds to be used by the Loop. If a dictionary is passed, the keys are used as the names of the Worlds for the Debugger.
+]=]
+function Loop:setWorlds(worlds: { World.World } | { [string]: World.World })
+	self._worlds = worlds
+end
+
+--[=[
 	Connects to frame events and starts invoking your systems.
 
 	Pass a table of events you want to be able to run systems on, a map of name to event. Systems can use these names
@@ -369,14 +379,7 @@ function Loop:begin(events)
 
 			local profiling = self.profiling
 
-			local worlds: { World.World } = {}
-			for _, stateArgument in self._state do
-				if typeof(stateArgument) == "table" and getmetatable(stateArgument) == World then
-					table.insert(worlds, stateArgument)
-				end
-			end
-
-			for _, world in worlds do
+			for _, world in self._worlds do
 				world:startDeferring()
 			end
 
@@ -406,7 +409,7 @@ function Loop:begin(events)
 					local thread = coroutine.create(function(...)
 						fn(...)
 
-						for _, world in worlds do
+						for _, world in self._worlds do
 							local ok, err = pcall(world.commitCommands, world)
 							if not ok then
 								commitFailed = true
