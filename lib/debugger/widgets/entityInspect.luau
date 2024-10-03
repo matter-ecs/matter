@@ -3,7 +3,7 @@ local formatTable = formatTableModule.formatTable
 local FormatMode = formatTableModule.FormatMode
 
 return function(plasma)
-	return plasma.widget(function(debugger)
+	return plasma.widget(function(debugger, world)
 		local style = plasma.useStyle()
 
 		local closed = plasma
@@ -11,7 +11,7 @@ return function(plasma)
 				title = string.format("Entity %d", debugger.debugEntity),
 				closable = true,
 			}, function()
-				if not debugger.debugWorld:contains(debugger.debugEntity) then
+				if not world:contains(debugger.debugEntity) then
 					debugger.debugEntity = nil
 					return
 				end
@@ -28,7 +28,7 @@ return function(plasma)
 
 				plasma.row(function()
 					if plasma.button("despawn"):clicked() then
-						debugger.debugWorld:despawn(debugger.debugEntity)
+						world:despawn(debugger.debugEntity)
 						debugger.debugEntity = nil
 					end
 				end)
@@ -39,7 +39,7 @@ return function(plasma)
 
 				local items = { { "Component", "Data" } }
 
-				for component, data in debugger.debugWorld:_getEntity(debugger.debugEntity) do
+				for component, data in world:_getEntity(debugger.debugEntity) do
 					table.insert(items, {
 						tostring(component),
 						formatTable(data, FormatMode.Long),

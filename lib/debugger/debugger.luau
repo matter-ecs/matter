@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local hookWidgets = require(script.Parent.hookWidgets)
-local World = require(script.Parent.Parent.World)
 local EventBridge = require(script.Parent.EventBridge)
 local ui = require(script.Parent.ui)
 local mouseHighlight = require(script.Parent.mouseHighlight)
@@ -269,16 +268,6 @@ end
 function Debugger:_enable()
 	if self.enabled then
 		return
-	end
-
-	-- TODO: Find a better way for the user to specify the world.
-	if not self.debugWorld then
-		for _, object in self.loop._state do
-			if getmetatable(object) == World then
-				self.debugWorld = object
-				break
-			end
-		end
 	end
 
 	self.enabled = true

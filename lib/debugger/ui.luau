@@ -1,6 +1,6 @@
 local RunService = game:GetService("RunService")
-local World = require(script.Parent.Parent.World)
 local rollingAverage = require(script.Parent.Parent.rollingAverage)
+local World = require(script.Parent.Parent.World)
 
 local function systemName(system)
 	local systemFn = if type(system) == "table" then system.system else system
@@ -41,12 +41,17 @@ local function ui(debugger, loop)
 	})
 
 	local objectStack = plasma.useState({})
-	local worldViewOpen, setWorldViewOpen = plasma.useState(false)
-	local worldExists = debugger.debugWorld ~= nil
+	local openWorld, setOpenWorld = plasma.useState()
 
-	if debugger.hoverEntity and worldExists then
-		if debugger.debugWorld:contains(debugger.hoverEntity) then
-			custom.hoverInspect(debugger.debugWorld, debugger.hoverEntity, custom)
+	local debugEntityWorld
+
+	for _, world in loop._worlds do
+		if debugger.hoverEntity and world:contains(debugger.hoverEntity) then
+			custom.hoverInspect(world, debugger.hoverEntity, custom)
+		end
+
+		if debugger.debugEntity and world:contains(debugger.debugEntity) then
+			debugEntityWorld = world
 		end
 	end
 
@@ -79,25 +84,36 @@ local function ui(debugger, loop)
 
 			local items = {}
 
-			for index, object in loop._state do
-				if type(object) ~= "table" then
+			for index, world in loop._worlds do
+				local selected = openWorld == world
+
+				local name = if type(index) == "number" then `World {index}` else index
+
+				table.insert(items, {
+					text = name,
+					icon = "🌐",
+					object = world,
+					selected = selected,
+					isWorld = true,
+				})
+			end
+
+			for index, value in loop._state do
+				if type(value) ~= "table" or getmetatable(value) == World then
 					continue
 				end
 
-				local isWorld = getmetatable(object) == World
-
-				local selected = (#objectStack > 0 and object == objectStack[#objectStack].value)
-					or (debugger.debugWorld == object and worldViewOpen)
-
 				local name = debugger.loopParameterNames[index]
-				local defaultName = (if isWorld then "World" else "table") .. " " .. index
+				local defaultName = if name then name else `table {index}`
+
+				local selected = (#objectStack > 0 and value == objectStack[#objectStack].value)
 
 				table.insert(items, {
-					text = if name then name else defaultName,
-					icon = if isWorld then "🌐" else "{}",
-					object = object,
+					text = defaultName,
+					icon = "{}",
+					object = value,
 					selected = selected,
-					isWorld = isWorld,
+					isWorld = false,
 				})
 			end
 
@@ -105,12 +121,10 @@ local function ui(debugger, loop)
 
 			if selectedState then
 				if selectedState.isWorld then
-					if worldViewOpen and debugger.debugWorld == selectedState.object then
-						debugger.debugWorld = nil
-						setWorldViewOpen(false)
+					if openWorld == selectedState.object then
+						setOpenWorld(nil)
 					else
-						debugger.debugWorld = selectedState.object
-						setWorldViewOpen(true)
+						setOpenWorld(selectedState.object)
 					end
 				else
 					local previousFirstValue = if objectStack[1] then objectStack[1].value else nil
@@ -228,16 +242,16 @@ local function ui(debugger, loop)
 		end)
 
 		debugger.parent = custom.container(function()
-			if debugger.debugWorld and worldViewOpen then
-				local closed = custom.worldInspect(debugger, objectStack)
+			if openWorld then
+				local closed = custom.worldInspect(debugger, openWorld, objectStack)
 
 				if closed then
-					setWorldViewOpen(false)
+					setOpenWorld(nil)
 				end
 			end
 
-			if debugger.debugWorld and debugger.debugEntity then
-				custom.entityInspect(debugger)
+			if debugEntityWorld and debugger.debugEntity then
+				custom.entityInspect(debugger, debugEntityWorld)
 			end
 
 			if #objectStack > 0 then
