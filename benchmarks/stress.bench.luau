@@ -29,38 +29,38 @@ local function flip()
 	return math.random() > 0.5
 end
 
-for i = 1, 10_000 do
+for i = 1, 50_000 do
 	local id = i
 	world:spawnAt(id)
 	pinnedWorld:spawnAt(id)
 
 	if flip() then
-		world:insert(id, A({ a = true }))
-		pinnedWorld:insert(id, pinnedA({ a = true }))
+		world:insert(id, A({ a = true, id = i }))
+		pinnedWorld:insert(id, pinnedA({ a = true, id = i }))
 	end
 	if flip() then
-		world:insert(id, B({ b = true }))
-		pinnedWorld:insert(id, pinnedB({ b = true }))
+		world:insert(id, B({ b = true, id = i }))
+		pinnedWorld:insert(id, pinnedB({ b = true, id = i }))
 	end
 	if flip() then
-		world:insert(id, C({ c = true }))
-		pinnedWorld:insert(id, pinnedC({ c = true }))
+		world:insert(id, C({ c = true, id = i }))
+		pinnedWorld:insert(id, pinnedC({ c = true, id = i }))
 	end
 	if flip() then
-		world:insert(id, D({ d = true }))
-		pinnedWorld:insert(id, pinnedD({ d = true }))
+		world:insert(id, D({ d = true, id = i }))
+		pinnedWorld:insert(id, pinnedD({ d = true, id = i }))
 	end
 	if flip() then
-		world:insert(id, E({ e = true }))
-		pinnedWorld:insert(id, pinnedE({ e = true }))
+		world:insert(id, E({ e = true, id = i }))
+		pinnedWorld:insert(id, pinnedE({ e = true, id = i }))
 	end
 	if flip() then
-		world:insert(id, F({ f = true }))
-		pinnedWorld:insert(id, pinnedF({ f = true }))
+		world:insert(id, F({ f = true, id = i }))
+		pinnedWorld:insert(id, pinnedF({ f = true, id = i }))
 	end
 	if flip() then
-		world:insert(id, G({ g = true }))
-		pinnedWorld:insert(id, pinnedG({ g = true }))
+		world:insert(id, G({ g = true, id = i }))
+		pinnedWorld:insert(id, pinnedG({ g = true, id = i }))
 	end
 end
 

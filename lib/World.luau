@@ -639,10 +639,13 @@ local QueryResult = {}
 QueryResult.__index = QueryResult
 
 function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds: { number })
-	local a, b, c, d, e, f = nil, nil, nil, nil, nil, nil
+	local A, B, C, D, E, F, G, H = unpack(componentIds)
+	local a, b, c, d, e, f, g, h = nil, nil, nil, nil, nil, nil, nil, nil
+
 	local currentEntityIndex = 1
 	local currentArchetypeIndex = 1
 	local currentArchetype = compatibleArchetypes[1]
+	local currentEntities = currentArchetype.ownedEntities
 
 	local function cacheComponentStorages()
 		if currentArchetype == nil then
@@ -651,38 +654,55 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 
 		local storage, componentIdToStorageIndex = currentArchetype.fields, currentArchetype.componentIdToStorageIndex
 		if queryLength == 1 then
-			a = storage[componentIdToStorageIndex[componentIds[1]]]
+			a = storage[componentIdToStorageIndex[A]]
 		elseif queryLength == 2 then
-			a = storage[componentIdToStorageIndex[componentIds[1]]]
-			b = storage[componentIdToStorageIndex[componentIds[2]]]
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
 		elseif queryLength == 3 then
-			a = storage[componentIdToStorageIndex[componentIds[1]]]
-			b = storage[componentIdToStorageIndex[componentIds[2]]]
-			c = storage[componentIdToStorageIndex[componentIds[3]]]
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
+			c = storage[componentIdToStorageIndex[C]]
 		elseif queryLength == 4 then
-			a = storage[componentIdToStorageIndex[componentIds[1]]]
-			b = storage[componentIdToStorageIndex[componentIds[2]]]
-			c = storage[componentIdToStorageIndex[componentIds[3]]]
-			d = storage[componentIdToStorageIndex[componentIds[4]]]
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
+			c = storage[componentIdToStorageIndex[C]]
+			d = storage[componentIdToStorageIndex[D]]
 		elseif queryLength == 5 then
-			a = storage[componentIdToStorageIndex[componentIds[1]]]
-			b = storage[componentIdToStorageIndex[componentIds[2]]]
-			c = storage[componentIdToStorageIndex[componentIds[3]]]
-			d = storage[componentIdToStorageIndex[componentIds[4]]]
-			e = storage[componentIdToStorageIndex[componentIds[5]]]
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
+			c = storage[componentIdToStorageIndex[C]]
+			d = storage[componentIdToStorageIndex[D]]
+			e = storage[componentIdToStorageIndex[E]]
 		elseif queryLength == 6 then
-			a = storage[componentIdToStorageIndex[componentIds[1]]]
-			b = storage[componentIdToStorageIndex[componentIds[2]]]
-			c = storage[componentIdToStorageIndex[componentIds[3]]]
-			d = storage[componentIdToStorageIndex[componentIds[4]]]
-			e = storage[componentIdToStorageIndex[componentIds[5]]]
-			f = storage[componentIdToStorageIndex[componentIds[6]]]
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
+			c = storage[componentIdToStorageIndex[C]]
+			d = storage[componentIdToStorageIndex[D]]
+			e = storage[componentIdToStorageIndex[E]]
+			f = storage[componentIdToStorageIndex[F]]
+		elseif queryLength == 7 then
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
+			c = storage[componentIdToStorageIndex[C]]
+			d = storage[componentIdToStorageIndex[D]]
+			e = storage[componentIdToStorageIndex[E]]
+			f = storage[componentIdToStorageIndex[F]]
+			g = storage[componentIdToStorageIndex[G]]
+		elseif queryLength == 8 then
+			a = storage[componentIdToStorageIndex[A]]
+			b = storage[componentIdToStorageIndex[B]]
+			c = storage[componentIdToStorageIndex[C]]
+			d = storage[componentIdToStorageIndex[D]]
+			e = storage[componentIdToStorageIndex[E]]
+			f = storage[componentIdToStorageIndex[F]]
+			g = storage[componentIdToStorageIndex[G]]
+			h = storage[componentIdToStorageIndex[H]]
 		end
 	end
 
 	local entityId: number
 	local function nextEntity(): any
-		entityId = currentArchetype.ownedEntities[currentEntityIndex]
+		entityId = currentEntities[currentEntityIndex]
 		while entityId == nil do
 			currentEntityIndex = 1
 			currentArchetypeIndex += 1
@@ -692,13 +712,14 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 			end
 
 			cacheComponentStorages()
-			entityId = currentArchetype.ownedEntities[currentEntityIndex]
+			currentEntities = currentArchetype.ownedEntities
+			entityId = currentEntities[currentEntityIndex]
 		end
 
 		local entityIndex = currentEntityIndex
 		currentEntityIndex += 1
 
-		local entityId = currentArchetype.ownedEntities[entityIndex]
+		local entityId = currentEntities[entityIndex]
 		if queryLength == 1 then
 			return entityId, a[entityIndex]
 		elseif queryLength == 2 then
@@ -717,6 +738,25 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 				d[entityIndex],
 				e[entityIndex],
 				f[entityIndex]
+		elseif queryLength == 7 then
+			return entityId,
+				a[entityIndex],
+				b[entityIndex],
+				c[entityIndex],
+				d[entityIndex],
+				e[entityIndex],
+				f[entityIndex],
+				g[entityIndex]
+		elseif queryLength == 8 then
+			return entityId,
+				a[entityIndex],
+				b[entityIndex],
+				c[entityIndex],
+				d[entityIndex],
+				e[entityIndex],
+				f[entityIndex],
+				g[entityIndex],
+				h[entityIndex]
 		else
 			error("Unimplemented Query Length")
 		end
