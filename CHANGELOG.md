@@ -12,10 +12,12 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Added
 
+- Added `Loop:setWorlds({world})`. This is a breaking change and is now required for the Loop and Debugger to operate properly.
 - Implemented a deferred command mode for the registry.
   - The Loop turns deferring on for all worlds given to it.
   - The command buffer is flushed between systems.
   - Iterator invalidation is now only prevented in deferred mode.
+- The debugger now supports loop parameters of any kind and will display Worlds properly if defined in the Loop.
 
 ### Deprecated
 
