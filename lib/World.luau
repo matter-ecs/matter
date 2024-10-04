@@ -1,14 +1,10 @@
 --!strict
 local Component = require(script.Parent.component)
-local archetypeModule = require(script.Parent.archetype)
 local archetypeTree = require(script.Parent.archetypeTree)
 local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
 local assertValidComponent = Component.assertValidComponent
-local archetypeOf = archetypeModule.archetypeOf
-local negateArchetypeOf = archetypeModule.negateArchetypeOf
-local areArchetypesCompatible = archetypeModule.areArchetypesCompatible
 
 type EntityId = number
 type DenseEntityId = number
@@ -71,48 +67,16 @@ type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
 local World = {}
 World.__index = World
 
-local function createArchetype(world: World, componentIds: { ComponentId }): Archetype
-	local componentIdToStorageIndex, storageIndexToComponentId = {}, {}
-	local length = #componentIds
-	local storage = table.create(length)
-
-	local indexInArchetypes = #world.archetypes + 1
-	local archetype: Archetype = {
-		ownedEntities = {},
-
-		componentIds = componentIds,
-
-		componentIdToStorageIndex = componentIdToStorageIndex,
-		storageIndexToComponentId = storageIndexToComponentId,
-		storage = storage,
-	}
-
-	for index, componentId in componentIds do
-		local associatedArchetypes = world.componentToArchetypes[componentId] or ({} :: any)
-		associatedArchetypes[indexInArchetypes] = index
-		world.componentToArchetypes[componentId] = associatedArchetypes
-
-		componentIdToStorageIndex[componentId] = index
-		storageIndexToComponentId[index] = componentId
-
-		storage[index] = {}
-	end
-
-	table.insert(world.archetypes, archetype)
-	world.archetypeIdToArchetype[archetypeId] = archetype
-	return archetype
-end
-
 --[=[
 	Creates a new World.
 ]=]
 function World.new()
 	local self = setmetatable({
-		archetypeTree = archetypeTree.new(),
+		archetypes = archetypeTree.new(),
+
 		entities = {} :: Entities,
 		componentIdToComponent = {},
 		componentToArchetypes = {} :: ComponentToArchetypes,
-		archetypes = {} :: Archetypes,
 		archetypeIdToArchetype = {} :: { [string]: Archetype? },
 
 		-- Map from archetype string --> entity ID --> entity data
@@ -146,7 +110,7 @@ function World.new()
 		_changedStorage = {},
 	}, World)
 
-	self.archetypeTree:ensureArchetype({})
+	self.rootArchetype = self.archetypes:ensureArchetype({})
 	--print(self.archetypeTree:findNode({ 1, 2, 3 }))
 	--print(self.archetypeTree)
 	return self
@@ -196,7 +160,7 @@ function World.__iter(world: World)
 		local componentIdToComponent = world.componentIdToComponent
 		local archetype = entityRecord.archetype
 		local componentInstances = {}
-		for index, componentStorage in archetype.storage do
+		for index, componentStorage in archetype.fields do
 			componentInstances[componentIdToComponent[archetype.storageIndexToComponentId[index]]] =
 				componentStorage[entityRecord.indexInArchetype]
 		end
@@ -206,23 +170,22 @@ function World.__iter(world: World)
 end
 
 local function ensureArchetype(world: World, componentIds: { number })
-	return world.archetypeTree:ensureArchetype(componentIds) --world.archetypeIdToArchetype[archetypeId] or createArchetype(world, componentIds)
+	return world.archetypes:ensureArchetype(componentIds)
 end
 
 local function ensureRecord(world: World, entityId: number): EntityRecord
 	local entityRecord = world.entities[entityId]
 	if entityRecord == nil then
-		local root = world.archetypeTree.root
+		local root = world.rootArchetype
 		entityRecord = {
-			archetype = root.archetype,
-			indexInArchetype = #root.archetype.ownedEntities + 1,
+			archetype = root,
+			indexInArchetype = #root.ownedEntities + 1,
 		}
 
-		table.insert(root.archetype.ownedEntities, entityId)
+		table.insert(root.ownedEntities, entityId)
 		world.entities[entityId] = entityRecord
 	end
 
-	--print("record", entityRecord)
 	return entityRecord :: EntityRecord
 end
 
@@ -282,7 +245,7 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	local archetype = entityRecord.archetype
 
 	-- Track changes
-	for _, componentStorage in archetype.storage do
+	for _, componentStorage in archetype.fields do
 		local componentInstance = componentStorage[entityRecord.indexInArchetype]
 		local component = getmetatable(componentInstance :: any)
 		world:_trackChanged(component, entityId, componentInstance, nil)
@@ -367,7 +330,7 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 	end
 
 	-- Track removed
-	for index, componentStorage in oldArchetype.storage do
+	for index, componentStorage in oldArchetype.fields do
 		local componentId = oldArchetype.storageIndexToComponentId[index]
 		if componentIdMap[componentId] == nil then
 			local component = world.componentIdToComponent[componentId]
@@ -395,7 +358,7 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 		local index = table.find(componentIds, componentId)
 		if index then
 			local componentInstance =
-				archetype.storage[archetype.componentIdToStorageIndex[componentId]][entityRecord.indexInArchetype]
+				archetype.fields[archetype.componentIdToStorageIndex[componentId]][entityRecord.indexInArchetype]
 			world:_trackChanged(component, entityId, componentInstance, nil)
 
 			table.remove(componentIds, index)
@@ -622,7 +585,7 @@ function World.get(self: World, entityId, ...: Component)
 		end
 
 		-- Yes
-		componentInstances[i] = archetype.storage[storageIndex][entityRecord.indexInArchetype]
+		componentInstances[i] = archetype.fields[storageIndex][entityRecord.indexInArchetype]
 	end
 
 	return unpack(componentInstances, 1, length)
@@ -1135,7 +1098,7 @@ function World.query(self: World, ...)
 		end
 	end
 
-	local possibleArchetypes = self.archetypeTree:findArchetypes(componentIds)
+	local possibleArchetypes = self.archetypes:findArchetypes(componentIds)
 	local compatibleArchetypes = possibleArchetypes
 	--print("possibleArchetypes:", possibleArchetypes)
 	-- local possibleArchetypes
@@ -1381,7 +1344,7 @@ function World.remove(self: World, id, ...: Component)
 	local archetype = entityRecord.archetype
 	for _, component in components do
 		local componentId = #component
-		local storage = archetype.storage[archetype.componentIdToStorageIndex[componentId]]
+		local storage = archetype.fields[archetype.componentIdToStorageIndex[componentId]]
 		table.insert(componentInstances, if storage then storage[entityRecord.indexInArchetype] else nil)
 	end
 

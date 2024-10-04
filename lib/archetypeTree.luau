@@ -50,7 +50,8 @@ local function newArchetypeTree()
 		return node
 	end
 
-	local function findArchetypes(_, terms: Terms)
+	local function findArchetypes(_, with: Terms)
+		local terms = table.clone(with)
 		table.sort(terms)
 
 		local archetypes = {}
