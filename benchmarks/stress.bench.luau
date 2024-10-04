@@ -8,9 +8,22 @@ local PinnedMatter = require(ReplicatedStorage.PinnedMatter)
 local world = Matter.World.new()
 local pinnedWorld = PinnedMatter.World.new()
 
-local A, B, C, D = Matter.component(), Matter.component(), Matter.component(), Matter.component()
-local pinnedA, pinnedB, pinnedC, pinnedD =
-	PinnedMatter.component(), PinnedMatter.component(), PinnedMatter.component(), PinnedMatter.component()
+local A, B, C, D, E, F, G =
+	Matter.component(),
+	Matter.component(),
+	Matter.component(),
+	Matter.component(),
+	Matter.component(),
+	Matter.component(),
+	Matter.component()
+local pinnedA, pinnedB, pinnedC, pinnedD, pinnedE, pinnedF, pinnedG =
+	PinnedMatter.component(),
+	PinnedMatter.component(),
+	PinnedMatter.component(),
+	PinnedMatter.component(),
+	PinnedMatter.component(),
+	PinnedMatter.component(),
+	PinnedMatter.component()
 
 local function flip()
 	return math.random() > 0.5
@@ -37,6 +50,18 @@ for i = 1, 10_000 do
 		world:insert(id, D({ d = true }))
 		pinnedWorld:insert(id, pinnedD({ d = true }))
 	end
+	if flip() then
+		world:insert(id, E({ e = true }))
+		pinnedWorld:insert(id, pinnedE({ e = true }))
+	end
+	if flip() then
+		world:insert(id, F({ f = true }))
+		pinnedWorld:insert(id, pinnedF({ f = true }))
+	end
+	if flip() then
+		world:insert(id, G({ g = true }))
+		pinnedWorld:insert(id, pinnedG({ g = true }))
+	end
 end
 
 return {
@@ -46,17 +71,17 @@ return {
 
 	Functions = {
 		["Old Matter"] = function()
-			local count = 0
-			for _ in pinnedWorld:query(pinnedA, pinnedB) do
-				count += 1
+			--local count = 0
+			for _ in pinnedWorld:query(pinnedB, pinnedA) do
+				--count += 1
 			end
 
 			--print("old:", count)
 		end,
 		["New Matter"] = function()
-			local count = 0
-			for _ in world:query(A, B) do
-				count += 1
+			--local count = 0
+			for _ in world:query(B, A) do
+				--count += 1
 				--print("entt", a, b)
 			end
 
