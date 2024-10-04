@@ -40,7 +40,7 @@ local function assertDeepEqual(a, b)
 end
 
 return function()
-	describeFOCUS("World", function()
+	describe("World", function()
 		describe("buffered", function()
 			local function createDeferredWorld()
 				local world = World.new()
@@ -143,6 +143,18 @@ return function()
 		end)
 
 		describe("immediate", function()
+			itFOCUS("test", function()
+				local world = World.new()
+				local A, B = component(), component()
+				world:spawn(A({ a = true }), B({ b = true }))
+				world:spawn(A({ a = true }))
+
+				for id, a in world:query(A) do
+					print(id, a)
+				end
+
+				print("Done:", world.archetypeTree)
+			end)
 			it("should work", function()
 				local world = World.new()
 				local A, B = component(), component()

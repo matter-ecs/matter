@@ -16,7 +16,7 @@ local function flip()
 	return math.random() > 0.5
 end
 
-for i = 1, 200_000 do
+for i = 1, 50_000 do
 	local id = i
 	world:spawnAt(id)
 	pinnedWorld:spawnAt(id)
@@ -46,16 +46,20 @@ return {
 
 	Functions = {
 		["Old Matter"] = function()
+			local count = 0
 			for _ in pinnedWorld:query(pinnedA, pinnedB) do
-			end
-		end,
-		["New Matter"] = function()
-			--local count = 0
-			for _ in world:query(A, B) do
-				--count += 1
+				count += 1
 			end
 
-			--print(count)
+			--print("old:", count)
+		end,
+		["New Matter"] = function()
+			local count = 0
+			for _ in world:query(A, B) do
+				count += 1
+			end
+
+			--print("new:", count)
 		end,
 	},
 }
