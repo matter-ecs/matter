@@ -16,26 +16,26 @@ local function flip()
 	return math.random() > 0.5
 end
 
-for i = 1, 50_000 do
+for i = 1, 10_000 do
 	local id = i
 	world:spawnAt(id)
 	pinnedWorld:spawnAt(id)
 
 	if flip() then
-		world:insert(id, A())
-		pinnedWorld:insert(id, pinnedA())
+		world:insert(id, A({ a = true }))
+		pinnedWorld:insert(id, pinnedA({ a = true }))
 	end
 	if flip() then
-		world:insert(id, B())
-		pinnedWorld:insert(id, pinnedB())
+		world:insert(id, B({ b = true }))
+		pinnedWorld:insert(id, pinnedB({ b = true }))
 	end
 	if flip() then
-		world:insert(id, C())
-		pinnedWorld:insert(id, pinnedC())
+		world:insert(id, C({ c = true }))
+		pinnedWorld:insert(id, pinnedC({ c = true }))
 	end
 	if flip() then
-		world:insert(id, D())
-		pinnedWorld:insert(id, pinnedD())
+		world:insert(id, D({ d = true }))
+		pinnedWorld:insert(id, pinnedD({ d = true }))
 	end
 end
 
@@ -57,6 +57,7 @@ return {
 			local count = 0
 			for _ in world:query(A, B) do
 				count += 1
+				--print("entt", a, b)
 			end
 
 			--print("new:", count)

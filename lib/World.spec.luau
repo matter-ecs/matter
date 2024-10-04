@@ -151,7 +151,7 @@ return function()
 				world:spawn(C({ c = true, top = true }))
 				world:spawn(B({ b = true }), C({ c = true, nested = true }))
 
-				for id, a in world:query(C) do
+				for id, a in world:query(C, B):without(A) do
 					print(id, a)
 				end
 
