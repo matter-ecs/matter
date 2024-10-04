@@ -322,7 +322,7 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 		world:_trackChanged(
 			component,
 			entityId,
-			if storageIndex then oldArchetype.storage[storageIndex][entityRecord.indexInArchetype] else nil,
+			if storageIndex then oldArchetype.fields[storageIndex][entityRecord.indexInArchetype] else nil,
 			componentInstance
 		)
 
@@ -698,6 +698,8 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 			g = storage[componentIdToStorageIndex[G]]
 			h = storage[componentIdToStorageIndex[H]]
 		end
+
+		-- For anything longer, we do not cache.
 	end
 
 	local entityId: number
@@ -758,7 +760,13 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 				g[entityIndex],
 				h[entityIndex]
 		else
-			error("Unimplemented Query Length")
+			local output = table.create(queryLength)
+			for index, componentId in componentIds do
+				output[index] =
+					currentArchetype.fields[currentArchetype.componentToStorageIndex[componentId]][entityIndex]
+			end
+
+			return unpack(output, 1, queryLength)
 		end
 	end
 
@@ -795,6 +803,8 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 		end
 
 		currentArchetype = compatibleArchetypes[1]
+		currentEntities = currentArchetype.ownedEntities
+
 		cacheComponentStorages()
 		return query
 	end
@@ -829,11 +839,14 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 		return entities
 	end
 
+	local function view() end
+
 	cacheComponentStorages()
 	return setmetatable({
 		next = nextEntity,
 		without = without,
 		snapshot = snapshot,
+		view = view,
 	}, {
 		__iter = iter,
 		__call = nextEntity,
@@ -1134,7 +1147,7 @@ function World.query(self: World, ...)
 	else
 		componentIds = table.create(queryLength)
 		for i = 1, queryLength do
-			componentIds[i] = select(i, ...)
+			componentIds[i] = #select(i, ...)
 		end
 	end
 
