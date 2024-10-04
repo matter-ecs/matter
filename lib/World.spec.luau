@@ -145,11 +145,13 @@ return function()
 		describe("immediate", function()
 			itFOCUS("test", function()
 				local world = World.new()
-				local A, B = component(), component()
-				world:spawn(A({ a = true }), B({ b = true }))
+				local A, B, C = component(), component(), component()
+				world:spawn(A({ a = true }), B({ b = true }), C({ c = true, deep = true }))
 				world:spawn(A({ a = true }))
+				world:spawn(C({ c = true, top = true }))
+				world:spawn(B({ b = true }), C({ c = true, nested = true }))
 
-				for id, a in world:query(A) do
+				for id, a in world:query(C) do
 					print(id, a)
 				end
 

@@ -50,19 +50,35 @@ local function newArchetypeTree()
 		return node
 	end
 
-	local function findArchetypes(self, terms: Terms)
+	local function findArchetypes(_, terms: Terms)
 		table.sort(terms)
 
 		local archetypes = {}
-		local function collapse(node: Node)
-			table.insert(archetypes, node.archetype)
+		local function check(node: Node, terms: Terms)
+			if #terms == 0 then
+				if node.archetype then
+					table.insert(archetypes, node.archetype)
+				end
+			end
 
-			for _, child in node.children do
-				collapse(child)
+			for componentId, child in node.children do
+				local head = terms[1]
+				if head then
+					if componentId < head then
+						check(child, terms)
+					elseif componentId == head then
+						local newTerms = table.clone(terms)
+						table.remove(newTerms, 1)
+
+						check(child, newTerms)
+					end
+				else
+					check(child, terms)
+				end
 			end
 		end
 
-		collapse(findNode(self, terms))
+		check(root, terms)
 		return archetypes
 	end
 
