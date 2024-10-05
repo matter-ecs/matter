@@ -760,13 +760,15 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 				g[entityIndex],
 				h[entityIndex]
 		else
-			local output = table.create(queryLength)
+			local output = table.create(queryLength + 1)
+			output[1] = entityIndex
+
 			for index, componentId in componentIds do
-				output[index] =
-					currentArchetype.fields[currentArchetype.componentToStorageIndex[componentId]][entityIndex]
+				output[index + 1] =
+					currentArchetype.fields[currentArchetype.componentIdToStorageIndex[componentId]][entityIndex]
 			end
 
-			return unpack(output, 1, queryLength)
+			return unpack(output, 1, queryLength + 1)
 		end
 	end
 
@@ -839,7 +841,48 @@ function QueryResult.new(compatibleArchetypes, queryLength: number, componentIds
 		return entities
 	end
 
-	local function view() end
+	local function view()
+		local entities = {}
+		while true do
+			local entry = table.pack(nextEntity())
+			if entry.n == 1 then
+				break
+			end
+
+			entities[entry[1]] = table.move(entry, 2, #entry, 1, {})
+		end
+
+		local function get(_, entityId)
+			local components = entities[entityId]
+			if components == nil then
+				return nil
+			end
+
+			return unpack(components, 1, #components)
+		end
+
+		local function contains(_, entityId)
+			return entities[entityId] ~= nil
+		end
+
+		return setmetatable({
+			get = get,
+			contains = contains,
+		}, {
+			__iter = function()
+				local index = 0
+				return function()
+					index += 1
+					local entity = entities[index]
+					if not entity then
+						return
+					end
+
+					return index, unpack(entity, 1, #entity)
+				end
+			end,
+		})
+	end
 
 	cacheComponentStorages()
 	return setmetatable({

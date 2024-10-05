@@ -104,11 +104,51 @@ local function newArchetypeTree()
 		return node.archetype
 	end
 
+	local function count()
+		local archetypes = {}
+		local function check(node, str)
+			if node.archetype then
+				archetypes[str] = (archetypes[str] or 0) + #node.archetype.ownedEntities
+			end
+
+			for componentId, child in node.children do
+				check(child, str .. "_" .. componentId)
+			end
+		end
+
+		check(root, "")
+		return archetypes
+	end
+
+	local function cleanup()
+		-- TODO:
+		-- dont potentially delete root node
+
+		local function check(node)
+			for componentId, child in node.children do
+				local archetype, children = child.archetype, child.children
+				if archetype == nil or #archetype.ownedEntities == 0 then
+					if next(children) == nil then
+						node.children[componentId] = nil
+					else
+						child.archetype = nil
+					end
+				end
+
+				check(child)
+			end
+		end
+
+		check(root)
+	end
+
 	return table.freeze({
 		findNode = findNode,
 		findArchetypes = findArchetypes,
 		ensureArchetype = ensureArchetype,
 		root = root,
+		count = count,
+		cleanup = cleanup,
 	})
 end
 
