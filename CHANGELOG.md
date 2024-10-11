@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   - The Loop turns deferring on for all worlds given to it.
   - The command buffer is flushed between systems.
   - Iterator invalidation is now only prevented in deferred mode.
+- Added a button to the Debugger's system list to sort by run time.
 
 ### Deprecated
 
