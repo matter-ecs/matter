@@ -140,8 +140,17 @@ local function ui(debugger, loop)
 				end
 			end
 
+			local sortByDuration, setSortByDuration = plasma.useState(false)
+
 			plasma.space(15)
-			plasma.heading("SYSTEMS")
+			plasma.row({ verticalAlignment = Enum.VerticalAlignment.Center }, function()
+				plasma.heading("SYSTEMS")
+
+				if plasma.button(`sort by: {sortByDuration and "duration" or "order"}`):clicked() then
+					setSortByDuration(not sortByDuration)
+				end
+			end)
+
 			plasma.space(10)
 
 			local durations = {}
@@ -210,6 +219,12 @@ local function ui(debugger, loop)
 						barWidth = barWidth,
 						index = index,
 					})
+				end
+
+				if sortByDuration then
+					table.sort(listOfSystems, function(a, b)
+						return (durations[a.system] or 0) > (durations[b.system] or 0)
+					end)
 				end
 
 				local systemList = custom.selectionList(listOfSystems, custom)
