@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Added a button to the Debugger's system list to sort by run time.
+
 ### Fixed
 
 - The debugger now gracefully handles cyclic tables.
