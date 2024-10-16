@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   - Iterator invalidation is now only prevented in deferred mode.
 - The debugger now supports `Loop` parameters of any kind.
   - For example, you can now have a single `Loop` state table that contains your World, and the debugger will display it properly.
+- Added a button to the Debugger's system list to sort by run time.
 
 ### Deprecated
 

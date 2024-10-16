@@ -127,9 +127,10 @@ return function(Plasma)
 
 		Plasma.useEffect(function()
 			refs.mainText.Text = text
+			refs.index.Text = index or ""
 			refs.button.container.Icon.Text = icon or ""
 			refs.button.container.Icon.Visible = icon ~= nil
-		end, text, icon)
+		end, text, icon, index)
 
 		refs.button.container.sideText.Visible = sideText ~= nil
 		refs.button.container.sideText.Text = if sideText ~= nil then sideText else ""
