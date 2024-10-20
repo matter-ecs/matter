@@ -528,7 +528,7 @@ end
 	@param id number -- The entity ID
 	@return bool -- `true` if the entity exists
 ]=]
-function World.contains(self: typeof(World.new()), id)
+function World:contains(id)
 	return self.allEntities[id] ~= nil
 end
 
@@ -678,6 +678,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 
 	local entityId: number
 	--[=[
+		@within QueryResult
+
 		Returns the next set of values from the query result. Once all results have been returned, the
 		QueryResult is exhausted and is no longer useful.
 
@@ -774,6 +776,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 	end
 
 	--[=[
+		@within QueryResult
+
 		Returns an iterator that will skip any entities that also have the given components.
 		The filtering is done at the archetype level, and so it is faster than manually skipping entities.
 
@@ -838,6 +842,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 	}
 
 	--[=[
+		@within QueryResult
+
 		Creates a "snapshot" of this query, draining this QueryResult and returning a list containing all of its results.
 
 		By default, iterating over a QueryResult happens in "real time": it iterates over the actual data in the ECS, so
@@ -878,6 +884,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 	end
 
 	--[=[
+		@class View
+
 		Creates a View of the query and does all of the iterator tasks at once at an amortized cost.
 		This is used for many repeated random access to an entity. If you only need to iterate, just use a query.
 
@@ -904,6 +912,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 		end
 
 		--[=[
+			@within View
+
 			Retrieve the query results to corresponding `entity`
 			@param entity number - the entity ID
 			@return ...ComponentInstance
@@ -918,6 +928,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 		end
 
 		--[=[
+			@within View
+
 			Equivalent to `world:contains()`
 			@param entity number - the entity ID
 			@return boolean
