@@ -110,9 +110,7 @@ function World.new()
 		_changedStorage = {},
 	}, World)
 
-	self.rootArchetype = self.archetypes:ensureArchetype({})
-	--print(self.archetypeTree:findNode({ 1, 2, 3 }))
-	--print(self.archetypeTree)
+	self.rootArchetype = assert(self.archetypes.root.archetype, "Missing root archetype")
 	return self
 end
 export type World = typeof(World.new())

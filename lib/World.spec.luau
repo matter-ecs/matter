@@ -151,11 +151,11 @@ return function()
 				-- world:spawn(C({ c = true, top = true }))
 				-- world:spawn(B({ b = true }), C({ c = true, nested = true }))
 
-				world:spawnAt(15)
-				world:insert(15, B({}))
-				world:remove(15, D({}))
-				world:replace(15, B({}), A({}))
-				for id, a in world:query(A):without(C) do
+				world:spawn(A({ a = true }), B({ b = true }))
+				-- world:insert(15, B({}))
+				-- world:remove(15, D({}))
+				-- world:replace(15, B({}), A({}))
+				for id, a in world:query(B, C) do
 					print(id, a)
 				end
 

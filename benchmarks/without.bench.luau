@@ -29,66 +29,40 @@ local function flip()
 	return math.random() > 0.5
 end
 
-local archetypes = {}
-for i = 1, 1_000 do
+for i = 1, 50_000 do
 	local id = i
 	world:spawnAt(id)
 	pinnedWorld:spawnAt(id)
 
-	local str = ""
 	if flip() then
 		world:insert(id, A({ a = true, id = i }))
 		pinnedWorld:insert(id, pinnedA({ a = true, id = i }))
-		str ..= "A_"
 	end
 	if flip() then
 		world:insert(id, B({ b = true, id = i }))
 		pinnedWorld:insert(id, pinnedB({ b = true, id = i }))
-		str ..= "B_"
 	end
 	if flip() then
 		world:insert(id, C({ c = true, id = i }))
 		pinnedWorld:insert(id, pinnedC({ c = true, id = i }))
-		str ..= "C_"
 	end
 	if flip() then
 		world:insert(id, D({ d = true, id = i }))
 		pinnedWorld:insert(id, pinnedD({ d = true, id = i }))
-		str ..= "D_"
 	end
 	if flip() then
 		world:insert(id, E({ e = true, id = i }))
 		pinnedWorld:insert(id, pinnedE({ e = true, id = i }))
-		str ..= "E_"
 	end
 	if flip() then
 		world:insert(id, F({ f = true, id = i }))
 		pinnedWorld:insert(id, pinnedF({ f = true, id = i }))
-		str ..= "F_"
 	end
 	if flip() then
 		world:insert(id, G({ g = true, id = i }))
 		pinnedWorld:insert(id, pinnedG({ g = true, id = i }))
-		str ..= "G_"
 	end
-
-	archetypes[str] = (archetypes[str] or 0) + 1
 end
-
-local total = 0
-for _, count in archetypes do
-	total += count
-end
-
-print("archetypes:", archetypes)
-print(total, "different archetypes")
-
-print("tree:", world.archetypes:count())
-local total = 0
-for _, count in world.archetypes:count() do
-	total += count
-end
-print(total, "archetypes")
 
 return {
 	ParameterGenerator = function()
@@ -97,21 +71,20 @@ return {
 
 	Functions = {
 		["Old Matter"] = function()
-			--local count = 0
-			for _ in pinnedWorld:query(pinnedB, pinnedA) do
-				--count += 1
+			local count = 0
+			for _ in pinnedWorld:query(pinnedB):without(pinnedC) do
+				count += 1
 			end
 
 			--print("old:", count)
 		end,
 		["New Matter"] = function()
-			--local count = 0
-			for _ in world:query(B, A) do
-				--count += 1
-				--print("entt", a, b)
+			local count = 0
+			for _ in world:query(B):without(C) do
+				count += 1
 			end
 
-			--print("new:", count)
+			print("new:", count)
 		end,
 	},
 }
