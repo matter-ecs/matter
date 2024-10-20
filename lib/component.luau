@@ -181,6 +181,6 @@ return {
 	newComponent = newComponent,
 	assertValidComponentInstance = assertValidComponentInstance,
 	assertValidComponentInstances = assertValidComponentInstances,
-  assertValidComponentArgsProvided = assertValidComponentArgsProvided,
+	assertComponentArgsProvided = assertComponentArgsProvided,
 	assertValidComponent = assertValidComponent,
 }

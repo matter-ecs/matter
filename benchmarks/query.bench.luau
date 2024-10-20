@@ -16,7 +16,6 @@ for i = 1, 10_000 do
 	pinnedWorld:spawnAt(i, pinnedA({}), pinnedB({}))
 end
 
-print(world.archetypes, world.archetypes:count())
 return {
 	ParameterGenerator = function()
 		return
@@ -28,8 +27,6 @@ return {
 			for _ in world:query(A, B) do
 				count += 1
 			end
-
-			print("new", count)
 		end,
 		["Old Matter"] = function()
 			local count = 0

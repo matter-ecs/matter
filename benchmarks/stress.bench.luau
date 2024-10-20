@@ -83,13 +83,6 @@ end
 print("archetypes:", archetypes)
 print(total, "different archetypes")
 
-print("tree:", world.archetypes:count())
-local total = 0
-for _, count in world.archetypes:count() do
-	total += count
-end
-print(total, "archetypes")
-
 return {
 	ParameterGenerator = function()
 		return
@@ -97,21 +90,16 @@ return {
 
 	Functions = {
 		["Old Matter"] = function()
-			--local count = 0
+			local count = 0
 			for _ in pinnedWorld:query(pinnedB, pinnedA) do
-				--count += 1
+				count += 1
 			end
-
-			--print("old:", count)
 		end,
 		["New Matter"] = function()
-			--local count = 0
+			local count = 0
 			for _ in world:query(B, A) do
-				--count += 1
-				--print("entt", a, b)
+				count += 1
 			end
-
-			--print("new:", count)
 		end,
 	},
 }

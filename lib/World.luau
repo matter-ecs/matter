@@ -8,6 +8,7 @@ local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
 local assertValidComponent = Component.assertValidComponent
+local assertComponentArgsProvided = Component.assertComponentArgsProvided
 
 type EntityId = Archetype.EntityId
 type ComponentId = Archetype.ComponentId
@@ -54,6 +55,15 @@ type ReplaceCommand = {
 }
 
 type Command = DespawnCommand | InsertCommand | RemoveCommand | ReplaceCommand
+
+local function assertEntityExists(world, id: number)
+	assert(world:contains(id), "Entity doesn't exist, use world:contains to check if needed")
+end
+
+local function assertWorldOperationIsValid(world, id: number, ...)
+	assertEntityExists(world, id)
+	assertComponentArgsProvided(...)
+end
 
 --[=[
 	@class World
@@ -500,6 +510,7 @@ end
 function World:replace(id, ...)
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)
+
 	bufferCommand(self, { type = "replace", entityId = id, componentInstances = componentInstances })
 end
 
@@ -551,15 +562,13 @@ end
 	@param ... Component -- The components to fetch
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
-function World.get(self: World, entityId, ...: Component)
-	local entityRecord = self.allEntities[entityId]
-	if entityRecord == nil then
-		error(ERROR_NO_ENTITY, 2)
-	end
+function World:get(entityId, ...: Component)
+	assertWorldOperationIsValid(self, entityId, ...)
 
 	local length = select("#", ...)
 	local componentInstances = table.create(length, nil)
 
+	local entityRecord = self.allEntities[entityId]
 	local archetype = entityRecord.archetype
 	local idToIndex = archetype.idToIndex
 	for i = 1, length do
@@ -1244,9 +1253,7 @@ end
 	@param ... ComponentInstance -- The component values to insert
 ]=]
 function World:insert(id, ...)
-	if not self:contains(id) then
-		error(ERROR_NO_ENTITY, 2)
-	end
+	assertWorldOperationIsValid(self, id, ...)
 
 	local componentInstances = { ... }
 	assertValidComponentInstances(componentInstances)

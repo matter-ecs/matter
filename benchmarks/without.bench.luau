@@ -75,16 +75,12 @@ return {
 			for _ in pinnedWorld:query(pinnedB):without(pinnedC) do
 				count += 1
 			end
-
-			--print("old:", count)
 		end,
 		["New Matter"] = function()
 			local count = 0
 			for _ in world:query(B):without(C) do
 				count += 1
 			end
-
-			print("new:", count)
 		end,
 	},
 }
