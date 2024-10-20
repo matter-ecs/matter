@@ -477,28 +477,6 @@ function World:spawnAt(id: number, ...)
 	return id
 end
 
-function World:_newQueryArchetype(queryArchetype)
-	if self._queryCache[queryArchetype] == nil then
-		self._queryCache[queryArchetype] = {}
-	else
-		return -- Archetype isn't actually new
-	end
-
-	for entityArchetype in self.storage do
-		if areArchetypesCompatible(queryArchetype, entityArchetype) then
-			self._queryCache[queryArchetype][entityArchetype] = true
-		end
-	end
-end
-
-function World:_updateQueryCache(entityArchetype)
-	for queryArchetype, compatibleArchetypes in pairs(self._queryCache) do
-		if areArchetypesCompatible(queryArchetype, entityArchetype) then
-			compatibleArchetypes[entityArchetype] = true
-		end
-	end
-end
-
 --[=[
 	Replaces a given entity by ID with an entirely new set of components.
 	Equivalent to removing all components from an entity, and then adding these ones.
@@ -557,7 +535,7 @@ end
 --[=[
 	Gets a specific component (or set of components) from a specific entity in this world.
 
-	@param id number -- The entity ID
+	@param entityId number -- The entity ID
 	@param ... Component -- The components to fetch
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
