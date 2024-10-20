@@ -143,56 +143,6 @@ return function()
 		end)
 
 		describe("immediate", function()
-			it("test", function()
-				local world = World.new()
-				local A, B, C, D = component(), component(), component(), component()
-				-- world:spawn(A({ a = true }), B({ b = true }), C({ c = true, deep = true }))
-				-- world:spawn(A({ a = true }))
-				-- world:spawn(C({ c = true, top = true }))
-				-- world:spawn(B({ b = true }), C({ c = true, nested = true }))
-
-				world:spawn(A({ a = true }), B({ b = true }))
-				-- world:insert(15, B({}))
-				-- world:remove(15, D({}))
-				-- world:replace(15, B({}), A({}))
-				for id, a in world:query(B, C) do
-					print(id, a)
-				end
-
-				print("Done:", world.archetypes)
-			end)
-			it("should work", function()
-				local world = World.new()
-				local A, B, C = component(), component(), component()
-
-				local id = world:spawn(A({ a = true }))
-				world:replace(id, B({ b = true }))
-				world:insert(id, C({ c = true }))
-
-				print(world.archetypes)
-				-- world:spawnAt(10)
-				-- world:insert(10, A({ a = true }), B({ b = true }))
-				-- world:remove(10, A, B)
-				-- world:insert(10, A({ a = true, second = true }))
-				-- world:insert(10, B({ b = true, second = true }))
-
-				--world:spawnAt(50, A({ a = true, two = true }), B({ b = true, two = true }))
-				-- world:spawnAt(11)
-				-- world:insert(11, A({ a = true, two = true }), B({ b = true, two = true }))
-				--print(world.archetypes)
-				-- world:spawnAt(10, A({ a = true }))
-				-- world:spawnAt(11, A({ a = true, two = true }))
-				-- world:spawnAt(12, A({ a = true, three = true }))
-
-				-- world:insert(10, B({ b = true }))
-				--world:spawnAt(10, A({ a = true }), B({ b = true }))
-				--world:remove(10, B)
-				-- for id, a in world:query(A) do
-				-- 	print(id, a)
-				-- end
-				--print(world)
-			end)
-
 			it("should be iterable", function()
 				local world = World.new()
 				local A = component()
@@ -204,7 +154,6 @@ return function()
 
 				local count = 0
 				for id, data in world do
-					print(id, data)
 					count += 1
 					if id == eA then
 						expect(data[A]).to.be.ok()
@@ -582,7 +531,6 @@ return function()
 					local ran = false
 
 					for entityId, record in w:queryChanged(A) do
-						print(entityId, record, tostring(record.new))
 						if additionalQuery then
 							if w:get(entityId, additionalQuery) == nil then
 								continue
@@ -784,7 +732,6 @@ return function()
 				local viewA = world:query(ComponentA):view()
 				local viewB = world:query(ComponentB):view()
 
-				print(viewA)
 				expect(viewA:contains(entityA)).to.equal(true)
 				expect(viewA:contains(entityB)).to.equal(false)
 				expect(viewB:contains(entityB)).to.equal(true)
