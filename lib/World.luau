@@ -790,7 +790,7 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 		end
 		```
 	]=]
-	local function without(query, ...: Component)
+	local function without(_, ...: Component)
 		local numComponents = select("#", ...)
 		local numCompatibleArchetypes = #compatibleArchetypes
 		for archetypeIndex = numCompatibleArchetypes, 1, -1 do
@@ -884,8 +884,6 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 	end
 
 	--[=[
-		@class View
-
 		Creates a View of the query and does all of the iterator tasks at once at an amortized cost.
 		This is used for many repeated random access to an entity. If you only need to iterate, just use a query.
 
@@ -915,10 +913,10 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 			@within View
 
 			Retrieve the query results to corresponding `entity`
-			@param entity number - the entity ID
+			@param entityId number - the entity ID
 			@return ...ComponentInstance
 		]=]
-		local function get(_, entityId)
+		local function get(_, entityId: EntityId)
 			local components = entities[entityId]
 			if components == nil then
 				return nil
@@ -931,10 +929,10 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 			@within View
 
 			Equivalent to `world:contains()`
-			@param entity number - the entity ID
+			@param entityId number - the entity ID
 			@return boolean
 		]=]
-		local function contains(_, entityId)
+		local function contains(_, entityId: EntityId)
 			return entities[entityId] ~= nil
 		end
 
