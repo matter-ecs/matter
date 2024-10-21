@@ -45,6 +45,7 @@ local merge = require(script.Parent.immutable).merge
 -- It should not be accessible through indexing into a component instance directly.
 local DIAGNOSTIC_COMPONENT_MARKER = {}
 
+local lastId = 0
 local function newComponent(name, defaultData)
 	name = name or debug.info(2, "s") .. "@" .. debug.info(2, "l")
 
@@ -102,12 +103,17 @@ local function newComponent(name, defaultData)
 		return patch
 	end
 
+	lastId += 1
+	local id = lastId
 	setmetatable(component, {
 		__call = function(_, ...)
 			return component.new(...)
 		end,
 		__tostring = function()
 			return name
+		end,
+		__len = function()
+			return id
 		end,
 		[DIAGNOSTIC_COMPONENT_MARKER] = true,
 	})
@@ -175,6 +181,6 @@ return {
 	newComponent = newComponent,
 	assertValidComponentInstance = assertValidComponentInstance,
 	assertValidComponentInstances = assertValidComponentInstances,
-	assertValidComponent = assertValidComponent,
 	assertComponentArgsProvided = assertComponentArgsProvided,
+	assertValidComponent = assertValidComponent,
 }

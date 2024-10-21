@@ -429,7 +429,6 @@ function Loop:begin(events)
 						end
 
 						local debugger = self._debugger
-
 						if debugger and debugger.debugSystem == system and debugger._queries then
 							local totalQueryTime = 0
 

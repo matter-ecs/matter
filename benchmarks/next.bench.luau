@@ -23,15 +23,15 @@ return {
 
 	Functions = {
 		["Matter 0.9"] = function()
-			local count = 0
-			for _ in world:query(A, B) do
-				count += 1
+			local query = world:query(A, B)
+			for _ = 1, 1_000 do
+				query:next()
 			end
 		end,
 		["Matter 0.8.4"] = function()
-			local count = 0
-			for _ in pinnedWorld:query(pinnedA, pinnedB) do
-				count += 1
+			local query = pinnedWorld:query(pinnedA, pinnedB)
+			for _ = 1, 1_000 do
+				query:next()
 			end
 		end,
 	},
