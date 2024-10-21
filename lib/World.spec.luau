@@ -240,6 +240,14 @@ return function()
 				expect(world:size()).to.equal(1)
 			end)
 
+			it("should allow removing missing components", function()
+				local world = World.new()
+				local A = component()
+
+				local entityId = world:spawn()
+				expect(world:remove(entityId, A)).to.equal(nil)
+			end)
+
 			it("should not find any entities", function()
 				local world = World.new()
 

@@ -1,103 +1,50 @@
-local toSet = require(script.Parent.immutable).toSet
+export type EntityId = number
+export type ComponentId = number
+export type ComponentIds = { ComponentId }
 
-local valueIds = {}
-local nextValueId = 0
-local compatibilityCache = {}
-local archetypeCache = {}
+export type Component = { [any]: any }
+export type ComponentInstance = { [any]: any }
 
-local function getValueId(value)
-	local valueId = valueIds[value]
-	if valueId == nil then
-		valueIds[value] = nextValueId
-		valueId = nextValueId
-		nextValueId += 1
-	end
+export type ArchetypeId = string
+export type Archetype = {
+	entities: { EntityId },
+	componentIds: { ComponentId },
+	idToIndex: { [ComponentId]: number },
+	indexToId: { [number]: ComponentId },
+	fields: { { ComponentInstance } },
+}
 
-	return valueId
+function hash(componentIds: { number })
+	table.sort(componentIds)
+	return table.concat(componentIds, "_")
 end
 
-function archetypeOf(...)
-	debug.profilebegin("archetypeOf")
+function new(componentIds: { ComponentId }): (Archetype, ArchetypeId)
+	local length = #componentIds
+	local archetypeId = hash(componentIds)
 
-	local length = select("#", ...)
+	local idToIndex, indexToId = {}, {}
+	local fields = table.create(length)
 
-	local currentNode = archetypeCache
+	local archetype: Archetype = {
+		entities = {},
+		componentIds = componentIds,
+		idToIndex = idToIndex,
+		indexToId = indexToId,
+		fields = fields,
+	}
 
-	for i = 1, length do
-		local nextNode = currentNode[select(i, ...)]
+	for index, componentId in componentIds do
+		idToIndex[componentId] = index
+		indexToId[index] = componentId
 
-		if not nextNode then
-			nextNode = {}
-			currentNode[select(i, ...)] = nextNode
-		end
-
-		currentNode = nextNode
+		fields[index] = {}
 	end
 
-	if currentNode._archetype then
-		debug.profileend()
-		return currentNode._archetype
-	end
-
-	local list = table.create(length)
-
-	for i = 1, length do
-		list[i] = getValueId(select(i, ...))
-	end
-
-	table.sort(list)
-
-	local archetype = table.concat(list, "_")
-
-	currentNode._archetype = archetype
-
-	debug.profileend()
-
-	return archetype
-end
-
-function negateArchetypeOf(...)
-	return string.gsub(archetypeOf(...), "_", "x")
-end
-
-function areArchetypesCompatible(queryArchetype, targetArchetype)
-	local archetypes = string.split(queryArchetype, "x")
-	local baseArchetype = table.remove(archetypes, 1)
-
-	local cachedCompatibility = compatibilityCache[queryArchetype .. "-" .. targetArchetype]
-	if cachedCompatibility ~= nil then
-		return cachedCompatibility
-	end
-	debug.profilebegin("areArchetypesCompatible")
-
-	local queryIds = string.split(baseArchetype, "_")
-	local targetIds = toSet(string.split(targetArchetype, "_"))
-	local excludeIds = toSet(archetypes)
-
-	for _, queryId in ipairs(queryIds) do
-		if targetIds[queryId] == nil then
-			compatibilityCache[queryArchetype .. "-" .. targetArchetype] = false
-			debug.profileend()
-			return false
-		end
-	end
-
-	for excludeId in excludeIds do
-		if targetIds[excludeId] then
-			compatibilityCache[queryArchetype .. "-" .. targetArchetype] = false
-			debug.profileend()
-			return false
-		end
-	end
-
-	compatibilityCache[queryArchetype .. "-" .. targetArchetype] = true
-
-	debug.profileend()
-	return true
+	return archetype, archetypeId
 end
 
 return {
-	archetypeOf = archetypeOf,
-	negateArchetypeOf = negateArchetypeOf,
-	areArchetypesCompatible = areArchetypesCompatible,
+	new = new,
+	hash = hash,
 }
