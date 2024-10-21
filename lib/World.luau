@@ -790,7 +790,7 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 		end
 		```
 	]=]
-	local function without(_, ...: Component)
+	local function without(self, ...: Component)
 		local numComponents = select("#", ...)
 		local numCompatibleArchetypes = #compatibleArchetypes
 		for archetypeIndex = numCompatibleArchetypes, 1, -1 do
@@ -822,7 +822,7 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 		currentEntities = currentArchetype.entities
 
 		cacheFields()
-		return query
+		return self
 	end
 
 	local Snapshot = {
