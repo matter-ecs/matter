@@ -781,6 +781,7 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 		Returns an iterator that will skip any entities that also have the given components.
 		The filtering is done at the archetype level, and so it is faster than manually skipping entities.
 
+		@param self QueryResult
 		@param ... Component -- The component types to filter against.
 		@return () -> (id, ...ComponentInstance) -- Iterator of entity ID followed by the requested component values
 
@@ -884,6 +885,8 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 	end
 
 	--[=[
+		@within QueryResult
+
 		Creates a View of the query and does all of the iterator tasks at once at an amortized cost.
 		This is used for many repeated random access to an entity. If you only need to iterate, just use a query.
 
@@ -913,6 +916,7 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 			@within View
 
 			Retrieve the query results to corresponding `entity`
+			@param _ View
 			@param entityId number - the entity ID
 			@return ...ComponentInstance
 		]=]
@@ -929,6 +933,7 @@ function QueryResult.new(compatibleArchetypes: { Archetype }, queryLength: numbe
 			@within View
 
 			Equivalent to `world:contains()`
+			@param _ View
 			@param entityId number - the entity ID
 			@return boolean
 		]=]
