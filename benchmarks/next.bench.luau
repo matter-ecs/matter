@@ -22,13 +22,13 @@ return {
 	end,
 
 	Functions = {
-		["New Matter"] = function()
+		["Matter 0.9"] = function()
 			local query = world:query(A, B)
 			for _ = 1, 1_000 do
 				query:next()
 			end
 		end,
-		["Old Matter"] = function()
+		["Matter 0.8.4"] = function()
 			local query = pinnedWorld:query(pinnedA, pinnedB)
 			for _ = 1, 1_000 do
 				query:next()

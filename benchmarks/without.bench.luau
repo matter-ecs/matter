@@ -70,13 +70,13 @@ return {
 	end,
 
 	Functions = {
-		["Old Matter"] = function()
+		["Matter 0.8.4"] = function()
 			local count = 0
 			for _ in pinnedWorld:query(pinnedB):without(pinnedC) do
 				count += 1
 			end
 		end,
-		["New Matter"] = function()
+		["Matter 0.9"] = function()
 			local count = 0
 			for _ in world:query(B):without(C) do
 				count += 1

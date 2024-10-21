@@ -30,7 +30,7 @@ local function flip()
 end
 
 local archetypes = {}
-for i = 1, 1_000 do
+for i = 1, 30_000 do
 	local id = i
 	world:spawnAt(id)
 	pinnedWorld:spawnAt(id)
@@ -69,18 +69,17 @@ for i = 1, 1_000 do
 	if flip() then
 		world:insert(id, G({ g = true, id = i }))
 		pinnedWorld:insert(id, pinnedG({ g = true, id = i }))
-		str ..= "G_"
+		str ..= "G"
 	end
 
 	archetypes[str] = (archetypes[str] or 0) + 1
 end
 
 local total = 0
-for _, count in archetypes do
-	total += count
+for _ in archetypes do
+	total += 1
 end
 
-print("archetypes:", archetypes)
 print(total, "different archetypes")
 
 return {
@@ -89,13 +88,13 @@ return {
 	end,
 
 	Functions = {
-		["Old Matter"] = function()
+		["Matter 0.8.4"] = function()
 			local count = 0
 			for _ in pinnedWorld:query(pinnedB, pinnedA) do
 				count += 1
 			end
 		end,
-		["New Matter"] = function()
+		["Matter 0.9"] = function()
 			local count = 0
 			for _ in world:query(B, A) do
 				count += 1

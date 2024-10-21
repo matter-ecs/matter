@@ -22,12 +22,12 @@ return {
 	end,
 
 	Functions = {
-		["New"] = function(_, world)
+		["Matter 0.9"] = function(_, world)
 			for i = 1, N do
 				world:insert(i, A({ i }))
 			end
 		end,
-		["Old"] = function(_, _, world)
+		["Matter 0.8.4"] = function(_, _, world)
 			for i = 1, N do
 				world:insert(i, A({ i }))
 			end
