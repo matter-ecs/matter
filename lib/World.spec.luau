@@ -219,10 +219,22 @@ return function()
 				local entity = world:spawn()
 				world:insert(entity, A())
 
-				world:spawn(A())
-				--world:insert(entity, B())
+				expect(world.archetypes[1].edges[#A].add).to.equal(world.archetypes[2])
+				expect(world.archetypes[2].edges[#A].remove).to.equal(world.archetypes[1])
 
-				print(world.archetypes)
+				world:insert(entity, B())
+
+				expect(world.archetypes[2].edges[#B].add).to.equal(world.archetypes[3])
+				expect(world.archetypes[3].edges[#B].remove).to.equal(world.archetypes[2])
+
+				world:remove(entity, A)
+
+				expect(world.archetypes[3].edges[#A].remove).to.equal(world.archetypes[4])
+				expect(world.archetypes[4].edges[#A].add).to.equal(world.archetypes[3])
+
+				world:insert(entity, A())
+
+				expect(world.allEntities[entity].archetype).to.equal(world.archetypes[3])
 			end)
 
 			it("should allow inserting and removing components from existing entities", function()
