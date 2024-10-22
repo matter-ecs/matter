@@ -1,5 +1,5 @@
 local formatTableModule = require(script.Parent.Parent.formatTable)
-local getEntity = require(script.Parent.Parent.getEntity)
+local getAllComponentData = require(script.Parent.Parent.getAllComponentData)
 local formatTable = formatTableModule.formatTable
 
 local BY_COMPONENT_NAME = "ComponentName"
@@ -141,7 +141,7 @@ return function(plasma)
 								continue
 							end
 
-							for component, value in getEntity(world, entityId) do
+							for component, value in getAllComponentData(world, entityId) do
 								if component == debugComponent then
 									continue
 								end

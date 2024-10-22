@@ -1,5 +1,5 @@
 local formatTableModule = require(script.Parent.Parent.formatTable)
-local getEntity = require(script.Parent.Parent.getEntity)
+local getAllComponentData = require(script.Parent.Parent.getAllComponentData)
 local formatTable = formatTableModule.formatTable
 local FormatMode = formatTableModule.FormatMode
 
@@ -39,8 +39,7 @@ return function(plasma)
 				end
 
 				local items = { { "Component", "Data" } }
-
-				for component, componentData in getEntity(world, debugger.debugEntity) do
+				for component, componentData in getAllComponentData(world, debugger.debugEntity) do
 					table.insert(items, {
 						tostring(component),
 						formatTable(componentData, FormatMode.Long),

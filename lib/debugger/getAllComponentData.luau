@@ -1,4 +1,4 @@
-local function getEntity(world, entity: number): { [{ [any]: any }]: { [any]: any } }
+local function getAllComponentData(world, entity: number): { [{ [any]: any }]: { [any]: any } }
 	local componentToData = {}
 
 	local location = world.allEntities[entity]
@@ -16,4 +16,4 @@ local function getEntity(world, entity: number): { [{ [any]: any }]: { [any]: an
 	return componentToData
 end
 
-return getEntity
+return getAllComponentData
