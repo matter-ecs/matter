@@ -1,6 +1,5 @@
 --!native
 --!optimize 2
---!strict
 
 local Archetype = require(script.Parent.Archetype)
 local Component = require(script.Parent.component)
