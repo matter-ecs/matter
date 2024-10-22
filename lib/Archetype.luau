@@ -5,6 +5,11 @@ export type ComponentIds = { ComponentId }
 export type Component = { [any]: any }
 export type ComponentInstance = { [any]: any }
 
+export type ArchetypeEdge = {
+	add: Archetype?,
+	remove: Archetype?,
+}
+
 export type ArchetypeId = string
 export type Archetype = {
 	entities: { EntityId },
@@ -12,11 +17,28 @@ export type Archetype = {
 	idToIndex: { [ComponentId]: number },
 	indexToId: { [number]: ComponentId },
 	fields: { { ComponentInstance } },
+	edges: { [ComponentId]: ArchetypeEdge? },
 }
 
 function hash(componentIds: { number })
 	table.sort(componentIds)
 	return table.concat(componentIds, "_")
+end
+
+function ensureEdge(archetype: Archetype, componentId: ComponentId): ArchetypeEdge
+	local edge = archetype.edges[componentId]
+	if edge then
+		return edge
+	end
+
+	edge = { add = nil, remove = nil }
+	archetype.edges[componentId] = edge
+	return edge
+end
+
+function link(archetype: Archetype, nextArchetype: Archetype, componentId: ComponentId)
+	ensureEdge(archetype, componentId).add = nextArchetype
+	ensureEdge(nextArchetype, componentId).remove = archetype
 end
 
 function new(componentIds: { ComponentId }): (Archetype, ArchetypeId)
@@ -32,6 +54,7 @@ function new(componentIds: { ComponentId }): (Archetype, ArchetypeId)
 		idToIndex = idToIndex,
 		indexToId = indexToId,
 		fields = fields,
+		edges = {},
 	}
 
 	for index, componentId in componentIds do
@@ -45,6 +68,9 @@ function new(componentIds: { ComponentId }): (Archetype, ArchetypeId)
 end
 
 return {
-	new = new,
 	hash = hash,
+	ensureEdge = ensureEdge,
+	link = link,
+
+	new = new,
 }

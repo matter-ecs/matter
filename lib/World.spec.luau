@@ -212,6 +212,19 @@ return function()
 				expect(nextId).to.equal(6)
 			end)
 
+			it("should create an archetype graph", function()
+				local world = World.new()
+				local A, B = component("A", { a = true }), component("B", { b = true })
+
+				local entity = world:spawn()
+				world:insert(entity, A())
+
+				world:spawn(A())
+				--world:insert(entity, B())
+
+				print(world.archetypes)
+			end)
+
 			it("should allow inserting and removing components from existing entities", function()
 				local world = World.new()
 

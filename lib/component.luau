@@ -165,9 +165,9 @@ local function assertValidComponentInstance(value, position)
 	end
 end
 
-local function assertValidComponentInstances(componentInstances)
-	for position, componentInstance in componentInstances do
-		assertValidComponentInstance(componentInstance, position)
+local function assertValidComponentInstances(...)
+	for i = 1, select("#", ...) do
+		assertValidComponentInstance(select(i, ...), i)
 	end
 end
 

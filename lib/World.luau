@@ -1,5 +1,6 @@
 --!native
 --!optimize 2
+--!strict
 
 local Archetype = require(script.Parent.Archetype)
 local Component = require(script.Parent.component)
@@ -193,21 +194,25 @@ local function transitionArchetype(
 	world: World,
 	entityId: number,
 	entityRecord: EntityRecord,
-	archetype: Archetype
+	nextArchetype: Archetype
 ): number
 	local oldArchetype = entityRecord.archetype
 	local oldEntityIndex = entityRecord.indexInArchetype
 
 	-- Add entity to archetype's entities
-	local entities = archetype.entities
+	local entities = nextArchetype.entities
+	local fields = nextArchetype.fields
+	local idToIndex = nextArchetype.idToIndex
+
 	local entityIndex = #entities + 1
 	entities[entityIndex] = entityId
 
 	-- Move old storage to new storage if needed
 	local oldNumEntities = #oldArchetype.entities
+	local oldComponentIds = oldArchetype.componentIds
 	local wasLastEntity = oldNumEntities == oldEntityIndex
 	for index, oldComponentStorage in oldArchetype.fields do
-		local componentStorage = archetype.fields[archetype.idToIndex[oldArchetype.componentIds[index]]]
+		local componentStorage = fields[idToIndex[oldComponentIds[index]]]
 
 		-- Does the new storage contain this component?
 		if componentStorage then
@@ -233,7 +238,7 @@ local function transitionArchetype(
 
 	-- Mark entity as being in new archetype
 	entityRecord.indexInArchetype = entityIndex
-	entityRecord.archetype = archetype
+	entityRecord.archetype = nextArchetype
 
 	return entityIndex
 end
@@ -260,43 +265,52 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 end
 
 local function executeInsert(world: World, insertCommand: InsertCommand)
-	debug.profilebegin("World:insert")
-
 	local entityId = insertCommand.entityId
 	local entityRecord = ensureRecord(world, entityId)
 	local componentInstances = insertCommand.componentInstances
 
-	local oldArchetype = entityRecord.archetype
+	local archetype = entityRecord.archetype
 	for _, componentInstance in componentInstances do
 		local component = getmetatable(componentInstance)
 		local componentId = #component
-		local componentIds = table.clone(oldArchetype.componentIds)
 
-		local archetype: Archetype
+		local nextArchetype: Archetype
 		local entityIndex: number
 		local oldComponentInstance: ComponentInstance?
-		if oldArchetype.idToIndex[componentId] == nil then
-			table.insert(componentIds, componentId)
-			archetype = ensureArchetype(world, componentIds)
-			entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
-			oldComponentInstance = archetype.fields[archetype.idToIndex[componentId]][entityIndex]
+
+		if archetype.idToIndex[componentId] == nil then
+			-- We're adding a new component to the entity
+			local edge = Archetype.ensureEdge(archetype, componentId)
+			local addEdge = edge.add
+			if addEdge then
+				-- We already have the next archetype created and cached
+				nextArchetype = addEdge
+			else
+				local componentIds = table.clone(archetype.componentIds)
+				table.insert(componentIds, componentId)
+
+				nextArchetype = ensureArchetype(world, componentIds)
+				Archetype.link(archetype, nextArchetype, componentId)
+			end
+
+			entityIndex = transitionArchetype(world, entityId, entityRecord, nextArchetype)
+			oldComponentInstance = nextArchetype.fields[nextArchetype.idToIndex[componentId]][entityIndex]
 
 			-- FIXME:
 			-- This shouldn't be in a hotpath, probably better in createArchetype
 			world.componentIdToComponent[componentId] = component
 		else
-			archetype = oldArchetype
+			-- We are updating the data for a component that exists already
+			nextArchetype = archetype
 			entityIndex = entityRecord.indexInArchetype
-			oldComponentInstance = oldArchetype.fields[oldArchetype.idToIndex[componentId]][entityIndex]
+			oldComponentInstance = archetype.fields[archetype.idToIndex[componentId]][entityIndex]
 		end
 
-		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = componentInstance
+		nextArchetype.fields[nextArchetype.idToIndex[componentId]][entityIndex] = componentInstance
 		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
 
-		oldArchetype = archetype
+		archetype = nextArchetype
 	end
-
-	debug.profileend()
 end
 
 local function executeReplace(world: World, replaceCommand: ReplaceCommand)
@@ -349,23 +363,37 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 	local entityId = removeCommand.entityId
 	local entityRecord = ensureRecord(world, entityId)
 	local archetype = entityRecord.archetype
-	local componentIds = table.clone(entityRecord.archetype.componentIds)
 
 	local didRemove = false
 	for _, component in removeCommand.components do
 		local componentId = #component
-		local index = table.find(componentIds, componentId)
-		if index then
-			local componentInstance = archetype.fields[archetype.idToIndex[componentId]][entityRecord.indexInArchetype]
-			world:_trackChanged(component, entityId, componentInstance, nil)
-
-			table.remove(componentIds, index)
-			didRemove = true
+		local fieldIndex = archetype.idToIndex[componentId]
+		if fieldIndex == nil then
+			-- This archetype does not have this component
+			continue
 		end
+
+		local componentInstance = archetype.fields[fieldIndex][entityRecord.indexInArchetype]
+		local edge = Archetype.ensureEdge(archetype, componentId)
+		if edge.remove then
+			archetype = edge.remove
+		else
+			local componentIds = table.clone(archetype.componentIds)
+			local index = archetype.idToIndex[componentId]
+			table.remove(componentIds, index)
+
+			local nextArchetype = ensureArchetype(world, componentIds)
+			Archetype.link(nextArchetype, archetype, componentId)
+
+			archetype = nextArchetype
+		end
+
+		didRemove = true
+		world:_trackChanged(component, entityId, componentInstance, nil)
 	end
 
 	if didRemove then
-		transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
+		transitionArchetype(world, entityId, entityRecord, archetype)
 	end
 end
 
@@ -458,8 +486,8 @@ function World:spawnAt(id: number, ...)
 		self._nextId = id + 1
 	end
 
+	assertValidComponentInstances(...)
 	local componentInstances = { ... }
-	assertValidComponentInstances(componentInstances)
 
 	local willBeDeleted = self.markedForDeletion[id] ~= nil
 	if self:contains(id) and not willBeDeleted then
@@ -485,8 +513,9 @@ end
 	@param ... ComponentInstance -- The component values to spawn the entity with.
 ]=]
 function World:replace(id, ...)
+	assertValidComponentInstances(...)
+
 	local componentInstances = { ... }
-	assertValidComponentInstances(componentInstances)
 
 	bufferCommand(self, { type = "replace", entityId = id, componentInstances = componentInstances })
 end
@@ -1246,10 +1275,9 @@ end
 ]=]
 function World:insert(id, ...)
 	assertWorldOperationIsValid(self, id, ...)
+	assertValidComponentInstances(...)
 
 	local componentInstances = { ... }
-	assertValidComponentInstances(componentInstances)
-
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end
 
