@@ -1,10 +1,11 @@
 local formatTableModule = require(script.Parent.Parent.formatTable)
+local getAllComponentData = require(script.Parent.Parent.getAllComponentData)
 local formatTable = formatTableModule.formatTable
 local FormatMode = formatTableModule.FormatMode
 
 return function(plasma)
 	return plasma.widget(function(world, id, custom)
-		local entityData = world:_getEntity(id)
+		local entityData = getAllComponentData(world, id)
 
 		local str = "<b>Entity " .. id .. "</b>\n\n"
 
