@@ -55,7 +55,7 @@ end
 return myFirstSystem
 ```
 
-Now we're printing something 60 times per second. We should probably do something actually interesting instead.
+Now we're printing `"Hello world!"` every frame. We should probably do something actually interesting instead.
 
 Let's create a couple components.
 
