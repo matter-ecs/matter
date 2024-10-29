@@ -62,7 +62,6 @@ function Loop.new(...)
 		_middlewares = {},
 		_systemErrors = {},
 		_systemLogs = {},
-		_systemNames = {},
 		_debugger = nil,
 		profiling = nil,
 		trackErrors = false,
