@@ -205,6 +205,9 @@ function Loop:replaceSystem(old: System, new: System)
 	self._systemState[new] = self._systemState[old] or {}
 	self._systemState[old] = nil
 
+	systemNames[new] = systemName(new)
+	systemNames[old] = nil
+
 	if self._skipSystems[old] then
 		self._skipSystems[old] = nil
 		self._skipSystems[new] = true
