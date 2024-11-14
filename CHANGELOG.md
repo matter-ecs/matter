@@ -21,6 +21,14 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
   - For example, you can now have a single `Loop` state table that contains your World, and the debugger will display it properly.
 - Added a button to the Debugger's system list to sort by run time.
 
+### Changed
+- Internal storage layout has been completely reworked.
+  - Queries bottlenecked by iteration speed will see a 7.5-15x performance improvement.
+  - Archetypes are now their own data structure and their layout tries to keep all information densely packed and cache friendly.
+
+### Fixed
+- Fixed archetypes being skipped in queries and `World:queryChanged` causing entities to be missed.
+
 ### Deprecated
 
 - Deprecated the return type of `World:remove()` because it can now be inaccurate.
