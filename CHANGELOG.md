@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.9.0-beta.0] - 2024-11-15
+
 ### Added
 
 - Added a `Loop:setWorlds({ World })` method for informing the Loop of your
@@ -354,7 +356,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 - Initial release
 
-[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.4...HEAD
+[unreleased]: https://github.com/matter-ecs/matter/compare/v0.9.0-beta.0...HEAD
+[0.9.0-beta.0]: https://github.com/matter-ecs/matter/releases/tag/v0.9.0-beta.0
 [0.8.4]: https://github.com/matter-ecs/matter/releases/tag/v0.8.4
 [0.8.3]: https://github.com/matter-ecs/matter/releases/tag/v0.8.3
 [0.8.2]: https://github.com/matter-ecs/matter/releases/tag/v0.8.2
