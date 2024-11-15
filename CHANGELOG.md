@@ -12,28 +12,39 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ### Added
 
-- Added `Loop:setWorlds({world})`. This is a breaking change and is now required for the Loop and Debugger to operate properly.
+- Added a `Loop:setWorlds({ World })` method for informing the Loop of your
+  Worlds.
 - Implemented a deferred command mode for the registry.
   - The `Loop` turns deferring on for all worlds given to it.
   - The command buffer is flushed between systems.
   - Iterator invalidation is now only prevented in deferred mode.
-- The debugger now supports `Loop` parameters of any kind.
-  - For example, you can now have a single `Loop` state table that contains your World, and the debugger will display it properly.
-- Added a button to the Debugger's system list to sort by run time.
+- The debugger now supports `Loop` parameters with nested worlds.
+  - For example, you can now have a single `Loop` state table that contains your
+    World, and the debugger will display both properly.
+- The Debugger system list can sort by run time via button.
 
 ### Changed
-- Internal storage layout has been completely reworked.
-  - Queries bottlenecked by iteration speed will see a 7.5-15x performance improvement.
-  - Archetypes are now their own data structure and their layout tries to keep all information densely packed and cache friendly.
-- `Loop` system names are now cached, resulting in fewer calls to `debug.info`.
 
-### Fixed
-- Fixed archetypes being skipped in queries and `World:queryChanged` causing entities to be missed.
+- The `Loop` now requires a `setWorlds` call to be made before it can be used.
+  - Consequently, the `Debugger` also requires this.
+- The internal storage layout has been completely reworked.
+  - Queries bottlenecked by iteration speed will see a 7.5-15x performance
+    improvement.
+  - Archetypes are now their own data structure and their layout tries to keep
+    all information densely packed and cache friendly.
+- `Loop` system names are now cached, resulting in fewer calls to `debug.info`.
+  - This reduces overhead as `debug.info` is a slow operation.
 
 ### Deprecated
 
-- Deprecated the return type of `World:remove()` because it can now be inaccurate.
+- Deprecated the return type of `World:remove()` because it can now misleadingly
+  indicate a component is removed or vice versa.
 - Deprecated `World:optimizeQueries()` because it no longer does anything.
+
+### Fixed
+
+- Fixed archetypes being skipped in queries and `World:queryChanged` missing
+  entities.
 
 ## [0.8.4] - 2024-08-15
 
@@ -60,14 +71,16 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Removed extra new-lines in component data strings within the debugger entity
   inspect tables.
 - Fixed alt-hover erroring when hovered entity is despawned.
-- Fixed flashing buttons ("View queries" and "View logs") in system inspect panel
+- Fixed flashing buttons ("View queries" and "View logs") in system inspect
+  panel
 
 ## [0.8.3] - 2024-07-02
 
 ### Fixed
 
 - Converted the remaining lua files in the example project to luau files.
-- Iterating empty views properly iterates over nothing rather than the data structure members.
+- Iterating empty views properly iterates over nothing rather than the data
+  structure members.
 
 ## [0.8.2] - 2024-06-25
 
