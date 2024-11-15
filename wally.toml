@@ -18,6 +18,7 @@ exclude = [
     "build",
     "pages",
     "tests",
+    "benchmarks",
     "AttackOfTheKillerRoombas.rbxl",
     "AttackOfTheKillerRoombas.rbxl.lock",
     "matter.rbxl",
