@@ -7,6 +7,8 @@ local topoRuntime = require(script.Parent.topoRuntime)
 local recentErrors = {}
 local recentErrorLastTime = 0
 
+local systemNames: { [any]: string } = {}
+
 local function systemFn(system: System)
 	if type(system) == "table" then
 		return system.system
@@ -128,6 +130,8 @@ type System = (...any) -> () | { system: (...any) -> (), event: string?, priorit
 ]=]
 function Loop:scheduleSystems(systems: { System })
 	for _, system in ipairs(systems) do
+		systemNames[system] = systemName(system)
+
 		if table.find(self._systems, system) == nil then
 			table.insert(self._systems, system)
 		end
@@ -176,6 +180,8 @@ function Loop:evictSystem(system: System)
 	self._systemState[system] = nil
 	self._systemLogs[system] = nil
 
+	systemNames[system] = nil
+
 	self:_sortSystems()
 end
 
@@ -198,6 +204,9 @@ function Loop:replaceSystem(old: System, new: System)
 
 	self._systemState[new] = self._systemState[old] or {}
 	self._systemState[old] = nil
+
+	systemNames[new] = systemName(new)
+	systemNames[old] = nil
 
 	if self._skipSystems[old] then
 		self._skipSystems[old] = nil
@@ -222,6 +231,8 @@ local function orderSystemsByDependencies(unscheduledSystems: { System })
 	local visiting = "v"
 
 	local function systemPriority(system: System)
+		local name = systemNames[system]
+
 		local priority = systemPriorityMap[system]
 
 		if not priority then
@@ -232,13 +243,13 @@ local function orderSystemsByDependencies(unscheduledSystems: { System })
 			if type(system) == "table" then
 				if system.after then
 					for _, dependency in system.after do
+						local dependencyName = systemNames[dependency]
+
 						if systemPriorityMap[dependency] ~= visiting then
 							priority = math.max(priority, systemPriority(dependency) + 1)
 						else
 							local errorStatement = {
-								`Cyclic dependency detected: System '{systemName(system)}' is set to execute after System '{systemName(
-									dependency
-								)}', and vice versa. This creates a loop that prevents the systems from being able to execute in a valid order.`,
+								`Cyclic dependency detected: System '{name}' is set to execute after System '{dependencyName}', and vice versa. This creates a loop that prevents the systems from being able to execute in a valid order.`,
 								"To resolve this issue, reconsider the dependencies between these systems. One possible solution is to update the 'after' field from one of the systems.",
 							}
 							error(table.concat(errorStatement, "\n"))
@@ -262,8 +273,8 @@ local function orderSystemsByDependencies(unscheduledSystems: { System })
 		local priorityB = systemPriority(b)
 
 		if priorityA == priorityB then
-			local nameA = systemName(a)
-			local nameB = systemName(b)
+			local nameA = systemNames[a]
+			local nameB = systemNames[b]
 
 			if nameA == nameB then
 				return table.find(unscheduledSystems, a) < table.find(unscheduledSystems, b)
@@ -282,6 +293,8 @@ function Loop:_sortSystems()
 	local systemsByEvent = {}
 
 	for _, system in pairs(self._systems) do
+		local name = systemNames[system]
+
 		local eventName = "default"
 
 		if type(system) == "table" then
@@ -290,21 +303,21 @@ function Loop:_sortSystems()
 			end
 			if system.after then
 				if system.priority then
-					error(`{systemName(system)} shouldn't have both priority and after defined`)
+					error(`{name} shouldn't have both priority and after defined`)
 				end
 
 				if #system.after == 0 then
 					error(
-						`System "{systemName(system)}" "after" table was provided but is empty; did you accidentally use a nil value or make a typo?`
+						`System "{name}" "after" table was provided but is empty; did you accidentally use a nil value or make a typo?`
 					)
 				end
 
 				for _, dependency in system.after do
+					local dependencyName = systemNames[dependency]
+
 					if not table.find(self._systems, dependency) then
 						error(
-							`Unable to schedule "{systemName(system)}" because the system "{systemName(dependency)}" is not scheduled.\n\nEither schedule "{systemName(
-								dependency
-							)}" before "{systemName(system)}" or consider scheduling these systems together with Loop:scheduleSystems`
+							`Unable to schedule "{name}" because the system "{dependencyName}" is not scheduled.\n\nEither schedule "{dependencyName}" before "{name}" or consider scheduling these systems together with Loop:scheduleSystems`
 						)
 					end
 				end
@@ -402,7 +415,7 @@ function Loop:begin(events)
 					end
 
 					local fn = systemFn(system)
-					local name = systemName(system)
+					local name = systemNames[system]
 
 					debug.profilebegin("system: " .. name)
 					local commitFailed = false
@@ -453,7 +466,7 @@ function Loop:begin(events)
 							(
 								"Matter: System %s yielded! Its thread has been closed. "
 								.. "Yielding in systems is not allowed."
-							):format(systemName(system))
+							):format(name)
 						)
 					end
 

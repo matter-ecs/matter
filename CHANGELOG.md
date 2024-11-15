@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Internal storage layout has been completely reworked.
   - Queries bottlenecked by iteration speed will see a 7.5-15x performance improvement.
   - Archetypes are now their own data structure and their layout tries to keep all information densely packed and cache friendly.
+- `Loop` system names are now cached, resulting in fewer calls to `debug.info`.
 
 ### Fixed
 - Fixed archetypes being skipped in queries and `World:queryChanged` causing entities to be missed.
