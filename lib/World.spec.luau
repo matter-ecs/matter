@@ -143,22 +143,6 @@ return function()
 		end)
 
 		describe("immediate", function()
-			itFOCUS("should allow non-table components", function()
-				local world = World.new()
-				local A = component()
-				local B = component()
-
-				world:spawn(A("hello"))
-				world:spawn(A(1))
-				world:spawn(A({ whats_good = true }))
-				world:spawn(A())
-				world:spawn(A("test"))
-
-				for id, a in world:query(A) do
-					print(id, a)
-				end
-			end)
-
 			it("should be iterable", function()
 				local world = World.new()
 				local A = component()
@@ -232,7 +216,7 @@ return function()
 				local world = World.new()
 
 				local Player = component()
-				local Health = component()
+				local Health = component(100)
 				local Poison = component()
 
 				local id = world:spawn(Player(), Poison())
@@ -262,6 +246,41 @@ return function()
 
 				local entityId = world:spawn()
 				expect(world:remove(entityId, A)).to.equal(nil)
+			end)
+
+			it("should allow inserting the same component with multiple datatypes", function()
+				local world = World.new()
+				local A = component()
+
+				local one = world:spawn(A("hello"))
+				local two = world:spawn(A(1))
+				local three = world:spawn(A({ whats_good = true }))
+				local four = world:spawn(A())
+				local five = world:spawn(A("test"))
+
+				expect(world:get(one, A)).to.equal("hello")
+
+				expect(world:get(two, A)).to.equal(1)
+
+				expect(typeof(world:get(three, A))).to.equal("table")
+				expect(world:get(three, A).whats_good).to.be.ok()
+
+				expect(typeof(world:get(four, A))).to.equal("table")
+				expect(next(world:get(four, A))).to.never.be.ok()
+
+				expect(world:get(five, A)).to.equal("test")
+			end)
+
+			it("should unwrap non-tables in queries", function()
+				local world = World.new()
+				local A = component()
+
+				local entity = world:spawn(A("hello"))
+				expect(world:query(A):next()).to.equal(entity)
+
+				for _, a in world:query(A) do
+					expect(a).to.equal("hello")
+				end
 			end)
 
 			it("should not find any entities", function()
