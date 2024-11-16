@@ -271,7 +271,7 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 		local component = getmetatable(componentInstance)
 		local componentId = #component
 		local componentIds = table.clone(oldArchetype.componentIds)
-		local isPrimitive = Component.isPrimitive(component)
+		local isPrimitive = Component.isPrimitive(componentInstance)
 
 		local archetype: Archetype
 		local entityIndex: number
@@ -291,8 +291,9 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 		end
 
 		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = if isPrimitive
-			then componentInstance[1]
+			then componentInstance.data
 			else componentInstance
+
 		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
 
 		oldArchetype = archetype

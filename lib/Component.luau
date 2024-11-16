@@ -55,21 +55,18 @@ local function new(name: string, defaultData)
 	ComponentInstance.__index = ComponentInstance
 
 	function ComponentInstance.new(data)
-		local mt = getmetatable(ComponentInstance :: any)
-		if typeof(data) == "table" then
-			data = data or {}
+		data = if data == nil then defaultData or {} else data
 
+		local component = getmetatable(ComponentInstance :: any)
+		if typeof(data) == "table" then
 			if defaultData then
 				data = merge(defaultData, data)
 			end
 
-			mt[PRIMITIVE_MARKER] = false
-			return setmetatable(table.freeze(data), ComponentInstance)
+			return table.freeze(setmetatable(data, ComponentInstance))
 		else
-			data = data or defaultData
-
-			mt[PRIMITIVE_MARKER] = true
-			return setmetatable({ data }, ComponentInstance)
+			component[PRIMITIVE_MARKER] = true
+			return table.freeze(setmetatable({ data = data, [PRIMITIVE_MARKER] = true }, ComponentInstance))
 		end
 	end
 
@@ -184,7 +181,7 @@ local function assertComponentArgsProvided(...)
 end
 
 local function isPrimitive(componentInstance)
-	return getmetatable(componentInstance)[PRIMITIVE_MARKER] == true
+	return componentInstance[PRIMITIVE_MARKER] ~= nil
 end
 
 return {

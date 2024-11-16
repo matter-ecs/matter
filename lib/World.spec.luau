@@ -149,6 +149,10 @@ return function()
 				local B = component()
 
 				world:spawn(A("hello"))
+				world:spawn(A(1))
+				world:spawn(A({ whats_good = true }))
+				world:spawn(A())
+				world:spawn(A("test"))
 
 				for id, a in world:query(A) do
 					print(id, a)
