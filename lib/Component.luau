@@ -140,7 +140,6 @@ local function assertValidComponent(value, position)
 	assertValidType(value, position)
 
 	local metatable = getmetatable(value)
-
 	if getmetatable(metatable) ~= nil and getmetatable(metatable)[DIAGNOSTIC_COMPONENT_MARKER] then
 		error(
 			string.format(

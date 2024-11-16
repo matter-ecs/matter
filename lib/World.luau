@@ -1250,10 +1250,10 @@ end
 	@param ... ComponentInstance -- The component values to insert
 ]=]
 function World:insert(id, ...)
-	--assertWorldOperationIsValid(self, id, ...)
+	assertWorldOperationIsValid(self, id, ...)
 
 	local componentInstances = { ... }
-	--assertValidComponentInstances(componentInstances)
+	assertValidComponentInstances(componentInstances)
 
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end
