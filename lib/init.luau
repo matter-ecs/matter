@@ -55,7 +55,7 @@
 local immutable = require(script.immutable)
 local World = require(script.World)
 local Loop = require(script.Loop)
-local newComponent = require(script.component).newComponent
+local newComponent = require(script.Component).new
 local topoRuntime = require(script.topoRuntime)
 
 export type World = World.World

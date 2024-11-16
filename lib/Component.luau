@@ -43,28 +43,34 @@ local merge = require(script.Parent.immutable).merge
 -- This is a special value we set inside the component's metatable that will allow us to detect when
 -- a Component is accidentally inserted as a Component Instance.
 -- It should not be accessible through indexing into a component instance directly.
-local DIAGNOSTIC_COMPONENT_MARKER = {}
+local DIAGNOSTIC_COMPONENT_MARKER = table.freeze({})
+
+local PRIMITIVE_MARKER = table.freeze({})
 
 local lastId = 0
-local function newComponent(name, defaultData)
+local function new(name: string, defaultData)
 	name = name or debug.info(2, "s") .. "@" .. debug.info(2, "l")
 
-	assert(
-		defaultData == nil or type(defaultData) == "table",
-		"if component default data is specified, it must be a table"
-	)
+	local ComponentInstance = {}
+	ComponentInstance.__index = ComponentInstance
 
-	local component = {}
-	component.__index = component
+	function ComponentInstance.new(data)
+		local mt = getmetatable(ComponentInstance :: any)
+		if typeof(data) == "table" then
+			data = data or {}
 
-	function component.new(data)
-		data = data or {}
+			if defaultData then
+				data = merge(defaultData, data)
+			end
 
-		if defaultData then
-			data = merge(defaultData, data)
+			mt[PRIMITIVE_MARKER] = false
+			return setmetatable(table.freeze(data), ComponentInstance)
+		else
+			data = data or defaultData
+
+			mt[PRIMITIVE_MARKER] = true
+			return setmetatable({ data }, ComponentInstance)
 		end
-
-		return table.freeze(setmetatable(data, component))
 	end
 
 	--[=[
@@ -96,29 +102,29 @@ local function newComponent(name, defaultData)
 	@param partialNewData {} -- The table to be merged with the existing component data.
 	@return ComponentInstance -- A copy of the component instance with values from `partialNewData` overriding existing values.
 	]=]
-	function component:patch(partialNewData)
-		debug.profilebegin("patch")
-		local patch = getmetatable(self).new(merge(self, partialNewData))
-		debug.profileend()
-		return patch
+	function ComponentInstance:patch(partialNewData)
+		return getmetatable(self).new(merge(self, partialNewData))
 	end
 
 	lastId += 1
 	local id = lastId
-	setmetatable(component, {
+	setmetatable(ComponentInstance, {
 		__call = function(_, ...)
-			return component.new(...)
+			return ComponentInstance.new(...)
 		end,
+
 		__tostring = function()
 			return name
 		end,
+
 		__len = function()
 			return id
 		end,
+
 		[DIAGNOSTIC_COMPONENT_MARKER] = true,
 	})
 
-	return component
+	return ComponentInstance
 end
 
 local function assertValidType(value, position)
@@ -177,10 +183,16 @@ local function assertComponentArgsProvided(...)
 	end
 end
 
+local function isPrimitive(componentInstance)
+	return getmetatable(componentInstance)[PRIMITIVE_MARKER] == true
+end
+
 return {
-	newComponent = newComponent,
+	new = new,
 	assertValidComponentInstance = assertValidComponentInstance,
 	assertValidComponentInstances = assertValidComponentInstances,
 	assertComponentArgsProvided = assertComponentArgsProvided,
 	assertValidComponent = assertValidComponent,
+
+	isPrimitive = isPrimitive,
 }

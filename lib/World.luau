@@ -2,7 +2,7 @@
 --!optimize 2
 
 local Archetype = require(script.Parent.Archetype)
-local Component = require(script.Parent.component)
+local Component = require(script.Parent.Component)
 local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
@@ -271,6 +271,7 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 		local component = getmetatable(componentInstance)
 		local componentId = #component
 		local componentIds = table.clone(oldArchetype.componentIds)
+		local isPrimitive = Component.isPrimitive(component)
 
 		local archetype: Archetype
 		local entityIndex: number
@@ -281,8 +282,7 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
 			oldComponentInstance = archetype.fields[archetype.idToIndex[componentId]][entityIndex]
 
-			-- FIXME:
-			-- This shouldn't be in a hotpath, probably better in createArchetype
+			-- FIXME: This shouldn't be in a hotpath, probably better in createArchetype
 			world.componentIdToComponent[componentId] = component
 		else
 			archetype = oldArchetype
@@ -290,7 +290,9 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			oldComponentInstance = oldArchetype.fields[oldArchetype.idToIndex[componentId]][entityIndex]
 		end
 
-		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = componentInstance
+		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = if isPrimitive
+			then componentInstance[1]
+			else componentInstance
 		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
 
 		oldArchetype = archetype
@@ -1247,10 +1249,10 @@ end
 	@param ... ComponentInstance -- The component values to insert
 ]=]
 function World:insert(id, ...)
-	assertWorldOperationIsValid(self, id, ...)
+	--assertWorldOperationIsValid(self, id, ...)
 
 	local componentInstances = { ... }
-	assertValidComponentInstances(componentInstances)
+	--assertValidComponentInstances(componentInstances)
 
 	bufferCommand(self, { type = "insert", entityId = id, componentInstances = componentInstances })
 end

@@ -143,6 +143,18 @@ return function()
 		end)
 
 		describe("immediate", function()
+			itFOCUS("should allow non-table components", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+
+				world:spawn(A("hello"))
+
+				for id, a in world:query(A) do
+					print(id, a)
+				end
+			end)
+
 			it("should be iterable", function()
 				local world = World.new()
 				local A = component()
