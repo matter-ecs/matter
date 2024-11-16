@@ -45,6 +45,7 @@ local merge = require(script.Parent.immutable).merge
 -- It should not be accessible through indexing into a component instance directly.
 local DIAGNOSTIC_COMPONENT_MARKER = table.freeze({})
 
+-- This tells the World whether the component should be unwrapped on insertion.
 local PRIMITIVE_MARKER = table.freeze({})
 
 local lastId = 0
@@ -55,6 +56,8 @@ local function new(name: string, defaultData)
 	ComponentInstance.__index = ComponentInstance
 
 	function ComponentInstance.new(data)
+		-- If we aren't passed data, then we use the default data.
+		-- If no default data is provided, we want to default a table.
 		data = if data == nil then defaultData or {} else data
 
 		local component = getmetatable(ComponentInstance :: any)
