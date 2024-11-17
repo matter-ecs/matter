@@ -6,12 +6,7 @@ local Matter = require(ReplicatedStorage.Lib.Matter)
 local function playersAreTargets(world)
 	for _, player in ipairs(Players:GetPlayers()) do
 		for _, character in Matter.useEvent(player, "CharacterAdded") do
-			world:spawn(
-				Components.Target(),
-				Components.Model({
-					model = character,
-				})
-			)
+			world:spawn(Components.Target(), Components.Model(character))
 		end
 	end
 

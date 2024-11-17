@@ -7,7 +7,7 @@ local name = RunService:IsServer() and "serverEntityId" or "clientEntityId"
 local function updateModelAttribute(world)
 	for id, record in world:queryChanged(Components.Model) do
 		if record.new then
-			record.new.model:SetAttribute(name, id)
+			record.new:SetAttribute(name, id)
 		end
 	end
 end

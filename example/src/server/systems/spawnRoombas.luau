@@ -7,12 +7,7 @@ local function spawnRoombas(world)
 		model.Parent = workspace
 		model.PrimaryPart:SetNetworkOwner(nil)
 
-		world:insert(
-			id,
-			Components.Model({
-				model = model,
-			})
-		)
+		world:insert(id, Components.Model(model))
 	end
 end
 

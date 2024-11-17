@@ -4,7 +4,7 @@ local Components = require(ReplicatedStorage.Shared.components)
 local function roombasMove(world)
 	local targets = {}
 	for _, model in world:query(Components.Model, Components.Target) do
-		table.insert(targets, model.model.PrimaryPart.CFrame.p)
+		table.insert(targets, model.PrimaryPart.CFrame.p)
 	end
 
 	for _, _, charge, model in world:query(Components.Roomba, Components.Charge, Components.Model) do
@@ -13,7 +13,7 @@ local function roombasMove(world)
 		end
 
 		local closestPosition, closestDistance
-		local currentPosition = model.model.PrimaryPart.CFrame.p
+		local currentPosition = model.PrimaryPart.CFrame.p
 
 		for _, target in ipairs(targets) do
 			local distance = (currentPosition - target).magnitude
@@ -24,7 +24,7 @@ local function roombasMove(world)
 		end
 
 		if closestPosition then
-			local body = model.model.Roomba
+			local body = model.Roomba
 			local force = body:GetMass() * 20
 
 			if closestDistance < 4 then

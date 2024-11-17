@@ -16,7 +16,7 @@ local function updateTransforms(world)
 		end
 
 		if transformRecord.new and not transformRecord.new.doNotReconcile then
-			model.model:SetPrimaryPartCFrame(transformRecord.new.cframe)
+			model:SetPrimaryPartCFrame(transformRecord.new.cframe)
 		end
 	end
 
@@ -33,18 +33,18 @@ local function updateTransforms(world)
 		end
 
 		if modelRecord.new then
-			modelRecord.new.model:SetPrimaryPartCFrame(transform.cframe)
+			modelRecord.new:SetPrimaryPartCFrame(transform.cframe)
 		end
 	end
 
 	-- Update Transform on unanchored Models
 	for id, model, transform in world:query(Components.Model, Components.Transform) do
-		if model.model.PrimaryPart.Anchored then
+		if model.PrimaryPart.Anchored then
 			continue
 		end
 
 		local existingCFrame = transform.cframe
-		local currentCFrame = model.model.PrimaryPart.CFrame
+		local currentCFrame = model.PrimaryPart.CFrame
 
 		-- Despawn models that fall into the void
 		if currentCFrame.Y < -400 then
