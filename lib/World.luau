@@ -244,10 +244,12 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	local archetype = entityRecord.archetype
 
 	-- Track changes
-	for _, componentStorage in archetype.fields do
-		local componentInstance = componentStorage[entityRecord.indexInArchetype]
-		local component = getmetatable(componentInstance :: any)
-		world:_trackChanged(component, entityId, componentInstance, nil)
+	for index, componentStorage in archetype.fields do
+		local data = componentStorage[entityRecord.indexInArchetype]
+		local componentId = archetype.indexToId[index]
+		local component = world.componentIdToComponent[componentId]
+
+		world:_trackChanged(component, entityId, data, nil)
 	end
 
 	-- TODO:
@@ -268,10 +270,12 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 
 	local oldArchetype = entityRecord.archetype
 	for _, componentInstance in componentInstances do
+		local isPrimitive = Component.isPrimitive(componentInstance)
+		local data = if isPrimitive then componentInstance.data else componentInstance
+
 		local component = getmetatable(componentInstance)
 		local componentId = #component
 		local componentIds = table.clone(oldArchetype.componentIds)
-		local isPrimitive = Component.isPrimitive(componentInstance)
 
 		local archetype: Archetype
 		local entityIndex: number
@@ -290,11 +294,8 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			oldComponentInstance = oldArchetype.fields[oldArchetype.idToIndex[componentId]][entityIndex]
 		end
 
-		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = if isPrimitive
-			then componentInstance.data
-			else componentInstance
-
-		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
+		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = data
+		world:_trackChanged(component, entityId, oldComponentInstance, data)
 
 		oldArchetype = archetype
 	end
@@ -1212,6 +1213,7 @@ function World._trackChanged(self: World, metatable, id, old, new)
 		return
 	end
 
+	--print("Track changed called", tostring(metatable), id, old, new, debug.traceback("", 2))
 	local record = table.freeze({
 		old = old,
 		new = new,
