@@ -1,7 +1,7 @@
-local formatTableModule = require(script.Parent.Parent.formatTable)
+local formatValueModule = require(script.Parent.Parent.formatValue)
 local getAllComponentData = require(script.Parent.Parent.getAllComponentData)
-local formatTable = formatTableModule.formatTable
-local FormatMode = formatTableModule.FormatMode
+local formatValue = formatValueModule.formatValue
+local FormatMode = formatValueModule.FormatMode
 
 return function(plasma)
 	return plasma.widget(function(debugger, world)
@@ -42,7 +42,7 @@ return function(plasma)
 				for component, componentData in getAllComponentData(world, debugger.debugEntity) do
 					table.insert(items, {
 						tostring(component),
-						formatTable(componentData, FormatMode.Long),
+						formatValue(componentData, FormatMode.Long),
 					})
 				end
 

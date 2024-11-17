@@ -1,5 +1,5 @@
 local topoRuntime = require(script.Parent.Parent.topoRuntime)
-local format = require(script.Parent.Parent.debugger.formatTable)
+local format = require(script.Parent.Parent.debugger.formatValue)
 
 --[=[
 	@within Matter
@@ -25,7 +25,7 @@ local function log(...)
 		local value = select(i, ...)
 
 		if type(value) == "table" then
-			segments[i] = format.formatTable(value)
+			segments[i] = format.formatValue(value)
 		else
 			segments[i] = tostring(value)
 		end

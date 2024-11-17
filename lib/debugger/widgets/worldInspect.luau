@@ -1,6 +1,6 @@
-local formatTableModule = require(script.Parent.Parent.formatTable)
+local formatValueModule = require(script.Parent.Parent.formatValue)
 local getAllComponentData = require(script.Parent.Parent.getAllComponentData)
-local formatTable = formatTableModule.formatTable
+local formatValue = formatValueModule.formatValue
 
 local BY_COMPONENT_NAME = "ComponentName"
 local BY_ENTITY_COUNT = "EntityCount"
@@ -130,7 +130,7 @@ return function(plasma)
 						for entityId, data in world:query(debugComponent) do
 							table.insert(items, {
 								entityId,
-								formatTable(data),
+								formatValue(data),
 
 								selected = debugger.debugEntity == entityId,
 							})
@@ -170,7 +170,7 @@ return function(plasma)
 							for i = 1, #intersectingComponents do
 								local data = intersectingData[item[1]][i]
 
-								table.insert(item, if data then formatTable(data) else "")
+								table.insert(item, if data then formatValue(data) else "")
 							end
 						end
 
