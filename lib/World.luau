@@ -1213,7 +1213,6 @@ function World._trackChanged(self: World, metatable, id, old, new)
 		return
 	end
 
-	--print("Track changed called", tostring(metatable), id, old, new, debug.traceback("", 2))
 	local record = table.freeze({
 		old = old,
 		new = new,
