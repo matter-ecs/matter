@@ -4,7 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local defaultRaycastParams = RaycastParams.new()
 defaultRaycastParams.IgnoreWater = true
 
-function getInstanceOnMouse(params: RaycastParams?)
+function getInstanceOnMouse(params: RaycastParams)
 	local camera = workspace.CurrentCamera
 	if not camera then
 		return
@@ -13,7 +13,7 @@ function getInstanceOnMouse(params: RaycastParams?)
 	local mouseLocation = UserInputService:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(mouseLocation.X, mouseLocation.Y)
 
-	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000)
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 	return result and result.Instance
 end
 
