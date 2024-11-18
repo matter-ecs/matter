@@ -1,7 +1,10 @@
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-function getInstanceOnMouse()
+local defaultRaycastParams = RaycastParams.new()
+defaultRaycastParams.IgnoreWater = true
+
+function getInstanceOnMouse(params: RaycastParams?)
 	local camera = workspace.CurrentCamera
 	if not camera then
 		return
@@ -22,7 +25,7 @@ local function mouseHighlight(debugger, remoteEvent)
 	local lastSent, setLastSent = debugger.plasma.useState()
 
 	if UserInputService:IsKeyDown(Enum.KeyCode.LeftAlt) then
-		local instance = getInstanceOnMouse()
+		local instance = getInstanceOnMouse(debugger.raycastParams or defaultRaycastParams)
 
 		if instance then
 			local id
