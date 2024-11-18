@@ -60,7 +60,6 @@ local function new(name: string, defaultData)
 		-- If no default data is provided, we want to default a table.
 		data = if data == nil then defaultData or {} else data
 
-		local component = getmetatable(ComponentInstance :: any)
 		if typeof(data) == "table" then
 			if defaultData then
 				data = merge(defaultData, data)
@@ -68,7 +67,6 @@ local function new(name: string, defaultData)
 
 			return table.freeze(setmetatable(data, ComponentInstance))
 		else
-			component[PRIMITIVE_MARKER] = true
 			return table.freeze(setmetatable({ data = data, [PRIMITIVE_MARKER] = true }, ComponentInstance))
 		end
 	end
