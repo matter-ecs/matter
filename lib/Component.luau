@@ -52,10 +52,10 @@ local lastId = 0
 local function new(name: string, defaultData)
 	name = name or debug.info(2, "s") .. "@" .. debug.info(2, "l")
 
-	local ComponentInstance = {}
-	ComponentInstance.__index = ComponentInstance
+	local Component = {}
+	Component.__index = Component
 
-	function ComponentInstance.new(data)
+	function Component.new(data)
 		-- If we aren't passed data, then we use the default data.
 		-- If no default data is provided, we want to default a table.
 		data = if data == nil then defaultData or {} else data
@@ -65,9 +65,9 @@ local function new(name: string, defaultData)
 				data = merge(defaultData, data)
 			end
 
-			return table.freeze(setmetatable(data, ComponentInstance))
+			return table.freeze(setmetatable(data, Component))
 		else
-			return table.freeze(setmetatable({ data = data, [PRIMITIVE_MARKER] = true }, ComponentInstance))
+			return table.freeze(setmetatable({ data = data, [PRIMITIVE_MARKER] = true }, Component))
 		end
 	end
 
@@ -100,15 +100,15 @@ local function new(name: string, defaultData)
 	@param partialNewData {} -- The table to be merged with the existing component data.
 	@return ComponentInstance -- A copy of the component instance with values from `partialNewData` overriding existing values.
 	]=]
-	function ComponentInstance:patch(partialNewData)
+	function Component:patch(partialNewData)
 		return getmetatable(self).new(merge(self, partialNewData))
 	end
 
 	lastId += 1
 	local id = lastId
-	setmetatable(ComponentInstance, {
+	setmetatable(Component, {
 		__call = function(_, ...)
-			return ComponentInstance.new(...)
+			return Component.new(...)
 		end,
 
 		__tostring = function()
@@ -122,7 +122,7 @@ local function new(name: string, defaultData)
 		[DIAGNOSTIC_COMPONENT_MARKER] = true,
 	})
 
-	return ComponentInstance
+	return Component
 end
 
 local function assertValidType(value, position)
