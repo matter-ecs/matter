@@ -108,8 +108,9 @@ Debugger.__index = Debugger
 	Create this property in Debugger to specify the RaycastParams used for the mouse highlight. For example, you may want to specify a different collision group.
 
 	```lua
-	debugger.raycastParams = RaycastParams.new()
+	local raycastParams = RaycastParams.new()
 	raycastParams.CollisionGroup = "SomeGroup"
+	debugger.raycastParams = raycastParams
 	```
 ]=]
 
