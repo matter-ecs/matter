@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Added `Debugger.raycastParams` property.
+  - This allows users to customize the `RaycastParams` that is used by the mouse highlight feature. For example, a different CollisionGroup could be specified.
+
 ## [0.9.0-beta.0] - 2024-11-15
 
 ### Added

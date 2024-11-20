@@ -102,6 +102,19 @@ Debugger.__index = Debugger
 ]=]
 
 --[=[
+	@prop raycastParams RaycastParams
+	@within Debugger
+
+	Create this property in Debugger to specify the RaycastParams used for the mouse highlight. For example, you may want to specify a different collision group.
+
+	```lua
+	local raycastParams = RaycastParams.new()
+	raycastParams.CollisionGroup = "SomeGroup"
+	debugger.raycastParams = raycastParams
+	```
+]=]
+
+--[=[
 	@prop componentRefreshFrequency number
 	@within Debugger
 
