@@ -1,5 +1,5 @@
-local formatTableModule = require(script.Parent.Parent.formatTable)
-local formatTable = formatTableModule.formatTable
+local formatValueModule = require(script.Parent.Parent.formatValue)
+local formatValue = formatValueModule.formatValue
 
 return function(plasma)
 	return plasma.widget(function(objectStack, custom)
@@ -41,13 +41,13 @@ return function(plasma)
 						valueItem = function()
 							if
 								custom
-									.link(formatTable(value), {
+									.link(formatValue(value), {
 										font = Enum.Font.Code,
 									})
 									:clicked()
 							then
 								table.insert(objectStack, {
-									key = if type(key) == "table" then formatTable(key) else tostring(key),
+									key = if type(key) == "table" then formatValue(key) else tostring(key),
 									value = value,
 								})
 							end

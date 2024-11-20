@@ -28,12 +28,7 @@ local function spawnMotherships(world)
 		model.Parent = workspace
 		model.PrimaryPart:SetNetworkOwner(nil)
 
-		world:insert(
-			id,
-			Components.Model({
-				model = model,
-			})
-		)
+		world:insert(id, Components.Model(model))
 	end
 
 	for id, mothership, transform in
@@ -58,7 +53,7 @@ local function spawnMotherships(world)
 	end
 
 	for _, mothership, model in world:query(Components.Mothership, Components.Model):without(Components.Lasering) do
-		model.model.Roomba.AlignPosition.Position = mothership.goal
+		model.Roomba.AlignPosition.Position = mothership.goal
 	end
 end
 

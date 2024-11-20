@@ -10,9 +10,7 @@ local function setupTags(world)
 	local function spawnBound(instance, component)
 		local id = world:spawn(
 			component(),
-			Components.Model({
-				model = instance,
-			}),
+			Components.Model(instance),
 			Components.Transform({
 				cframe = instance.PrimaryPart.CFrame,
 			})

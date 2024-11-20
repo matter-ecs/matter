@@ -11,11 +11,11 @@ local function spinSpinners(world, _, ui)
 	local randomize = ui.button("Randomize colors!"):clicked()
 
 	for _, model in world:query(Components.Model, Components.Spinner) do
-		model.model.PrimaryPart.CFrame = model.model.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(5), 0)
-		model.model.PrimaryPart.Transparency = transparency
+		model.PrimaryPart.CFrame = model.PrimaryPart.CFrame * CFrame.Angles(0, math.rad(5), 0)
+		model.PrimaryPart.Transparency = transparency
 
 		if randomize then
-			model.model.PrimaryPart.BrickColor = BrickColor.random()
+			model.PrimaryPart.BrickColor = BrickColor.random()
 		end
 	end
 end

@@ -6,11 +6,13 @@ local merge = require(script.Parent.immutable).merge
 	A component is a named piece of data that exists on an entity.
 	Components are created and removed in the [World](/api/World).
 
-	In the docs, the terms "Component" and "ComponentInstance" are used:
+	In the docs, the terms "Component", "ComponentInstance", and "ComponentValue" are used:
 	- **"Component"** refers to the base class of a specific type of component you've created.
 		This is what [`Matter.component`](/api/Matter#component) returns.
-	- **"Component Instance"** refers to an actual piece of data that can exist on an entity.
+	- **"Component Instance"** refers to an instance of a component with a table value.
 		The metatable of a component instance table is its respective Component table.
+	- **"Component Value"** refers to an actual piece of data that can exist on an entity. It can be
+		a "ComponentInstance" or another datatype.
 
 	Component instances are *plain-old data*: they do not contain behaviors or methods.
 
@@ -43,28 +45,32 @@ local merge = require(script.Parent.immutable).merge
 -- This is a special value we set inside the component's metatable that will allow us to detect when
 -- a Component is accidentally inserted as a Component Instance.
 -- It should not be accessible through indexing into a component instance directly.
-local DIAGNOSTIC_COMPONENT_MARKER = {}
+local DIAGNOSTIC_COMPONENT_MARKER = table.freeze({})
+
+-- This tells the World whether the component should be unwrapped on insertion.
+local PRIMITIVE_MARKER = table.freeze({})
 
 local lastId = 0
-local function newComponent(name, defaultData)
+local function new(name: string, defaultData)
 	name = name or debug.info(2, "s") .. "@" .. debug.info(2, "l")
 
-	assert(
-		defaultData == nil or type(defaultData) == "table",
-		"if component default data is specified, it must be a table"
-	)
+	local Component = {}
+	Component.__index = Component
 
-	local component = {}
-	component.__index = component
+	function Component.new(data)
+		-- If we aren't passed data, then we use the default data.
+		-- If no default data is provided, we want to default a table.
+		data = if data == nil then defaultData or {} else data
 
-	function component.new(data)
-		data = data or {}
+		if typeof(data) == "table" then
+			if defaultData then
+				data = merge(defaultData, data)
+			end
 
-		if defaultData then
-			data = merge(defaultData, data)
+			return table.freeze(setmetatable(data, Component))
+		else
+			return table.freeze(setmetatable({ data = data, [PRIMITIVE_MARKER] = true }, Component))
 		end
-
-		return table.freeze(setmetatable(data, component))
 	end
 
 	--[=[
@@ -96,29 +102,29 @@ local function newComponent(name, defaultData)
 	@param partialNewData {} -- The table to be merged with the existing component data.
 	@return ComponentInstance -- A copy of the component instance with values from `partialNewData` overriding existing values.
 	]=]
-	function component:patch(partialNewData)
-		debug.profilebegin("patch")
-		local patch = getmetatable(self).new(merge(self, partialNewData))
-		debug.profileend()
-		return patch
+	function Component:patch(partialNewData)
+		return getmetatable(self).new(merge(self, partialNewData))
 	end
 
 	lastId += 1
 	local id = lastId
-	setmetatable(component, {
+	setmetatable(Component, {
 		__call = function(_, ...)
-			return component.new(...)
+			return Component.new(...)
 		end,
+
 		__tostring = function()
 			return name
 		end,
+
 		__len = function()
 			return id
 		end,
+
 		[DIAGNOSTIC_COMPONENT_MARKER] = true,
 	})
 
-	return component
+	return Component
 end
 
 local function assertValidType(value, position)
@@ -137,7 +143,6 @@ local function assertValidComponent(value, position)
 	assertValidType(value, position)
 
 	local metatable = getmetatable(value)
-
 	if getmetatable(metatable) ~= nil and getmetatable(metatable)[DIAGNOSTIC_COMPONENT_MARKER] then
 		error(
 			string.format(
@@ -177,10 +182,16 @@ local function assertComponentArgsProvided(...)
 	end
 end
 
+local function isPrimitive(componentInstance)
+	return componentInstance[PRIMITIVE_MARKER] ~= nil
+end
+
 return {
-	newComponent = newComponent,
+	new = new,
 	assertValidComponentInstance = assertValidComponentInstance,
 	assertValidComponentInstances = assertValidComponentInstances,
 	assertComponentArgsProvided = assertComponentArgsProvided,
 	assertValidComponent = assertValidComponent,
+
+	isPrimitive = isPrimitive,
 }

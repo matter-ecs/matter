@@ -5,7 +5,7 @@ local Matter = require(ReplicatedStorage.Lib.Matter)
 
 local function roombasHurt(world)
 	for _, _, model in world:query(Components.Roomba, Components.Model) do
-		for _, part in Matter.useEvent(model.model.PrimaryPart, "Touched") do
+		for _, part in Matter.useEvent(model.PrimaryPart, "Touched") do
 			local touchedModel = part:FindFirstAncestorWhichIsA("Model")
 			if not touchedModel then
 				continue

@@ -1,7 +1,7 @@
-local formatTableModule = require(script.Parent.Parent.formatTable)
+local formatValueModule = require(script.Parent.Parent.formatValue)
 local getAllComponentData = require(script.Parent.Parent.getAllComponentData)
-local formatTable = formatTableModule.formatTable
-local FormatMode = formatTableModule.FormatMode
+local formatValue = formatValueModule.formatValue
+local FormatMode = formatValueModule.FormatMode
 
 return function(plasma)
 	return plasma.widget(function(world, id, custom)
@@ -15,7 +15,7 @@ return function(plasma)
 			if next(componentData) == nil then
 				str ..= "{ }\n"
 			else
-				str ..= (formatTable(componentData, FormatMode.Long, 0, 2) .. "\n")
+				str ..= (formatValue(componentData, FormatMode.Long, 0, 2) .. "\n")
 			end
 		end
 

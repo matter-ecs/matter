@@ -2,7 +2,7 @@
 --!optimize 2
 
 local Archetype = require(script.Parent.Archetype)
-local Component = require(script.Parent.component)
+local Component = require(script.Parent.Component)
 local topoRuntime = require(script.Parent.topoRuntime)
 
 local assertValidComponentInstances = Component.assertValidComponentInstances
@@ -244,10 +244,12 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	local archetype = entityRecord.archetype
 
 	-- Track changes
-	for _, componentStorage in archetype.fields do
-		local componentInstance = componentStorage[entityRecord.indexInArchetype]
-		local component = getmetatable(componentInstance :: any)
-		world:_trackChanged(component, entityId, componentInstance, nil)
+	for index, componentStorage in archetype.fields do
+		local data = componentStorage[entityRecord.indexInArchetype]
+		local componentId = archetype.indexToId[index]
+		local component = world.componentIdToComponent[componentId]
+
+		world:_trackChanged(component, entityId, data, nil)
 	end
 
 	-- TODO:
@@ -268,6 +270,9 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 
 	local oldArchetype = entityRecord.archetype
 	for _, componentInstance in componentInstances do
+		local isPrimitive = Component.isPrimitive(componentInstance)
+		local data = if isPrimitive then componentInstance.data else componentInstance
+
 		local component = getmetatable(componentInstance)
 		local componentId = #component
 		local componentIds = table.clone(oldArchetype.componentIds)
@@ -281,8 +286,7 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
 			oldComponentInstance = archetype.fields[archetype.idToIndex[componentId]][entityIndex]
 
-			-- FIXME:
-			-- This shouldn't be in a hotpath, probably better in createArchetype
+			-- FIXME: This shouldn't be in a hotpath, probably better in createArchetype
 			world.componentIdToComponent[componentId] = component
 		else
 			archetype = oldArchetype
@@ -290,8 +294,8 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			oldComponentInstance = oldArchetype.fields[oldArchetype.idToIndex[componentId]][entityIndex]
 		end
 
-		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = componentInstance
-		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
+		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = data
+		world:_trackChanged(component, entityId, oldComponentInstance, data)
 
 		oldArchetype = archetype
 	end

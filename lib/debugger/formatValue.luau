@@ -38,7 +38,11 @@ local FormatMode = {
 	Short = "Short",
 	Long = "Long",
 }
-local function formatTable(object, mode, _padLength, _depth)
+local function formatValue(object, mode, _padLength, _depth)
+	if typeof(object) ~= "table" then
+		return tostring(object)
+	end
+
 	mode = mode or FormatMode.Short
 	_padLength = _padLength or 0
 	_depth = _depth or 1
@@ -87,7 +91,7 @@ local function formatTable(object, mode, _padLength, _depth)
 				part ..= "[{..}]="
 			else
 				part ..= "["
-				part ..= formatTable(key, FormatMode.Short, #str + #part + _padLength, _depth + 1)
+				part ..= formatValue(key, FormatMode.Short, #str + #part + _padLength, _depth + 1)
 				part ..= "] = "
 			end
 		end
@@ -107,7 +111,7 @@ local function formatTable(object, mode, _padLength, _depth)
 			if mode == FormatMode.Short then
 				part ..= "{..}"
 			else
-				part ..= formatTable(value, FormatMode.Long, #str + #part + _padLength, _depth + 1)
+				part ..= formatValue(value, FormatMode.Long, #str + #part + _padLength, _depth + 1)
 			end
 		elseif mode == FormatMode.Long and (luaType == "userdata" or luaType == "vector") then
 			if robloxType == "CFrame" then
@@ -157,6 +161,6 @@ local function formatTable(object, mode, _padLength, _depth)
 end
 
 return {
-	formatTable = formatTable,
+	formatValue = formatValue,
 	FormatMode = FormatMode,
 }

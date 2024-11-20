@@ -19,8 +19,7 @@ local function start(containers)
 		end
 
 		local model = world:get(id, components.Model)
-
-		return model and model.model or nil
+		return model
 	end
 
 	local loop = Matter.Loop.new(world, state, debugger:getWidgets())
