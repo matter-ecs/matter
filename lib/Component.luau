@@ -6,11 +6,13 @@ local merge = require(script.Parent.immutable).merge
 	A component is a named piece of data that exists on an entity.
 	Components are created and removed in the [World](/api/World).
 
-	In the docs, the terms "Component" and "ComponentInstance" are used:
+	In the docs, the terms "Component", "ComponentInstance", and "ComponentValue" are used:
 	- **"Component"** refers to the base class of a specific type of component you've created.
 		This is what [`Matter.component`](/api/Matter#component) returns.
-	- **"Component Instance"** refers to an actual piece of data that can exist on an entity.
+	- **"Component Instance"** refers to an instance of a component with a table value.
 		The metatable of a component instance table is its respective Component table.
+	- **"Component Value"** refers to an actual piece of data that can exist on an entity. It can be
+		a "ComponentInstance" or another datatype.
 
 	Component instances are *plain-old data*: they do not contain behaviors or methods.
 
