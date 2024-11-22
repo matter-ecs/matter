@@ -363,7 +363,6 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 	local entityRecord = ensureRecord(world, entityId)
 	local archetype = entityRecord.archetype
 
-	local didRemove = false
 	for _, component in removeCommand.components do
 		local componentId = #component
 		local fieldIndex = archetype.idToIndex[componentId]
@@ -387,11 +386,7 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 			archetype = nextArchetype
 		end
 
-		didRemove = true
 		world:_trackChanged(component, entityId, componentInstance, nil)
-	end
-
-	if didRemove then
 		transitionArchetype(world, entityId, entityRecord, archetype)
 	end
 end
