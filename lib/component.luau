@@ -105,6 +105,8 @@ local function newComponent(name, defaultData)
 
 	lastId += 1
 	local id = lastId
+
+	component.id = id
 	setmetatable(component, {
 		__call = function(_, ...)
 			return component.new(...)

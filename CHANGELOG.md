@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - Added `Debugger.raycastParams` property.
   - This allows users to customize the `RaycastParams` that is used by the mouse highlight feature. For example, a different CollisionGroup could be specified.
 
+### Changed
+
+- `World:get()` now has fast paths for up to four components.
+  - Getting one component is now more than 2x faster and this scales with more components.
+
 ## [0.9.0-beta.0] - 2024-11-15
 
 ### Added
