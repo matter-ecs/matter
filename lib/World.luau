@@ -533,7 +533,7 @@ function World:contains(id)
 end
 
 -- This function call gets inlined
-local function field(entityRecord, archetype, idToIndex, component)
+local function field(entityRecord: EntityRecord, archetype: Archetype, idToIndex, component: Component)
 	local field = idToIndex[component.id]
 	if field == nil then
 		return nil
