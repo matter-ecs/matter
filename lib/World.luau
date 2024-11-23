@@ -591,14 +591,7 @@ function World:get(entityId: EntityId, ...: Component)
 			local component = select(i, ...)
 			assertValidComponent(component, i)
 
-			-- Does this component belong to the archetype that this entity is in?
-			local storageIndex = idToIndex[component.id]
-			if storageIndex == nil then
-				continue
-			end
-
-			-- Yes
-			componentInstances[i] = archetype.fields[storageIndex][entityRecord.indexInArchetype]
+			componentInstances[i] = field(entityRecord, archetype, idToIndex, component)
 		end
 
 		return unpack(componentInstances, 1, length)
