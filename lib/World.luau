@@ -539,30 +539,57 @@ end
 	@param ... Component -- The components to fetch
 	@return ... -- Returns the component values in the same order they were passed in
 ]=]
-function World:get(entityId, ...: Component)
-	assertWorldOperationIsValid(self, entityId, ...)
 
-	local length = select("#", ...)
-	local componentInstances = table.create(length, nil)
+-- This function call gets inlined
+local function field(entityRecord, archetype, idToIndex, component)
+	local field = idToIndex[component.id]
+	if field == nil then
+		return nil
+	end
+
+	return archetype.fields[field][entityRecord.indexInArchetype]
+end
+
+function World:get(entityId: EntityId, ...: Component)
+	assertWorldOperationIsValid(self, entityId, ...)
 
 	local entityRecord = self.allEntities[entityId]
 	local archetype = entityRecord.archetype
 	local idToIndex = archetype.idToIndex
-	for i = 1, length do
-		local component = select(i, ...)
-		assertValidComponent(component, i)
 
-		-- Does this component belong to the archetype that this entity is in?
-		local storageIndex = idToIndex[#component]
-		if storageIndex == nil then
-			continue
+	local a, b, c, d = ...
+	local length = select("#", ...)
+	if length == 1 then
+		return field(entityRecord, archetype, idToIndex, a)
+	elseif length == 2 then
+		return field(entityRecord, archetype, idToIndex, a), field(entityRecord, archetype, idToIndex, b)
+	elseif length == 3 then
+		return field(entityRecord, archetype, idToIndex, a),
+			field(entityRecord, archetype, idToIndex, b),
+			field(entityRecord, archetype, idToIndex, c)
+	elseif length == 4 then
+		return field(entityRecord, archetype, idToIndex, a),
+			field(entityRecord, archetype, idToIndex, b),
+			field(entityRecord, archetype, idToIndex, c),
+			field(entityRecord, archetype, idToIndex, d)
+	else
+		local componentInstances = table.create(length, nil)
+		for i = 1, length do
+			local component = select(i, ...)
+			assertValidComponent(component, i)
+
+			-- Does this component belong to the archetype that this entity is in?
+			local storageIndex = idToIndex[component.id]
+			if storageIndex == nil then
+				continue
+			end
+
+			-- Yes
+			componentInstances[i] = archetype.fields[storageIndex][entityRecord.indexInArchetype]
 		end
 
-		-- Yes
-		componentInstances[i] = archetype.fields[storageIndex][entityRecord.indexInArchetype]
+		return unpack(componentInstances, 1, length)
 	end
-
-	return unpack(componentInstances, 1, length)
 end
 
 local function noop() end

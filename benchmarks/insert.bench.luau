@@ -3,7 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Matter = require(ReplicatedStorage.Matter)
-local PinnedMatter = require(ReplicatedStorage.PinnedMatter)
+local PinnedMatter = require(ReplicatedStorage.Matter_0_8)
 
 local A, B = Matter.component(), Matter.component()
 local pinnedA, pinnedB = PinnedMatter.component(), PinnedMatter.component()
