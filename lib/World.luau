@@ -560,14 +560,28 @@ function World:get(entityId: EntityId, ...: Component)
 	local a, b, c, d = ...
 	local length = select("#", ...)
 	if length == 1 then
+		assertValidComponent(a, 1)
+
 		return field(entityRecord, archetype, idToIndex, a)
 	elseif length == 2 then
+		assertValidComponent(a, 1)
+		assertValidComponent(b, 2)
+
 		return field(entityRecord, archetype, idToIndex, a), field(entityRecord, archetype, idToIndex, b)
 	elseif length == 3 then
+		assertValidComponent(a, 1)
+		assertValidComponent(b, 2)
+		assertValidComponent(c, 3)
+
 		return field(entityRecord, archetype, idToIndex, a),
 			field(entityRecord, archetype, idToIndex, b),
 			field(entityRecord, archetype, idToIndex, c)
 	elseif length == 4 then
+		assertValidComponent(a, 1)
+		assertValidComponent(b, 2)
+		assertValidComponent(c, 3)
+		assertValidComponent(d, 4)
+
 		return field(entityRecord, archetype, idToIndex, a),
 			field(entityRecord, archetype, idToIndex, b),
 			field(entityRecord, archetype, idToIndex, c),
