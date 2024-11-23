@@ -532,14 +532,6 @@ function World:contains(id)
 	return self.allEntities[id] ~= nil
 end
 
---[=[
-	Gets a specific component (or set of components) from a specific entity in this world.
-
-	@param entityId number -- The entity ID
-	@param ... Component -- The components to fetch
-	@return ... -- Returns the component values in the same order they were passed in
-]=]
-
 -- This function call gets inlined
 local function field(entityRecord, archetype, idToIndex, component)
 	local field = idToIndex[component.id]
@@ -550,6 +542,13 @@ local function field(entityRecord, archetype, idToIndex, component)
 	return archetype.fields[field][entityRecord.indexInArchetype]
 end
 
+--[=[
+	Gets a specific component (or set of components) from a specific entity in this world.
+
+	@param entityId number -- The entity ID
+	@param ... Component -- The components to fetch
+	@return ... -- Returns the component values in the same order they were passed in
+]=]
 function World:get(entityId: EntityId, ...: Component)
 	assertWorldOperationIsValid(self, entityId, ...)
 
