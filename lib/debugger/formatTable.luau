@@ -38,10 +38,17 @@ local FormatMode = {
 	Short = "Short",
 	Long = "Long",
 }
-local function formatTable(object, mode, _padLength, _depth)
+
+local function formatTable(object, mode, _padLength, _depth, _seen)
 	mode = mode or FormatMode.Short
 	_padLength = _padLength or 0
 	_depth = _depth or 1
+	_seen = _seen or {}
+
+	if _seen[object] then
+		return "<cyclic>"
+	end
+	_seen[object] = true
 
 	local max = if mode == FormatMode.Short then 7 else 1000
 
@@ -87,7 +94,7 @@ local function formatTable(object, mode, _padLength, _depth)
 				part ..= "[{..}]="
 			else
 				part ..= "["
-				part ..= formatTable(key, FormatMode.Short, #str + #part + _padLength, _depth + 1)
+				part ..= formatTable(key, FormatMode.Short, #str + #part + _padLength, _depth + 1, _seen)
 				part ..= "] = "
 			end
 		end
@@ -107,7 +114,7 @@ local function formatTable(object, mode, _padLength, _depth)
 			if mode == FormatMode.Short then
 				part ..= "{..}"
 			else
-				part ..= formatTable(value, FormatMode.Long, #str + #part + _padLength, _depth + 1)
+				part ..= formatTable(value, FormatMode.Long, #str + #part + _padLength, _depth + 1, _seen)
 			end
 		elseif mode == FormatMode.Long and (luaType == "userdata" or luaType == "vector") then
 			if robloxType == "CFrame" then
@@ -152,6 +159,8 @@ local function formatTable(object, mode, _padLength, _depth)
 	if mode == FormatMode.Short or _depth > 1 then
 		str ..= "}"
 	end
+
+	_seen[object] = nil
 
 	return str
 end
