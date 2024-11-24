@@ -1,6 +1,7 @@
 local stringColor = "#dcdcaa"
 local numberColor = "#b0c4de"
 local keywordColor = "#c586c0"
+local dimmedColor = "#808080"
 
 function colorize(value, color)
 	if type(value) == "number" then
@@ -46,7 +47,7 @@ local function formatTable(object, mode, _padLength, _depth, _seen)
 	_seen = _seen or {}
 
 	if _seen[object] then
-		return "<cyclic>"
+		return colorize("&lt;cyclic&gt;", dimmedColor)
 	end
 	_seen[object] = true
 
