@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 - `World:get()` now has fast paths for up to four components.
   - Getting one component is now more than 2x faster and this scales with more components.
 
+### Fixed
+
+- The debugger now gracefully handles cyclic tables.
+
 ## [0.9.0-beta.0] - 2024-11-15
 
 ### Added
