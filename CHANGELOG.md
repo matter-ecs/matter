@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- The debugger now gracefully handles cyclic tables.
+
 ## [0.8.4] - 2024-08-15
 
 ### Added
