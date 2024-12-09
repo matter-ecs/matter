@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 ### Fixed
 
 - The debugger now gracefully handles cyclic tables.
+- The query cache no longer allows for a case where archetypes could be skipped.
 
 ## [0.8.4] - 2024-08-15
 
