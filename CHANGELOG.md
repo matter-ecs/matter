@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 ## [Unreleased]
 
+## [0.8.5] - 2024-12-09
+
 ### Added
 
 - Added a button to the Debugger's system list to sort by run time.
@@ -17,6 +19,7 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 ### Fixed
 
 - The debugger now gracefully handles cyclic tables.
+- The query cache no longer allows for a case where archetypes could be skipped.
 
 ## [0.8.4] - 2024-08-15
 
@@ -324,7 +327,8 @@ The format is based on [Keep a Changelog][kac], and this project adheres to
 
 - Initial release
 
-[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.4...HEAD
+[unreleased]: https://github.com/matter-ecs/matter/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/matter-ecs/matter/releases/tag/v0.8.5
 [0.8.4]: https://github.com/matter-ecs/matter/releases/tag/v0.8.4
 [0.8.3]: https://github.com/matter-ecs/matter/releases/tag/v0.8.3
 [0.8.2]: https://github.com/matter-ecs/matter/releases/tag/v0.8.2
