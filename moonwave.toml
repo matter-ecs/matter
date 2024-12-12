@@ -1,9 +1,16 @@
-classOrder = ["Matter", "World", "QueryResult", "Loop"]
 gitSourceBranch = "main"
 
 [docusaurus]
-url = "https://eryn.io"
+url = "https://matter-ecs.github.io/"
+baseUrl = "/matter"
 tagline = "A modern ECS library for Roblox"
+
+[[classOrder]]
+classes = ["Matter", "World", "QueryResult", "Loop"]
+
+[[classOrder]]
+section = "Components"
+classes = ["Component", "TableComponentInstance"]
 
 [[navbar.items]]
 href = "https://discord.gg/aQwDAYhqtJ"
@@ -25,4 +32,3 @@ src = "/logo.svg"
 [home]
 enabled = true
 includeReadme = false
-

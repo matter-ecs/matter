@@ -6,15 +6,11 @@ local merge = require(script.Parent.immutable).merge
 	A component is a named piece of data that exists on an entity.
 	Components are created and removed in the [World](/api/World).
 
-	In the docs, the terms "Component", "ComponentInstance", and "ComponentValue" are used:
+	In the docs, the terms "Component" and "ComponentInstance" are used:
 	- **"Component"** refers to the base class of a specific type of component you've created.
 		This is what [`Matter.component`](/api/Matter#component) returns.
-	- **"Component Instance"** refers to an instance of a component with a table value.
-		The metatable of a component instance table is its respective Component table.
-	- **"Component Value"** refers to an actual piece of data that can exist on an entity. It can be
-		a "ComponentInstance" or another datatype.
-
-	Component instances are *plain-old data*: they do not contain behaviors or methods.
+	- **"Component Instance"** refers to what encapsulates data you pass into a Component.
+		You only really interact with a [TableComponentInstance](/api/TableComponentInstance).
 
 	Since component instances are immutable, one helper function exists on all component instances, `patch`,
 	which allows reusing data from an existing component instance to make up for the ergonomic loss of mutations.
@@ -22,24 +18,22 @@ local merge = require(script.Parent.immutable).merge
 
 --[=[
 	@within Component
-	@type ComponentInstance {}
+	@type ComponentInstance TableComponentInstance | ValueComponentInstance
+]=]
 
-	The `ComponentInstance` type refers to an actual piece of data that can exist on an entity.
-	The metatable of the component instance table is set to its particular Component table.
+--[=[
+	@within Component
+	@type ValueComponentInstance {}
 
-	A component instance can be created by calling the Component table:
+	If you pass anything other than a table into a Component, then you will get a ValueComponentInstance back.
+	Unlike a [TableComponentInstance](/api/TableComponentInstance), you shouldn't need to interact with this
+	and it will not be passed back to you in queries.
 
-	```lua
-	-- Component:
-	local MyComponent = Matter.component("My component")
+	This is strictly used for insertions.
+]=]
 
-	-- component instance:
-	local myComponentInstance = MyComponent({
-		some = "data"
-	})
-
-	print(getmetatable(myComponentInstance) == MyComponent) --> true
-	```
+--[=[
+	@class TableComponentInstance
 ]=]
 
 -- This is a special value we set inside the component's metatable that will allow us to detect when
@@ -74,33 +68,33 @@ local function new(name: string, defaultData)
 	end
 
 	--[=[
-	@within Component
+		@within TableComponentInstance
 
-	```lua
-	for id, target in world:query(Target) do
-		if shouldChangeTarget(target) then
-			world:insert(id, target:patch({ -- modify the existing component
-				currentTarget = getNewTarget()
-			}))
+		```lua
+		for id, target in world:query(Target) do
+			if shouldChangeTarget(target) then
+				world:insert(id, target:patch({ -- modify the existing component
+					currentTarget = getNewTarget()
+				}))
+			end
 		end
-	end
-	```
+		```
 
-	A utility function used to immutably modify an existing component instance. Key/value pairs from the passed table
-	will override those of the existing component instance.
+		A utility function used to immutably modify an existing component instance. Key/value pairs from the passed table
+		will override those of the existing component instance.
 
-	As all components are immutable and frozen, it is not possible to modify the existing component directly.
+		As all components are immutable and frozen, it is not possible to modify the existing component directly.
 
-	You can use the `Matter.None` constant to remove a value from the component instance:
+		You can use the `Matter.None` constant to remove a value from the component instance:
 
-	```lua
-	target:patch({
-		currentTarget = Matter.None -- sets currentTarget to nil
-	})
-	```
+		```lua
+		target:patch({
+			currentTarget = Matter.None -- sets currentTarget to nil
+		})
+		```
 
-	@param partialNewData {} -- The table to be merged with the existing component data.
-	@return ComponentInstance -- A copy of the component instance with values from `partialNewData` overriding existing values.
+		@param partialNewData {} -- The table to be merged with the existing component data.
+		@return TableComponentInstance -- A copy of the component instance with values from `partialNewData` overriding existing values.
 	]=]
 	function Component:patch(partialNewData)
 		return getmetatable(self).new(merge(self, partialNewData))
