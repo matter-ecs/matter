@@ -5,11 +5,11 @@ export type ComponentIds = { ComponentId }
 export type Component = { [any]: any }
 export type ComponentInstance = { [any]: any }
 
-type EdgeId = number
-type EdgeDiff = {
-	added: {},
-	removed: {},
-}
+type EdgeId = ComponentId
+-- type EdgeDiff = {
+-- 	added: {},
+-- 	removed: {},
+-- }
 
 type GraphEdge = {
 	id: EdgeId,
@@ -20,8 +20,8 @@ type GraphEdge = {
 	-- Destination archetype
 	to: Archetype?,
 
-	-- What changes on the edge
-	diff: EdgeDiff,
+	-- -- What changes on the edge
+	-- diff: EdgeDiff,
 
 	prev: GraphEdge,
 	next: GraphEdge,
@@ -133,7 +133,7 @@ local function traverseAdd(
 	componentId: ComponentId
 ): Archetype
 	local node = archetype.node
-	local edge = ensureEdge(node.outgoing, componentId)
+	local edge = ensureEdge(node.outgoing.additive, componentId)
 	local to = edge.to
 	if to then
 		return to
@@ -162,11 +162,48 @@ local function traverseAdd(
 	return edge.to
 end
 
-local function traverseRemove() end
+local function traverseRemove(
+	archetypes: Archetypes,
+	archetype: Archetype,
+	componentArchetypeMap,
+	componentId: ComponentId
+)
+	local node = archetype.node
+	local edge = ensureEdge(node.outgoing.subtractive, componentId)
+	local to = edge.to
+	if to then
+		return to
+	end
+
+	-- Get the archetype
+	local nextComponentIds = table.clone(archetype.componentIds)
+	local index = table.find(nextComponentIds, componentId)
+	if index then
+		table.remove(nextComponentIds, index)
+	end
+
+	local nextArchetype = ensureArchetype(archetypes, componentArchetypeMap, nextComponentIds)
+	initializeEdge(archetype, nextArchetype, componentId, edge)
+
+	-- Add new incoming to the list
+	local nextIncoming = nextArchetype.node.incoming
+	local link = nextIncoming.subtractive
+
+	nextIncoming.subtractive = edge
+	edge.next = nextIncoming
+
+	edge.prev = link
+	if link then
+		link.prev = edge
+	end
+
+	return edge.to
+end
 
 return table.freeze({
 	new = new,
 	hash = hash,
 	ensureArchetype = ensureArchetype,
 	traverseAdd = traverseAdd,
+	traverseRemove = traverseRemove,
 })

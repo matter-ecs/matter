@@ -337,28 +337,23 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 	local entityId = removeCommand.entityId
 	local entityRecord = ensureRecord(world, entityId)
 	local archetype = entityRecord.archetype
-	local componentIds = table.clone(entityRecord.archetype.componentIds)
 
-	local didRemove = false
 	for _, component in removeCommand.components do
 		local componentId = #component
-		local index = table.find(componentIds, componentId)
-		if index then
-			local componentInstance = archetype.fields[archetype.idToIndex[componentId]][entityRecord.indexInArchetype]
-			world:_trackChanged(component, entityId, componentInstance, nil)
-
-			table.remove(componentIds, index)
-			didRemove = true
+		local fieldIndex = archetype.idToIndex[componentId]
+		if fieldIndex == nil then
+			-- This archetype does not have this component
+			continue
 		end
-	end
 
-	if didRemove then
-		transitionArchetype(
-			world,
-			entityId,
-			entityRecord,
-			Archetype.ensureArchetype(world.hashToArchetype, world.componentToArchetypes, componentIds)
-		)
+		local componentInstance = archetype.fields[fieldIndex][entityRecord.indexInArchetype]
+		local nextArchetype =
+			Archetype.traverseRemove(world.hashToArchetype, archetype, world.componentToArchetypes, componentId)
+
+		world:_trackChanged(component, entityId, componentInstance, nil)
+		transitionArchetype(world, entityId, entityRecord, nextArchetype)
+
+		archetype = nextArchetype
 	end
 end
 

@@ -249,6 +249,8 @@ return function()
 				expect(world:query(Player):next()).to.never.be.ok()
 				expect(world:query(Health):next()).to.be.ok()
 				expect(world:size()).to.equal(1)
+
+				print(world)
 			end)
 
 			it("should allow removing missing components", function()
