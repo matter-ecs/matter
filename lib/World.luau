@@ -74,31 +74,6 @@ end
 local World = {}
 World.__index = World
 
-local function ensureArchetype(world: World, componentIds: { ComponentId })
-	local archetypeId = Archetype.hash(componentIds)
-	local existingArchetype = world.hashToArchetype[archetypeId]
-	if existingArchetype then
-		return existingArchetype
-	end
-
-	-- Create new archetype
-	local archetype, archetypeId = Archetype.new(componentIds)
-	world.hashToArchetype[archetypeId] = archetype
-	table.insert(world.archetypes, archetype)
-
-	for _, componentId in componentIds do
-		local associatedArchetypes = world.componentToArchetypes[componentId]
-		if associatedArchetypes == nil then
-			associatedArchetypes = {}
-			world.componentToArchetypes[componentId] = associatedArchetypes
-		end
-
-		table.insert(associatedArchetypes, archetype)
-	end
-
-	return archetype
-end
-
 --[=[
 	Creates a new World.
 ]=]
@@ -109,7 +84,7 @@ function World.new()
 
 		componentIdToComponent = {} :: { [ComponentId]: Component },
 		componentToArchetypes = {} :: { [ComponentId]: { Archetype } },
-		hashToArchetype = {} :: { [string]: Archetype? },
+		hashToArchetype = {} :: Archetype.Archetypes,
 
 		-- Is the world buffering commands?
 		deferring = false,
@@ -130,7 +105,7 @@ function World.new()
 		_changedStorage = {},
 	}, World)
 
-	self.rootArchetype = ensureArchetype(self, {})
+	self.rootArchetype = Archetype.ensureArchetype(self.hashToArchetype, self.componentToArchetypes, {})
 	return self
 end
 
@@ -277,27 +252,31 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 		local componentId = #component
 		local componentIds = table.clone(oldArchetype.componentIds)
 
-		local archetype: Archetype
+		local nextArchetype: Archetype
 		local entityIndex: number
 		local oldComponentInstance: ComponentInstance?
 		if oldArchetype.idToIndex[componentId] == nil then
+			-- The field doesn't exist, so transition archetype
+			nextArchetype =
+				Archetype.traverseAdd(world.hashToArchetype, oldArchetype, world.componentToArchetypes, componentId)
+
 			table.insert(componentIds, componentId)
-			archetype = ensureArchetype(world, componentIds)
-			entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
-			oldComponentInstance = archetype.fields[archetype.idToIndex[componentId]][entityIndex]
+			entityIndex = transitionArchetype(world, entityId, entityRecord, nextArchetype)
+			oldComponentInstance = nextArchetype.fields[nextArchetype.idToIndex[componentId]][entityIndex]
 
 			-- FIXME: This shouldn't be in a hotpath, probably better in createArchetype
 			world.componentIdToComponent[componentId] = component
 		else
-			archetype = oldArchetype
+			-- The field already exists, so just update it
+			nextArchetype = oldArchetype
 			entityIndex = entityRecord.indexInArchetype
 			oldComponentInstance = oldArchetype.fields[oldArchetype.idToIndex[componentId]][entityIndex]
 		end
 
-		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = data
+		nextArchetype.fields[nextArchetype.idToIndex[componentId]][entityIndex] = data
 		world:_trackChanged(component, entityId, oldComponentInstance, data)
 
-		oldArchetype = archetype
+		oldArchetype = nextArchetype
 	end
 
 	debug.profileend()
@@ -342,7 +321,12 @@ local function executeReplace(world: World, replaceCommand: ReplaceCommand)
 	end
 
 	transitionArchetype(world, entityId, entityRecord, world.rootArchetype)
-	transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
+	transitionArchetype(
+		world,
+		entityId,
+		entityRecord,
+		Archetype.ensureArchetype(world.hashToArchetype, world.componentToArchetypes, componentIds)
+	)
 	executeInsert(
 		world,
 		{ type = "insert", componentInstances = replaceCommand.componentInstances, entityId = entityId }
@@ -369,7 +353,12 @@ local function executeRemove(world: World, removeCommand: RemoveCommand)
 	end
 
 	if didRemove then
-		transitionArchetype(world, entityId, entityRecord, ensureArchetype(world, componentIds))
+		transitionArchetype(
+			world,
+			entityId,
+			entityRecord,
+			Archetype.ensureArchetype(world.hashToArchetype, world.componentToArchetypes, componentIds)
+		)
 	end
 end
 

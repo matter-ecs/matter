@@ -143,6 +143,17 @@ return function()
 		end)
 
 		describe("immediate", function()
+			it("graph", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+
+				local entity = world:spawn(A())
+				world:insert(entity, B())
+
+				print(world)
+			end)
+
 			it("should be iterable", function()
 				local world = World.new()
 				local A = component()
@@ -216,7 +227,7 @@ return function()
 				local world = World.new()
 
 				local Player = component()
-				local Health = component("Health", 100)
+				local Health = component()
 				local Poison = component()
 
 				local id = world:spawn(Player(), Poison())
@@ -225,7 +236,6 @@ return function()
 				expect(world:query(Health):next()).to.never.be.ok()
 
 				world:insert(id, Health())
-				print(world:get(id, Health))
 
 				expect(world:query(Player):next()).to.be.ok()
 				expect(world:query(Health):next()).to.be.ok()
@@ -239,8 +249,6 @@ return function()
 				expect(world:query(Player):next()).to.never.be.ok()
 				expect(world:query(Health):next()).to.be.ok()
 				expect(world:size()).to.equal(1)
-
-				expect(world:query(Health):next()).to.never.be.ok()
 			end)
 
 			it("should allow removing missing components", function()
