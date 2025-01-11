@@ -128,6 +128,9 @@ function World.new()
 
 		-- Storage for `queryChanged`
 		_changedStorage = {},
+		
+		-- Proxies so `queryChanged` can receive pristine storage in each world in multi-world environments
+		_componentMappings = {},
 	}, World)
 
 	self.rootArchetype = ensureArchetype(self, {})
@@ -520,6 +523,7 @@ function World:clear()
 	self._entityMetatablesCache = {}
 	self._size = 0
 	self._changedStorage = {}
+	self._componentMappings = {}
 end
 
 --[=[
@@ -1195,7 +1199,13 @@ function World:queryChanged(componentToTrack, ...: nil)
 		error("World:queryChanged does not take any additional parameters", 2)
 	end
 
-	local hookState = topoRuntime.useHookState(componentToTrack, cleanupQueryChanged)
+	local componentReference = self._componentMappings[componentToTrack]
+	if not componentReference then
+		componentReference = {}
+		self._componentMappings[componentToTrack] = componentReference
+	end
+	
+	local hookState = topoRuntime.useHookState(componentReference, cleanupQueryChanged)
 
 	if hookState.storage then
 		return function(): any
