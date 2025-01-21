@@ -256,7 +256,10 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 	table.remove(world.rootArchetype.entities, entityRecord.indexInArchetype)
 	world.allEntities[entityId] = nil
 
-	world._size -= 1
+	local willBeDeleted = world.markedForDeletion[entityId] ~= nil
+	if willBeDeleted then
+		world._size -= 1
+	end
 end
 
 local function executeInsert(world: World, insertCommand: InsertCommand)
