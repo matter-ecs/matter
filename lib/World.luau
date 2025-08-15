@@ -189,36 +189,21 @@ local function ensureRecord(world: World, entityId: number): EntityRecord
 	return entityRecord :: EntityRecord
 end
 
-local function transitionArchetype(
-	world: World,
-	entityId: number,
-	entityRecord: EntityRecord,
-	archetype: Archetype
-): number
+local function removeFromArchetype(world: World, entityRecord: EntityRecord)
 	local oldArchetype = entityRecord.archetype
 	local oldEntityIndex = entityRecord.indexInArchetype
-
-	-- Add entity to archetype's entities
-	local entities = archetype.entities
-	local entityIndex = #entities + 1
-	entities[entityIndex] = entityId
-
+	
 	-- Move old storage to new storage if needed
 	local oldNumEntities = #oldArchetype.entities
 	local wasLastEntity = oldNumEntities == oldEntityIndex
+
 	for index, oldComponentStorage in oldArchetype.fields do
-		local componentStorage = archetype.fields[archetype.idToIndex[oldArchetype.componentIds[index]]]
-
-		-- Does the new storage contain this component?
-		if componentStorage then
-			componentStorage[entityIndex] = oldComponentStorage[oldEntityIndex]
-		end
-
 		-- Swap entity component storage
 		if not wasLastEntity then
 			oldComponentStorage[oldEntityIndex] = oldComponentStorage[oldNumEntities]
 		end
-
+		
+		-- Remove componentInstance from old storage
 		oldComponentStorage[oldNumEntities] = nil
 	end
 
@@ -230,6 +215,37 @@ local function transitionArchetype(
 
 	-- Remove from old archetype
 	oldArchetype.entities[oldNumEntities] = nil
+end
+
+local function transitionArchetype(
+	world: World,
+	entityId: number,
+	entityRecord: EntityRecord,
+	archetype: Archetype
+): number
+	local oldArchetype = entityRecord.archetype
+	local oldEntityIndex = entityRecord.indexInArchetype
+	if oldArchetype == archetype then
+		return
+	end
+	
+	-- Add entity to archetype's entities
+	local entities = archetype.entities
+	local entityIndex = #entities + 1
+	entities[entityIndex] = entityId
+	
+	-- Copy over old componentInstances before removeFromArchetype deletes them
+	for index, oldComponentStorage in oldArchetype.fields do
+		local componentStorage = archetype.fields[archetype.idToIndex[oldArchetype.componentIds[index]]]
+
+		-- Does the new storage contain this component?
+		if componentStorage then
+			componentStorage[entityIndex] = oldComponentStorage[oldEntityIndex]
+		end
+	end
+
+	-- Removed here so entityRecord still has the defined archetype
+	removeFromArchetype(world, entityRecord)
 
 	-- Mark entity as being in new archetype
 	entityRecord.indexInArchetype = entityIndex
@@ -250,10 +266,7 @@ local function executeDespawn(world: World, despawnCommand: DespawnCommand)
 		world:_trackChanged(component, entityId, componentInstance, nil)
 	end
 
-	-- TODO:
-	-- Optimize remove so no cascades
-	transitionArchetype(world, entityId, entityRecord, world.rootArchetype)
-	table.remove(world.rootArchetype.entities, entityRecord.indexInArchetype)
+	removeFromArchetype(world, entityRecord)
 	world.allEntities[entityId] = nil
 
 	world._size -= 1
