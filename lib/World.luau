@@ -509,17 +509,29 @@ end
 
 	:::caution
 	Removing entities in this way is not reported by `queryChanged`.
+
+	Existing whole-world iterators stop returning results after this call.
 	:::
 ]=]
 function World:clear()
-	self.storage = {}
+	table.clear(self.allEntities)
+	for _, archetype in self.archetypes do
+		table.clear(archetype.entities)
+		for _, storage in archetype.fields do
+			table.clear(storage)
+		end
+	end
+
 	self.commands = {}
 	self.markedForDeletion = {}
-
-	self._entityArchetypes = {}
-	self._entityMetatablesCache = {}
 	self._size = 0
-	self._changedStorage = {}
+
+	-- Keep subscriptions registered so existing queryChanged hooks continue to receive changes.
+	for _, storages in self._changedStorage do
+		for _, storage in storages do
+			table.clear(storage)
+		end
+	end
 end
 
 --[=[

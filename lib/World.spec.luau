@@ -2,6 +2,7 @@ local World = require(script.Parent.World)
 local Loop = require(script.Parent.Loop)
 local component = require(script.Parent).component
 local BindableEvent = require(script.Parent.mock.BindableEvent)
+local topoRuntime = require(script.Parent.topoRuntime)
 
 local function deepEquals(a, b)
 	if type(a) ~= "table" or type(b) ~= "table" then
@@ -139,6 +140,171 @@ return function()
 				expect(world:size()).to.equal(1)
 				world:commitCommands()
 				expect(world:size()).to.equal(0)
+			end)
+		end)
+
+		describe("clear", function()
+			it("should remove all entities and component data", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+				local ids = {
+					world:spawn(),
+					world:spawn(A({ value = 42 })),
+					world:spawn(B()),
+					world:spawn(A(), B()),
+				}
+
+				world:clear()
+
+				expect(world:size()).to.equal(0)
+				for _, id in ids do
+					expect(world:contains(id)).to.equal(false)
+					expect(function()
+						world:get(id, A)
+					end).to.throw()
+				end
+				expect(world:query(A):next()).to.equal(nil)
+				expect(world:query(B):next()).to.equal(nil)
+				expect(world:query(A, B):next()).to.equal(nil)
+
+				local count = 0
+				for _ in world do
+					count += 1
+				end
+				expect(count).to.equal(0)
+
+				-- Check that the world releases component data, including storage outside query results.
+				expect(next(world.rootArchetype.entities)).to.equal(nil)
+				for _, archetype in world.archetypes do
+					expect(next(archetype.entities)).to.equal(nil)
+					for _, storage in archetype.fields do
+						expect(next(storage)).to.equal(nil)
+					end
+				end
+			end)
+
+			it("should allow reuse after repeated clears without resetting entity IDs", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+				local oldId = world:spawnAt(50, A())
+
+				world:clear()
+				world:clear()
+
+				local a = A({ value = 42 })
+				local b = B({ value = 7 })
+				local idA = world:spawn(a)
+				local idB = world:spawn(b)
+				expect(idA).to.equal(51)
+				expect(idB).to.equal(52)
+				expect(world:size()).to.equal(2)
+				expect(world:contains(oldId)).to.equal(false)
+				expect(world:get(idA, A)).to.equal(a)
+				expect(world:get(idB, B)).to.equal(b)
+				local queryIdA, queryA = world:query(A):next()
+				local queryIdB, queryB = world:query(B):next()
+				expect(queryIdA).to.equal(idA)
+				expect(queryA).to.equal(a)
+				expect(queryIdB).to.equal(idB)
+				expect(queryB).to.equal(b)
+
+				local entities = {}
+				local count = 0
+				for id, data in world do
+					entities[id] = data
+					count += 1
+				end
+				expect(count).to.equal(2)
+				expect(entities[idA][A]).to.equal(a)
+				expect(entities[idB][B]).to.equal(b)
+
+				world:clear()
+				expect(world:size()).to.equal(0)
+				expect(world:contains(idA)).to.equal(false)
+				expect(world:contains(idB)).to.equal(false)
+				expect(world:query(A):next()).to.equal(nil)
+				expect(world:query(B):next()).to.equal(nil)
+				expect(world:spawn()).to.equal(53)
+				expect(world:size()).to.equal(1)
+			end)
+
+			it("should discard buffered commands while remaining deferred", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+				local id = world:spawn(A(), B())
+				world:startDeferring()
+				world:insert(id, A({ value = 42 }))
+				world:remove(id, B)
+				world:despawn(id)
+				local pendingId = world:spawn(B())
+
+				world:clear()
+				world:commitCommands()
+
+				expect(world:size()).to.equal(0)
+				expect(world:contains(id)).to.equal(false)
+				expect(world:contains(pendingId)).to.equal(false)
+				expect(world:query(A):next()).to.equal(nil)
+				expect(world:query(B):next()).to.equal(nil)
+				expect(next(world.markedForDeletion)).to.equal(nil)
+
+				local a = A({ value = 7 })
+				world:spawnAt(id, a)
+				expect(world:size()).to.equal(1)
+				expect(world:contains(id)).to.equal(true)
+				expect(world:get(id, A)).to.equal(nil)
+				expect(world:query(A):next()).to.equal(nil)
+				world:stopDeferring()
+				expect(world:get(id, A)).to.equal(a)
+				expect(world:query(A):next()).to.equal(id)
+				expect(world:size()).to.equal(1)
+			end)
+
+			it("should clear pending changes without disconnecting subscribers", function()
+				local world = World.new()
+				local A = component()
+				local nodes = { { system = {} }, { system = {} } }
+				local records
+				local function readChanges()
+					records = {}
+					for id, record in world:queryChanged(A) do
+						records[id] = record
+					end
+				end
+				for _, node in nodes do
+					topoRuntime.start(node, readChanges)
+				end
+				local oldId = world:spawn(A({ value = 1 }))
+				world:insert(oldId, A({ value = 2 }))
+
+				world:clear()
+
+				for _, node in nodes do
+					topoRuntime.start(node, readChanges)
+					expect(next(records)).to.equal(nil)
+				end
+				local a = A({ value = 42 })
+				local id = world:spawn(a)
+				for _, node in nodes do
+					topoRuntime.start(node, readChanges)
+					assertDeepEqual(records, { [id] = { new = a } })
+				end
+
+				local updated = A({ value = 7 })
+				world:insert(id, updated)
+				for _, node in nodes do
+					topoRuntime.start(node, readChanges)
+					assertDeepEqual(records, { [id] = { old = a, new = updated } })
+				end
+
+				world:clear()
+				for _, node in nodes do
+					topoRuntime.start(node, function() end)
+				end
+				expect(world._changedStorage[A]).to.equal(nil)
 			end)
 		end)
 
