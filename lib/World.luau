@@ -126,6 +126,9 @@ function World.new()
 		-- The total number of active entities in the world
 		_size = 0,
 
+		-- Invalidates whole-world iterators when the world is cleared
+		_clearGeneration = 0,
+
 		-- Storage for `queryChanged`
 		_changedStorage = {},
 	}, World)
@@ -152,8 +155,13 @@ export type World = typeof(World.new())
 	@return {[Component]: ComponentInstance}
 ]=]
 function World.__iter(world: World)
+	local clearGeneration = world._clearGeneration
 	local lastEntityId = nil
 	return function(): (number?, ...any)
+		if world._clearGeneration ~= clearGeneration then
+			return nil
+		end
+
 		local entityId, entityRecord = next(world.allEntities, lastEntityId)
 		if entityId == nil or entityRecord == nil then
 			return nil
@@ -514,6 +522,7 @@ end
 	:::
 ]=]
 function World:clear()
+	self._clearGeneration += 1
 	table.clear(self.allEntities)
 	for _, archetype in self.archetypes do
 		table.clear(archetype.entities)

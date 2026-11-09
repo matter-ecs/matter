@@ -184,6 +184,53 @@ return function()
 				end
 			end)
 
+			it("should stop whole-world iteration when cleared, including in deferred mode", function()
+				local A = component()
+				for _, deferring in { false, true } do
+					local world = World.new()
+					world:spawnAt(50, A())
+					world:spawnAt(100, A())
+					if deferring then
+						world:startDeferring()
+					end
+
+					local count = 0
+					for _ in world do
+						count += 1
+						world:clear()
+					end
+					expect(count).to.equal(1)
+					expect(world:size()).to.equal(0)
+				end
+			end)
+
+			it("should keep old world iterators invalid after repopulating the world", function()
+				local world = World.new()
+				local A = component()
+				world:spawnAt(50, A())
+				local unstarted = World.__iter(world)
+				local started = World.__iter(world)
+				expect(started()).to.equal(50)
+
+				world:clear()
+				expect(started()).to.equal(nil)
+				expect(unstarted()).to.equal(nil)
+
+				local a = A({ value = 42 })
+				world:spawnAt(50, a)
+				expect(started()).to.equal(nil)
+				expect(unstarted()).to.equal(nil)
+
+				local fresh = World.__iter(world)
+				local id, data = fresh()
+				expect(id).to.equal(50)
+				expect(data[A]).to.equal(a)
+				expect(fresh()).to.equal(nil)
+
+				world:clear()
+				expect(fresh()).to.equal(nil)
+			end)
+
 			it("should allow reuse after repeated clears without resetting entity IDs", function()
 				local world = World.new()
 				local A = component()
