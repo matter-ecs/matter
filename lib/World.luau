@@ -280,16 +280,13 @@ local function executeInsert(world: World, insertCommand: InsertCommand)
 			archetype = ensureArchetype(world, componentIds)
 			entityIndex = transitionArchetype(world, entityId, entityRecord, archetype)
 			oldComponentInstance = archetype.fields[archetype.idToIndex[componentId]][entityIndex]
-
-			-- FIXME:
-			-- This shouldn't be in a hotpath, probably better in createArchetype
-			world.componentIdToComponent[componentId] = component
 		else
 			archetype = oldArchetype
 			entityIndex = entityRecord.indexInArchetype
 			oldComponentInstance = oldArchetype.fields[oldArchetype.idToIndex[componentId]][entityIndex]
 		end
 
+		world.componentIdToComponent[componentId] = component
 		archetype.fields[archetype.idToIndex[componentId]][entityIndex] = componentInstance
 		world:_trackChanged(component, entityId, oldComponentInstance, componentInstance)
 
