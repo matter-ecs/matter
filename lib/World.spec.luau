@@ -2,6 +2,7 @@ local World = require(script.Parent.World)
 local Loop = require(script.Parent.Loop)
 local component = require(script.Parent).component
 local BindableEvent = require(script.Parent.mock.BindableEvent)
+local getAllComponentData = require(script.Parent.debugger.getAllComponentData)
 
 local function deepEquals(a, b)
 	if type(a) ~= "table" or type(b) ~= "table" then
@@ -139,6 +140,98 @@ return function()
 				expect(world:size()).to.equal(1)
 				world:commitCommands()
 				expect(world:size()).to.equal(0)
+			end)
+		end)
+
+		describe("replace", function()
+			it("should register a component type first introduced by immediate replacement", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+				local id = world:spawn(A({ value = 7 }))
+				local b = B({ value = 42 })
+
+				world:replace(id, b)
+
+				expect(world:contains(id)).to.equal(true)
+				expect(world:size()).to.equal(1)
+				expect(world:get(id, A)).to.equal(nil)
+				expect(world:get(id, B)).to.equal(b)
+				expect(world:query(A):next()).to.equal(nil)
+
+				local query = world:query(B)
+				local queryId, queryB = query:next()
+				expect(queryId).to.equal(id)
+				expect(queryB).to.equal(b)
+				expect(query:next()).to.equal(nil)
+
+				local count = 0
+				for entityId, data in world do
+					expect(entityId).to.equal(id)
+					expect(data[A]).to.equal(nil)
+					expect(data[B]).to.equal(b)
+					count += 1
+				end
+				expect(count).to.equal(1)
+
+				local data = getAllComponentData(world, id)
+				expect(data[A]).to.equal(nil)
+				expect(data[B]).to.equal(b)
+			end)
+
+			it("should register new component types when committing a deferred replacement", function()
+				local world = World.new()
+				local A = component()
+				local B = component()
+				local C = component()
+				local originalA = A({ value = 7 })
+				local id = world:spawn(originalA)
+				local a = A({ value = 8 })
+				local b = B({ value = 42 })
+				local c = C({ value = 99 })
+
+				world:startDeferring()
+				world:replace(id, a, b, c)
+
+				expect(world:get(id, A)).to.equal(originalA)
+				expect(world:get(id, B)).to.equal(nil)
+				expect(world:get(id, C)).to.equal(nil)
+				local beforeData = getAllComponentData(world, id)
+				expect(beforeData[A]).to.equal(originalA)
+				expect(beforeData[B]).to.equal(nil)
+				expect(beforeData[C]).to.equal(nil)
+
+				world:commitCommands()
+
+				expect(world:contains(id)).to.equal(true)
+				expect(world:size()).to.equal(1)
+				local storedA, storedB, storedC = world:get(id, A, B, C)
+				expect(storedA).to.equal(a)
+				expect(storedB).to.equal(b)
+				expect(storedC).to.equal(c)
+
+				local query = world:query(A, B, C)
+				local queryId, queryA, queryB, queryC = query:next()
+				expect(queryId).to.equal(id)
+				expect(queryA).to.equal(a)
+				expect(queryB).to.equal(b)
+				expect(queryC).to.equal(c)
+				expect(query:next()).to.equal(nil)
+
+				local count = 0
+				for entityId, data in world do
+					expect(entityId).to.equal(id)
+					expect(data[A]).to.equal(a)
+					expect(data[B]).to.equal(b)
+					expect(data[C]).to.equal(c)
+					count += 1
+				end
+				expect(count).to.equal(1)
+
+				local data = getAllComponentData(world, id)
+				expect(data[A]).to.equal(a)
+				expect(data[B]).to.equal(b)
+				expect(data[C]).to.equal(c)
 			end)
 		end)
 
